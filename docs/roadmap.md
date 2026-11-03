@@ -62,7 +62,7 @@
 ### 1.1 Проект, тесты, игрок
 
 - **Трек:** Core. **Зависит от:** T0. **Размер:** один чат.
-- **Что:** проект Godot 4.7, игрок с движением и прыжком, пустая тестовая комната, `tests/test_runner.gd`, `tests/ui_smoke_test.gd`, GitHub Actions `tests.yml` с закреплённой версией Godot.
+- **Что:** проект Godot 4.7.2-stable (как в Crown), игрок с движением и прыжком, пустая тестовая комната, `tests/test_runner.gd`, `tests/ui_smoke_test.gd`, GitHub Actions `tests.yml` с закреплённой версией Godot.
 - **Файлы:** `game/project.godot`, `game/core/`, `game/tests/`, `.github/`, `game/ui/`, `game/levels/test_room.tscn`.
 - **Готово:** оба теста зелёные локально и в GitHub; движение игрока не зависит от Shift.
 - **Проверят люди:** игрок двигается приятно, прыжок не липнет.

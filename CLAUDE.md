@@ -13,7 +13,7 @@ Shift Time (the name was chosen on 3.11.2026) is a 2D puzzle-platformer made in 
 
 ## Decisions so far
 
-- Engine: Godot 4.7, GDScript with static types, Compatibility renderer, 2D. Pin the version in CI together with the SHA-512 sums, like the Crown project did.
+- Engine: Godot 4.7.2-stable (the same build as Crown), GDScript with static types, Compatibility renderer, 2D. Pin the version in CI together with the SHA-512 sums, like the Crown project did.
 - Platform: PC first (Shift is the main key). A Windows build from GitHub Actions on every merge into `main`.
 - The core is not a general physics rewinder. Objects are controlled and recorded: fixed step, interpolation, short history (see «Design rules»).
 
