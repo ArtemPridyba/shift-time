@@ -104,7 +104,7 @@ Details and reasons are in `docs/setting.md`. Read it before a task that touches
 
 - Setting: a worn future in the spirit of Portal and Half-Life, with rust, metal and tired spaces and working new technology among them. Take the mood, never recognisable parts of those games (no orange portals, no Aperture panels).
 - Style: side view, silhouettes and flat geometric shapes, minimal detail. Wear is shown by shape (chips, holes, bent beams, streaks), thin overlays and particles, not by detailed textures. The background is always quieter than platforms, doors and interaction points.
-- One accent: the cold cyan (start value `#7FE8FF`) belongs only to what is tied to time: temporal objects, the wrist device, their glow and the time indicator. Nothing else uses it.
+- One accent: the cold cyan (start value `#7FE8FF`) belongs only to special mechanisms and objects tied to time, the wrist device and its indicator. Ordinary things in the world also rewind but get no glow. Nothing else uses it.
 - The player wears a device on the wrist; the time-direction indicator lives on it.
 - Time reads in the picture, not by color alone: particles, light pulses and the wrist device run the other way in reverse mode. «Worn ↔ clean» fading on temporal objects is optional polish and the first visual cut.
 - Neural-network art goes only on backdrops, decor, wear overlays and concept frames, after an approved style sheet. Level geometry and collision come from the blockout in Godot, never from an image. Temporal objects, interaction points and the wrist device are made by hand (vector, shaders, animation) so their states play forward and back without jumps.
