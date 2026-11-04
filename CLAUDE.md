@@ -9,6 +9,7 @@ Shift Time (the name was chosen on 3.11.2026) is a 2D puzzle-platformer made in 
 - Where we are: `docs/progress.md` (Russian): the next task for each track, handoffs, the queue, what waits for people, known issues.
 - History: `docs/history.md` (Russian): decisions with reasons, and the journal of sessions with their price. Not read at the start: search it when a past decision matters.
 - For people: `docs/how-we-work.md` (Russian): first messages, which model and effort to pick, how to give feedback. Not read at the start: at the end of a session take the next first message and the model and effort from it.
+- Setting and visual language: `docs/setting.md` (Russian): the worn-future setting, silhouettes, palette, how time reads in the picture, the neural-network art pipeline. Read it only for tasks that touch art, UI or level looks.
 - Level cards: `docs/levels/NN.md` (Russian, template in `docs/levels/_template.md`): the effect the player sees first, the cause, the solution step by step. A level's solution test is written from its card.
 
 ## Decisions so far
@@ -96,3 +97,14 @@ Both test commands exit with code 0 on success. A script error fails the test it
 - The player has an action in both modes: pressing buttons, using levers, carrying crates, only through special points of interaction, not by pushing (see `docs/history.md` for the decision).
 - Each level introduces one new rule and checks it in a new situation. At least two levels start from a visible effect whose cause the player must find, and no solution may depend on guessing a timing.
 - Postponed beyond this month: full physics inversion of all rigidbodies, fluid and gas simulation, several independent time fields, switching freely between all alternative histories, story, cutscenes, voice and a dialog system.
+
+## Visual rules
+
+Details and reasons are in `docs/setting.md`. Read it before a task that touches art, UI or how a level looks.
+
+- Setting: a worn future in the spirit of Portal and Half-Life, with rust, metal and tired spaces and working new technology among them. Take the mood, never recognisable parts of those games (no orange portals, no Aperture panels).
+- Style: side view, silhouettes and flat geometric shapes, minimal detail. Wear is shown by shape (chips, holes, bent beams, streaks), thin overlays and particles, not by detailed textures. The background is always quieter than platforms, doors and interaction points.
+- One accent: the cold cyan (start value `#7FE8FF`) belongs only to what is tied to time: temporal objects, the wrist device, their glow and the time indicator. Nothing else uses it.
+- The player wears a device on the wrist; the time-direction indicator lives on it.
+- Time reads in the picture, not by color alone: particles, light pulses and the wrist device run the other way in reverse mode. «Worn ↔ clean» fading on temporal objects is optional polish and the first visual cut.
+- Neural-network art goes only on backdrops, decor, wear overlays and concept frames, after an approved style sheet. Level geometry and collision come from the blockout in Godot, never from an image. Temporal objects, interaction points and the wrist device are made by hand (vector, shaders, animation) so their states play forward and back without jumps.
