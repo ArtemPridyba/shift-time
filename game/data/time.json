@@ -1,0 +1,7 @@
+{
+  "physics_ticks_per_second": 60,
+  "snapshot_every_ticks": 1,
+  "history_seconds": 20,
+  "default_prelude_seconds": 0,
+  "max_state_step": 40
+}
