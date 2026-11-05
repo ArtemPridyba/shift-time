@@ -10,11 +10,21 @@
 - Где мы сейчас и что дальше: [docs/progress.md](docs/progress.md).
 - Как работать с чатами: [docs/how-we-work.md](docs/how-we-work.md).
 - Журнал чатов и решения: [docs/history.md](docs/history.md).
-- Карточки уровней: [docs/levels/](docs/levels/), шаблон в [`_template.md`](docs/levels/_template.md).
+- Сеттинг и визуальный язык: [docs/setting.md](docs/setting.md).
+- Архитектура прототипа (модель времени, папки, тесты, CI): [docs/architecture.md](docs/architecture.md).
+- Арт-пайплайн (размеры, слои, объекты, запросы для нейросети, список ассетов): [docs/art-pipeline.md](docs/art-pipeline.md).
+- Карточки уровней: [docs/levels/](docs/levels/README.md), шаблон в [`_template.md`](docs/levels/_template.md).
+- Концепт-кадры: [docs/art/concept/](docs/art/concept/), скрипт сборки — [tools/concept/](tools/concept/README.md).
 
 ## Что уже есть
 
-Пока только основа проекта: концепция, план на 4 недели с воротами, правила для Claude, памятка для двоих и шаблон карточки уровня. Игры и кода ещё нет: проект Godot появится в задаче 1.1, а с ним тесты и проверка «Tests» на GitHub.
+Пока только основа проекта: концепция, сеттинг и визуальный язык, архитектура, арт-пайплайн, план на 4 недели с воротами, правила для Claude, памятка для двоих и черновики карточек семи уровней. Игры и кода ещё нет: проект Godot появится в задаче 1.1, а с ним тесты и проверка «Tests» на GitHub.
+
+Так выглядит стиль (образец, не игровая сцена): слева обычное время, справа обратное.
+
+![Обычное время](docs/art/concept/01_normal.png)
+
+![Обратное время](docs/art/concept/02_reverse.png)
 
 Что получится к концу месяца (подробно — в [docs/roadmap.md](docs/roadmap.md)):
 

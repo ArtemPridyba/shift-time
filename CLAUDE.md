@@ -10,6 +10,8 @@ Shift Time (the name was chosen on 3.11.2026) is a 2D puzzle-platformer made in 
 - History: `docs/history.md` (Russian): decisions with reasons, and the journal of sessions with their price. Not read at the start: search it when a past decision matters.
 - For people: `docs/how-we-work.md` (Russian): first messages, which model and effort to pick, how to give feedback. Not read at the start: at the end of a session take the next first message and the model and effort from it.
 - Setting and visual language: `docs/setting.md` (Russian): the worn-future setting, silhouettes, palette, how time reads in the picture, the neural-network art pipeline. Read it only for tasks that touch art, UI or level looks.
+- Architecture: `docs/architecture.md` (Russian): the time model (replay instead of re-simulation, branch, prelude), folders, components, data, input, tests, CI, open questions for the Core plan. Read it before any Core task.
+- Art pipeline: `docs/art-pipeline.md` (Russian): sizes, layers, object and character specs, prompts for the neural network, asset list, file names. Read it before an art task.
 - Level cards: `docs/levels/NN.md` (Russian, template in `docs/levels/_template.md`): the effect the player sees first, the cause, the solution step by step. A level's solution test is written from its card.
 
 ## Decisions so far
@@ -51,6 +53,7 @@ Everything a step reads stays in the conversation and is read again by every lat
 ## Layout
 
 - `game/` — the Godot project (`game/project.godot`).
+- `game/autoload/` — singleton nodes (`time_manager.gd`, `game_data.gd`): anything that must be a `Node` and global lives here, not in `core/`.
 - `game/core/` — rules in plain GDScript (`RefCounted`, no nodes, no UI): history, recorder, branches, time direction logic. Must stay testable headless.
 - `game/objects/` — temporal objects as scenes plus scripts: door, platform, crate, water, button, lever, valve. One scene per object.
 - `game/levels/` — one scene per level, `level_01.tscn` … `level_07.tscn`. Two people never edit one level at once.
@@ -72,6 +75,8 @@ Run from the repository root (`godot` = the Godot 4.7 binary):
 
 Both test commands exit with code 0 on success. A script error fails the test it happens in; `push_error` only prints. These commands and the tests are written in task 1.1; until then they don't exist.
 
+No `godot` on PATH (a fresh cloud container): download the Linux build from GitHub releases, `https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip`, unzip it and use the `Godot_v4.7.2-stable_linux.x86_64` binary inside. The downloads.godotengine.org mirror may be blocked by the cloud proxy. The SHA-512 of the zip is in `docs/architecture.md`, section 9.
+
 ## Rules for changes
 
 - Run both test commands after every change. Add a test for every new rule.
@@ -90,7 +95,10 @@ Both test commands exit with code 0 on success. A script error fails the test it
 
 - The player's time `t` always grows. World time `τ` grows in normal mode and decreases while Shift is held: `dτ/dt = +1 or −1`. Shift never moves the player back and never cancels the player's own actions.
 - `TimeManager` (autoload) holds the direction, +1 or −1, and tells temporal objects. The player does not subscribe to it as a temporal object.
-- Temporal objects record their state at a fixed step (start value 15 snapshots per second, set in `data/`), play it back with interpolation, and keep a bounded history (start value 20 seconds per room). Reverse motion is continuous, never a teleport.
+- Temporal objects record their state in a frame of the room's history. Start value: a frame on every physics tick (60 per second), fallback every 4th tick with interpolation; the history is bounded (start value 20 seconds per room), all numbers in `data/time.json`. Reverse motion is continuous, never a teleport.
+- Replay, not re-simulation: while the cursor is left of the head of the history, objects only restore recorded frames; they simulate only at the head. A player action left of the head writes the new state into the frame at the cursor and cuts everything to its right (a branch). The player is never recorded. While Shift is held and the cursor is at frame 0, the world stands still. Details: `docs/architecture.md`.
+- A level may have a prelude: the room is run without the player for `prelude_seconds` and recorded, so levels that start from an effect have a past to rewind. Scripted events are data, never random.
+- Every window in which the player must act is at least 3 seconds and visible; where possible the solution works from the world pinned at frame 0.
 - Do not try to reverse arbitrary Godot physics. Objects are controlled and recorded; water is a level value plus particles, not fluid simulation.
 - An action of the player during reverse mode creates a new branch: the old future of the changed object, and for the MVP of the whole room, is cut and recording continues from the new state (`BranchManager`).
 - The direction of time must read from motion, particles, mechanism animation and sound, never from color alone.
