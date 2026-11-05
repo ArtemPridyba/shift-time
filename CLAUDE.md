@@ -73,7 +73,7 @@ Run from the repository root (`godot` = the Godot 4.7 binary):
 - Both tests with short output, the usual check in a session: `godot --headless --path game --script res://tests/test_runner.gd 2>&1 | grep -E 'FAIL|SCRIPT ERROR|tests,'; godot --headless --path game --script res://tests/ui_smoke_test.gd 2>&1 | grep -E 'FAIL|SCRIPT ERROR|failed'`. Green is `N tests, 0 failed` and `UI smoke test: 0 failed`.
 - Play: open `game/project.godot` in the Godot editor and press F5.
 
-Both test commands exit with code 0 on success. A script error fails the test it happens in; `push_error` only prints. These commands and the tests are written in task 1.1; until then they don't exist.
+Both test commands exit with code 0 on success. A script error fails the test it happens in; `push_error` only prints.
 
 No `godot` on PATH (a fresh cloud container): download the Linux build from GitHub releases, `https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip`, unzip it and use the `Godot_v4.7.2-stable_linux.x86_64` binary inside. The downloads.godotengine.org mirror may be blocked by the cloud proxy. The SHA-512 of the zip is in `docs/architecture.md`, section 9.
 
