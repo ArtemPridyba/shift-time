@@ -1,0 +1,10 @@
+{
+  "walk_speed": 360,
+  "acceleration": 2400,
+  "friction": 3000,
+  "gravity": 2200,
+  "jump_velocity": 780,
+  "max_fall_speed": 1200,
+  "coyote_seconds": 0.08,
+  "jump_buffer_seconds": 0.1
+}
