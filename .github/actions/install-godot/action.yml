@@ -1,0 +1,26 @@
+name: Install Godot
+description: Download the pinned Godot build, check its SHA-512 and put `godot` on PATH.
+
+# Change the version and the sum together (docs/architecture.md, section 9).
+# The sum was taken from the working CI of the Crown project; compare it with
+# SHA512-SUMS.txt of the release when the version changes.
+
+runs:
+  using: composite
+  steps:
+    - name: Download and verify Godot
+      shell: bash
+      env:
+        GODOT_VERSION: 4.7.2-stable
+        GODOT_SHA512: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65
+      run: |
+        set -euo pipefail
+        name="Godot_v${GODOT_VERSION}_linux.x86_64"
+        curl -fsSL -o "$RUNNER_TEMP/godot.zip" \
+          "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/${name}.zip"
+        echo "${GODOT_SHA512}  $RUNNER_TEMP/godot.zip" | sha512sum -c -
+        unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
+        chmod +x "$RUNNER_TEMP/godot/${name}"
+        mkdir -p "$HOME/.local/bin"
+        ln -sf "$RUNNER_TEMP/godot/${name}" "$HOME/.local/bin/godot"
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"

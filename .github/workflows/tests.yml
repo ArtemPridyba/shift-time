@@ -1,0 +1,27 @@
+name: Tests
+
+on:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/install-godot
+
+      - name: Import project (class cache)
+        run: godot --headless --path game --import
+
+      - name: Rule tests
+        run: godot --headless --path game --script res://tests/test_runner.gd
+
+      # Runs even if the rule tests failed, so one run shows both results.
+      - name: UI smoke test
+        if: ${{ !cancelled() }}
+        run: godot --headless --path game --script res://tests/ui_smoke_test.gd
