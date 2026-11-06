@@ -10,6 +10,10 @@ config/name="Shift Time"
 run/main_scene="res://levels/test_room.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
+[autoload]
+
+TimeManager="*res://autoload/time_manager.gd"
+
 [display]
 
 window/size/viewport_width=1920

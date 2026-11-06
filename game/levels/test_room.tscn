@@ -4,6 +4,7 @@
 [ext_resource type="TileSet" path="res://levels/blockout/blockout_tileset.tres" id="2_e6vom"]
 [ext_resource type="PackedScene" path="res://objects/player.tscn" id="3_np6ep"]
 [ext_resource type="Script" path="res://objects/player.gd" id="4_wyybw"]
+[ext_resource type="Script" path="res://ui/debug_time_label.gd" id="5_dbgtl"]
 
 [node name="TestRoom" type="Node2D" unique_id=79242501]
 script = ExtResource("1_hw6vf")
@@ -18,3 +19,6 @@ position = Vector2(160, 960)
 [node name="Player" type="CharacterBody2D" parent="." unique_id=1888827393 instance=ExtResource("3_np6ep")]
 collision_layer = 2
 script = ExtResource("4_wyybw")
+
+[node name="TimeDebugLabel" type="CanvasLayer" parent="."]
+script = ExtResource("5_dbgtl")
