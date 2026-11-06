@@ -7,12 +7,14 @@
 - **Неделя:** 1 из 4 — прототип времени. Ворота: см. [roadmap.md](roadmap.md).
 - **Подготовка сделана (5.11.2026):** концепция, сеттинг и визуальный язык ([setting.md](setting.md)), арт-пайплайн ([art-pipeline.md](art-pipeline.md)), архитектура ([architecture.md](architecture.md)), черновики карточек уровней 01–07 ([levels/](levels/README.md)), концепт-кадры в [art/concept/](art/concept/) и скрипт их сборки в `tools/concept/`. Кода игры ещё нет.
 - **Решения T0 и предложения Claude** подтверждены командой 5.11.2026 ([history.md](history.md)).
-- **Задача 1.1 сделана (PR открыт):** в игре есть игрок и тестовая комната, оба теста и CI на месте.
+- **Задача 1.1 сделана (PR #1 влит):** в игре есть игрок и тестовая комната, оба теста и CI на месте.
+- **Задача 1.2 сделана (PR открыт):** Shift меняет направление времени; в углу тестовой комнаты надпись «TIME >> FORWARD» или «TIME << REWIND».
 
 ### Core (имя: впишите)
 
-- **Дальше:** 1.2 TimeManager и Shift. Потом 1.3, 1.4 и 2.6 (подряд, по одному чату).
+- **Дальше:** 1.3 Запись и история. Потом 1.4 и 2.6 (подряд, по одному чату).
 - **Сделано:** 1.1 Проект, тесты, игрок: `game/project.godot` (1920×1080, 60 Гц, Compatibility, карта ввода), `core/player_motion.gd`, `core/content.gd`, `objects/player.*`, `levels/test_room.*` (40×17 клеток, камера за игроком), `tests/` (11 тестов и UI-тест), CI. Блоки собирает `tools/build_blockout.gd`.
+- **Сделано:** 1.2 TimeManager и Shift (PR открыт): `autoload/time_manager.gd` (`direction`, `is_rewinding()`, `reset()`, сигнал `direction_changed`; опрос `rewind` на физическом тике), `tests/test_time_manager.gd` (5 тестов), временная надпись направления `ui/debug_time_label.gd` в тестовой комнате (её заменит индикатор 1.5), проверка надписи в UI-тесте. Всего 16 тестов и UI-тест.
 - **Передача:** нет.
 
 ### Content (имя: впишите)
@@ -32,7 +34,7 @@
 | ~~1.1 Проект, тесты, игрок~~ | Core | `game/project.godot`, `game/core/`, `game/tests/`, `.github/` | один чат | сделано |
 | 1.5 Визуальный язык времени | Content | `game/art/`, `game/ui/time_hud.*`, `game/audio/` | один чат | индикатор переключается и без цвета |
 | 2.4 Карточки уровней в блокауте | Content | `docs/levels/` | один чат | решения без угадывания тайминга |
-| 1.2 TimeManager и Shift | Core | `game/autoload/time_manager.gd`, `game/tests/` | короткий | тест направления |
+| ~~1.2 TimeManager и Shift~~ | Core | `game/autoload/time_manager.gd`, `game/tests/` | короткий | сделано |
 | 1.3 Запись и история | Core | `game/core/timeline.gd`, `game/data/time.json`, `game/tests/` | один чат | тест детерминизма и границ |
 | 1.4 TemporalObject, дверь, платформа | Core | `game/objects/`, `game/levels/`, `game/tests/` | один чат | тест непрерывности |
 | 2.6 Предыстория уровня | Core | `game/levels/time_world.gd`, `game/data/levels.json` | один чат | тест предыстории |
