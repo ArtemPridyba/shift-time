@@ -24,6 +24,14 @@ Shift Time (the name was chosen on 3.11.2026) is a 2D puzzle-platformer made in 
 
 Week 1 of 4: the prototype of time. Stages and gates are in `docs/roadmap.md`.
 
+## Boris's folder
+
+`boris/` is Boris's own workspace for market research, ideas and proposals. It is not part of the game, the plan or the rules, and nothing in it is a decision of the team.
+
+- Roadmap sessions don't read, change or move `boris/` unless a person asks, never take tasks from it, and don't offer to merge pull requests that change only `boris/`.
+- A session for Boris (its first message says so or names `boris/`) follows `boris/CLAUDE.md` instead of «How every session works» and writes only inside `boris/`.
+- If the team takes something from it, a roadmap session moves it into `docs/`; then the folder may be deleted.
+
 ## How every session works
 
 The team is two people who build the game through Claude. Every session is one task from `docs/roadmap.md` and ends with its pull request. Every step re-reads the whole conversation, so each step of a long session costs more: keep sessions short and see «Spend few tokens» below.
