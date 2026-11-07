@@ -7,6 +7,7 @@ extends SceneTree
 const SUITES: Array[String] = [
 	"res://tests/test_core.gd",
 	"res://tests/test_time_manager.gd",
+	"res://tests/test_timeline.gd",
 ]
 
 var _errors := ScriptErrors.new()

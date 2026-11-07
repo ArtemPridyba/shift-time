@@ -83,6 +83,10 @@ static func validate_time(data: Variant) -> PackedStringArray:
 			errors.append("time.json: '%s' must be at least 1" % key)
 	if float(data["history_seconds"]) <= 0.0:
 		errors.append("time.json: 'history_seconds' must be above 0")
+	var frames := float(data["history_seconds"]) * float(data["physics_ticks_per_second"]) \
+			/ maxf(float(data["snapshot_every_ticks"]), 1.0)
+	if frames < float(Timeline.MIN_CAPACITY):
+		errors.append("time.json: the history must hold at least %d frames" % Timeline.MIN_CAPACITY)
 	var prelude := float(data["default_prelude_seconds"])
 	if prelude < 0.0 or prelude > float(data["history_seconds"]):
 		errors.append("time.json: 'default_prelude_seconds' must be between 0 and 'history_seconds'")
