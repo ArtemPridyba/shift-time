@@ -40,6 +40,10 @@ func test_data_check_catches_broken_data() -> void:
 	broken_time["default_prelude_seconds"] = float(broken_time["history_seconds"]) + 1.0
 	check(not Content.validate_time(broken_time).is_empty(), "prelude longer than history must be reported")
 	check(not Content.validate_time({"history_seconds": 20}).is_empty(), "missing time keys must be reported")
+	var tiny_time := Content.time()
+	tiny_time["history_seconds"] = 0.01
+	tiny_time["default_prelude_seconds"] = 0
+	check(not Content.validate_time(tiny_time).is_empty(), "a history shorter than two frames must be reported")
 
 	var level := {"id": "a", "scene": ROOM_PATH, "prelude_seconds": 0, "title": "A"}
 	check(Content.validate_levels([level], 20.0).is_empty(), "a correct level entry must pass")
