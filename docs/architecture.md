@@ -85,11 +85,11 @@
 game/
   project.godot
   autoload/        # узлы-синглтоны: time_manager.gd, game_data.gd
-  core/            # RefCounted без узлов: timeline.gd, branch.gd, level_data.gd, input_log.gd
+  core/            # RefCounted без узлов: timeline.gd, temporal_recorder.gd, time_world.gd, content.gd, level_data.gd, input_log.gd
   objects/         # временные объекты и игрок: player.tscn/.gd, platform_moving, door, button, lever, water, crate
-  levels/          # test_room.tscn, level_01.tscn … level_10.tscn, time_world.gd
+  levels/          # test_room.tscn, level_01.tscn … level_10.tscn, room_time.gd
   ui/              # HUD, устройство на руке, меню
-  data/            # time.json, player.json, levels.json, texts.json
+  data/            # time.json, player.json, objects.json, levels.json, texts.json
   art/             # backgrounds, decals, characters, objects, ui, particles
   audio/
   tests/           # test_runner.gd, script_errors.gd, test_core.gd, ui_smoke_test.gd, solutions/
@@ -103,7 +103,8 @@ game/
 | --- | --- | --- |
 | `TimeManager` (autoload, `Node`) | `autoload/time_manager.gd` | читает действие `rewind`; хранит направление `+1` или `−1`; сигнал `direction_changed(direction: int)`; сам ничего не записывает |
 | `Timeline` (`RefCounted`) | `core/timeline.gd` | кадры, курсор, голова, кольцевой буфер; `record(frame)`, `step_back()`, `step_forward()`, `branch()`, `at_head()`, `at_start()` |
-| `TimeWorld` (`Node`, в каждой сцене уровня) | `levels/time_world.gd` | на каждом физическом тике по правилам из раздела 2 двигает курсор; собирает объекты группы `temporal`; прогоняет предысторию; решает «мир замер из-за игрока» |
+| `TimeWorld` (`RefCounted`) | `core/time_world.gd` | правила раздела 2: `tick(direction, objects, player_rect)` двигает курсор, проигрывает или записывает кадр; `run_prelude()`; `player_action()` и `live_action()`; решает «мир ждёт из-за игрока» (2.3). Объекты получает аргументом на каждом вызове |
+| `RoomTime` (`Node`, в каждой сцене уровня) | `levels/room_time.gd` | прямой потомок комнаты; на каждом тике берёт направление у `TimeManager`, объекты группы `temporal` и прямоугольник игрока и зовёт `TimeWorld.tick()`; передаёт объектам смену направления; `reset()` для сброса уровня |
 | временной объект | `objects/*` | уникальный `object_id`; методы `capture_state() -> Dictionary`, `restore_state(state: Dictionary)`, `simulate_tick(tick: int)`; `blocks_player_at(...)` для твёрдых |
 | `InteractionSystem` | `objects/player.gd` и точки взаимодействия | игрок жмёт `interact` рядом с точкой; точка вызывает `TimeWorld.player_action(object_id, new_state)`, тот делает `branch()` при необходимости |
 | `Player` (`CharacterBody2D`) | `objects/player.tscn` | управление не зависит от направления времени; ездит на платформах |
@@ -113,6 +114,26 @@ game/
 Временные объекты узнаются по группе `temporal` и по набору методов (утиная типизация), потому что платформа и дверь наследуют `AnimatableBody2D`, а кнопка — `Area2D`, и общий базовый класс невозможен. Тест проверяет, что каждый узел группы имеет все нужные методы.
 
 Платформы и двери — `AnimatableBody2D` с включённым `sync_to_physics`, положение задаёт `restore_state` или `simulate_tick`: тогда `CharacterBody2D` игрока едет вместе с ними и в обычном, и в обратном режиме.
+
+### 4.1. Контракт временного объекта (задача 1.4, 8.11.2026)
+
+Общего базового класса нет: дверь и платформа — `AnimatableBody2D`, кнопка будет `Area2D`. Объект — это сцена в `game/objects/`, корень которой стоит в группе `temporal` (группа задаётся в `.tscn`) и умеет следующее. Образцы — `objects/door.gd` и `objects/platform.gd`.
+
+| Что | Зачем | Правило |
+| --- | --- | --- |
+| `@export var object_id: String` | ключ объекта в кадре | уникален в комнате; пустой или повторный — ошибка `TemporalRecorder.validate()` и теста |
+| `capture_state() -> Dictionary` | состояние для кадра | только простые типы (`int`, `bool`, `float`, `Vector2`), числа целыми, где можно (раздел 5); всё, без чего объект не восстановится, включая фазу своего цикла |
+| `restore_state(state)` | показать кадр | ставит всё из `state`, в том числе положение узла; ничего не симулирует; `capture_state()` сразу после него возвращает тот же словарь |
+| `simulate_tick(tick)` | один тик на голове истории | только здесь объект живёт сам; результат зависит только от своего состояния и данных (детерминизм); `tick` — номер нового кадра |
+| `on_time_direction_changed(direction)` | смена направления, `+1` или `−1` | для вида и звука (частицы, анимация механизма); состояние не меняет |
+| `blocks_player_at(state, player_rect) -> bool` | правило «не давить» (2.3) | `true`, если объект в состоянии `state` залез бы в тело игрока; прямоугольники в координатах комнаты; пустой `player_rect` — всегда `false`. У нетвёрдых объектов (кнопка) просто `return false` |
+
+Ещё правила:
+
+- Числа поведения (скорость, паузы, длительности) — в `game/data/objects.json`, по разделу на вид объекта; проверка в `Content.validate_objects()`: окна действия не короче 3 с, шаг за тик не больше `max_state_step`. Геометрия (куда едет, на сколько поднимается) — `@export` в сцене уровня.
+- Положение в сцене — исходное (дверь ставят закрытой, платформу в начальной точке); объект запоминает его до первого изменения.
+- Объект не хранит ссылок на комнату, `RoomTime` или игрока; изменить записанный объект извне можно только через `RoomTime.player_action(object_id, new_state)` или `live_action(...)`.
+- Что проверяют тесты (`tests/test_objects.gd`, `tests/test_time_world.gd`): у каждого узла группы `temporal` в комнате есть все методы и уникальный `object_id`; обратный путь повторяет записанный кадр в кадр, соседние кадры отличаются не больше чем на `max_state_step`; на кадре 0 мир стоит; отпущенный Shift проигрывает то же будущее без симуляции; вмешательство отрезает будущее; мир ждёт, а не давит игрока; игрок едет на платформе в обе стороны.
 
 ## 5. Что записывается
 
@@ -163,6 +184,8 @@ game/
 ```
 
 Прыжок при них около 140 px, то есть чуть больше двух клеток, поэтому ступени и платформы в блокауте кратны 64 px и не выше двух клеток.
+
+`objects.json`: поведение временных объектов: `door` (`open_seconds`, `hold_open_seconds`, `close_seconds`, `hold_closed_seconds`), `platform` (`speed` в px/с, `pause_seconds`), `carry_margin_px` — на сколько пикселей ноги игрока могут уйти в платформу, чтобы это считалось «едет», а не «давит». Скорость платформы за тик должна быть меньше `carry_margin_px`.
 
 `levels.json`: список уровней в порядке прохождения: `id`, `scene`, `prelude_seconds`, `title`.
 
