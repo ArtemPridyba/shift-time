@@ -45,6 +45,20 @@ func test_data_check_catches_broken_data() -> void:
 	tiny_time["default_prelude_seconds"] = 0
 	check(not Content.validate_time(tiny_time).is_empty(), "a history shorter than two frames must be reported")
 
+	var time_data := Content.time()
+	check(Content.validate_objects(Content.objects(), time_data).is_empty(), "the shipped objects.json must pass")
+	check(not Content.validate_objects("text", time_data).is_empty(), "non-object objects.json must be reported")
+	check(not Content.validate_objects({}, time_data).is_empty(), "missing objects must be reported")
+	var short_window := Content.objects()
+	short_window["door"]["hold_open_seconds"] = 2
+	check(not Content.validate_objects(short_window, time_data).is_empty(), "a door window under 3 s must be reported")
+	var jumpy := Content.objects()
+	jumpy["door"]["open_seconds"] = 0.1
+	check(not Content.validate_objects(jumpy, time_data).is_empty(), "a door jumping above max_state_step must be reported")
+	var fast := Content.objects()
+	fast["platform"]["speed"] = 600
+	check(not Content.validate_objects(fast, time_data).is_empty(), "a platform faster than carry_margin_px per tick must be reported")
+
 	var level := {"id": "a", "scene": ROOM_PATH, "prelude_seconds": 0, "title": "A"}
 	check(Content.validate_levels([level], 20.0).is_empty(), "a correct level entry must pass")
 	check(not Content.validate_levels([level, level], 20.0).is_empty(), "duplicate level ids must be reported")

@@ -1,0 +1,13 @@
+{
+  "door": {
+    "open_seconds": 3,
+    "hold_open_seconds": 4,
+    "close_seconds": 3,
+    "hold_closed_seconds": 4
+  },
+  "platform": {
+    "speed": 120,
+    "pause_seconds": 4
+  },
+  "carry_margin_px": 8
+}
