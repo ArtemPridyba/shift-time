@@ -6,6 +6,7 @@ extends RefCounted
 const PLAYER_PATH := "res://data/player.json"
 const TIME_PATH := "res://data/time.json"
 const LEVELS_PATH := "res://data/levels.json"
+const OBJECTS_PATH := "res://data/objects.json"
 
 const PLAYER_KEYS: Array[String] = [
 	"walk_speed", "acceleration", "friction", "gravity",
@@ -16,6 +17,10 @@ const TIME_KEYS: Array[String] = [
 	"default_prelude_seconds", "max_state_step",
 ]
 const LEVEL_KEYS: Array[String] = ["id", "scene", "prelude_seconds", "title"]
+const DOOR_KEYS: Array[String] = ["open_seconds", "hold_open_seconds", "close_seconds", "hold_closed_seconds"]
+const PLATFORM_KEYS: Array[String] = ["speed", "pause_seconds"]
+## Every window in which the player must act is at least this long (design rules).
+const MIN_WINDOW_SECONDS := 3.0
 
 
 static func load_json(path: String) -> Variant:
@@ -35,6 +40,11 @@ static func time() -> Dictionary:
 	return data if data is Dictionary else {}
 
 
+static func objects() -> Dictionary:
+	var data: Variant = load_json(OBJECTS_PATH)
+	return data if data is Dictionary else {}
+
+
 static func levels() -> Array:
 	var data: Variant = load_json(LEVELS_PATH)
 	return data if data is Array else []
@@ -50,6 +60,8 @@ static func validate() -> PackedStringArray:
 	if time_data is Dictionary and time_data.has("history_seconds") and _is_number(time_data["history_seconds"]):
 		history_seconds = float(time_data["history_seconds"])
 	errors.append_array(validate_levels(load_json(LEVELS_PATH), history_seconds))
+	if time_data is Dictionary and validate_time(time_data).is_empty():
+		errors.append_array(validate_objects(load_json(OBJECTS_PATH), time_data))
 	return errors
 
 
@@ -125,6 +137,45 @@ static func validate_levels(data: Variant, history_seconds: float) -> PackedStri
 			errors.append("%s: 'prelude_seconds' must be between 0 and the history length" % where)
 		if not entry["title"] is String:
 			errors.append("%s: 'title' must be a string" % where)
+	return errors
+
+
+## `time_data` must already be valid: steps per tick are checked against it.
+static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not data is Dictionary:
+		errors.append("objects.json: expected an object")
+		return errors
+	var ticks := float(time_data["physics_ticks_per_second"])
+	var max_step := float(time_data["max_state_step"])
+	if not data.has("carry_margin_px") or not _is_number(data["carry_margin_px"]) or float(data["carry_margin_px"]) <= 0.0:
+		errors.append("objects.json: 'carry_margin_px' must be a number above 0")
+	for section in [["door", DOOR_KEYS], ["platform", PLATFORM_KEYS]]:
+		var name: String = section[0]
+		var entry: Variant = data.get(name)
+		if not entry is Dictionary:
+			errors.append("objects.json: missing object '%s'" % name)
+			continue
+		for key in section[1]:
+			if not entry.has(key) or not _is_number(entry[key]) or float(entry[key]) <= 0.0:
+				errors.append("objects.json: '%s.%s' must be a number above 0" % [name, key])
+	if not errors.is_empty():
+		return errors
+	var door: Dictionary = data["door"]
+	for key in ["hold_open_seconds", "hold_closed_seconds"]:
+		if float(door[key]) < MIN_WINDOW_SECONDS:
+			errors.append("objects.json: 'door.%s' is a window to act and must be at least %d s" % [key, MIN_WINDOW_SECONDS])
+	for key in ["open_seconds", "close_seconds"]:
+		if 1000.0 / (float(door[key]) * ticks) > max_step:
+			errors.append("objects.json: 'door.%s' is too short: the door would jump more than max_state_step per tick" % key)
+	var platform: Dictionary = data["platform"]
+	if float(platform["pause_seconds"]) < MIN_WINDOW_SECONDS:
+		errors.append("objects.json: 'platform.pause_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
+	var step := float(platform["speed"]) / ticks
+	if step > max_step:
+		errors.append("objects.json: 'platform.speed' moves more than max_state_step per tick")
+	if step >= float(data["carry_margin_px"]):
+		errors.append("objects.json: 'platform.speed' per tick must stay below 'carry_margin_px', or a rider reads as crushed")
 	return errors
 
 

@@ -5,6 +5,9 @@
 [ext_resource type="PackedScene" path="res://objects/player.tscn" id="3_np6ep"]
 [ext_resource type="Script" path="res://objects/player.gd" id="4_wyybw"]
 [ext_resource type="Script" path="res://ui/debug_time_label.gd" id="5_dbgtl"]
+[ext_resource type="Script" path="res://levels/room_time.gd" id="6_rmtim"]
+[ext_resource type="PackedScene" path="res://objects/door.tscn" id="7_door"]
+[ext_resource type="PackedScene" path="res://objects/platform.tscn" id="8_pltfm"]
 
 [node name="TestRoom" type="Node2D" unique_id=79242501]
 script = ExtResource("1_hw6vf")
@@ -16,9 +19,22 @@ tile_set = ExtResource("2_e6vom")
 [node name="SpawnPoint" type="Marker2D" parent="." unique_id=1849096031]
 position = Vector2(160, 960)
 
+[node name="Platform" parent="." instance=ExtResource("8_pltfm")]
+position = Vector2(800, 752)
+object_id = "platform"
+travel = Vector2(480, 0)
+
+[node name="Door" parent="." instance=ExtResource("7_door")]
+position = Vector2(1728, 864)
+object_id = "door"
+
 [node name="Player" type="CharacterBody2D" parent="." unique_id=1888827393 instance=ExtResource("3_np6ep")]
 collision_layer = 2
 script = ExtResource("4_wyybw")
 
 [node name="TimeDebugLabel" type="CanvasLayer" parent="."]
 script = ExtResource("5_dbgtl")
+
+[node name="RoomTime" type="Node" parent="."]
+script = ExtResource("6_rmtim")
+player_path = NodePath("../Player")

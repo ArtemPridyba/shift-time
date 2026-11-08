@@ -120,6 +120,16 @@ func branch() -> void:
 	_head = _cursor
 
 
+## Writes `frame` over the frame at the cursor. Only allowed at the head (after
+## `branch()` the cursor is the head): an interference rewrites the present of
+## the new branch. Returns false and changes nothing elsewhere or while empty.
+func replace_current(frame: Dictionary) -> bool:
+	if is_empty() or not at_head():
+		return false
+	_slots[_cursor % _capacity] = frame.duplicate(true)
+	return true
+
+
 ## Forgets everything.
 func clear() -> void:
 	_slots.fill(null)

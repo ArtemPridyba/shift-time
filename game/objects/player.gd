@@ -46,6 +46,11 @@ func set_camera_limits(rect: Rect2i) -> void:
 	_camera.limit_bottom = rect.end.y
 
 
+## The player's body in the parent's coordinates (the origin is at the feet).
+func body_rect() -> Rect2:
+	return Rect2(position - Vector2(_size.x / 2.0, _size.y), _size)
+
+
 func respawn(at: Vector2) -> void:
 	global_position = at
 	velocity = Vector2.ZERO

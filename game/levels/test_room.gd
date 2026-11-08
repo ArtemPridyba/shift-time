@@ -9,6 +9,7 @@ const FALL_MARGIN_CELLS := 4
 @onready var _blocks: TileMapLayer = $Blocks
 @onready var _spawn: Marker2D = $SpawnPoint
 @onready var _player: Player = $Player
+@onready var _time: RoomTime = $RoomTime
 
 var _bottom := 0
 
@@ -23,5 +24,8 @@ func _ready() -> void:
 
 func _physics_process(_delta: float) -> void:
 	var fell := _player.global_position.y > _bottom + FALL_MARGIN_CELLS * _blocks.tile_set.tile_size.y
-	if fell or Input.is_action_just_pressed("reset_level"):
+	if fell:
 		_player.respawn(_spawn.global_position)
+	if Input.is_action_just_pressed("reset_level"):
+		_player.respawn(_spawn.global_position)
+		_time.reset()

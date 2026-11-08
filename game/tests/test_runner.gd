@@ -8,6 +8,8 @@ const SUITES: Array[String] = [
 	"res://tests/test_core.gd",
 	"res://tests/test_time_manager.gd",
 	"res://tests/test_timeline.gd",
+	"res://tests/test_time_world.gd",
+	"res://tests/test_objects.gd",
 ]
 
 var _errors := ScriptErrors.new()
@@ -22,7 +24,14 @@ func _initialize() -> void:
 
 func _run() -> void:
 	for path in SUITES:
-		var suite: RefCounted = load(path).new(self)
+		var script := load(path) as GDScript
+		if script == null or not script.can_instantiate():
+			# A suite that does not parse fails, and the run still ends.
+			_tests += 1
+			_failed += 1
+			print("FAIL ", path, " does not load")
+			continue
+		var suite: RefCounted = script.new(self)
 		for info in suite.get_script().get_script_method_list():
 			var method: String = info["name"]
 			if not method.begins_with("test_"):
