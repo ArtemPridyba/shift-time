@@ -1,9 +1,16 @@
 class_name Door
 extends AnimatableBody2D
 ## A recorded door that slides up to open. Place it closed in the scene; `travel`
-## is how far it rises when fully open. Until buttons exist (task 2.1) it runs
-## its own cycle from `data/objects.json`: opens, stays open, closes, stays closed.
-## A locked door stands still.
+## is how far it rises when fully open.
+##
+## Two operating modes, determined by whether `linked_id` is set:
+##   - Standalone (no linked_id): runs its own open/hold/close/hold cycle from
+##     `data/objects.json` — the behaviour before task 2.1.
+##   - Powered (linked_id set): a button or lever drives the door through
+##     `powered` in the state dict. `simulate_tick` opens the door when
+##     `powered` is true and closes it when false. The cycle fields are still
+##     used for the speed of opening/closing; hold times are ignored.
+##     The door is registered in the room as the target of `linked_id`.
 ##
 ## Temporal object contract: docs/architecture.md, section 4.1.
 
@@ -14,11 +21,16 @@ const OPEN_MAX := 1000
 
 @export var object_id := "door"
 @export var travel := 192.0
+## When set, this door is driven by a button or lever with this object_id.
+## The cycle runs for looks (open/close speed) but hold times are ignored.
+@export var linked_id := ""
 
 var open := 0
 var locked := false
-## Tick on the door's own cycle.
+## Tick on the door's own cycle (unused in powered mode, kept for round-trip).
 var phase := 0
+## True when the linked control is active. Only present in state when linked_id != "".
+var powered := false
 ## +1 or -1, from TimeManager through TimeWorld; for looks and sound later.
 var time_direction := 1
 
@@ -49,21 +61,35 @@ func _ready() -> void:
 
 
 func capture_state() -> Dictionary:
-	return {"open": open, "locked": locked, "phase": phase}
+	var state := {"open": open, "locked": locked, "phase": phase}
+	if linked_id != "":
+		state["powered"] = powered
+	return state
 
 
 func restore_state(state: Dictionary) -> void:
 	open = int(state["open"])
 	locked = bool(state["locked"])
 	phase = int(state["phase"])
+	if linked_id != "":
+		powered = bool(state.get("powered", false))
 	_apply()
 
 
 func simulate_tick(_tick: int) -> void:
 	if locked:
 		return
-	phase = (phase + 1) % cycle_ticks()
-	open = open_at(phase)
+	if linked_id != "":
+		# Powered mode: open toward OPEN_MAX when powered, close toward 0 when not.
+		var step := int(round(float(OPEN_MAX) / maxf(float(_open_ticks), 1.0)))
+		if powered:
+			open = mini(open + step, OPEN_MAX)
+		else:
+			open = maxi(open - step, 0)
+	else:
+		# Standalone cycle mode.
+		phase = (phase + 1) % cycle_ticks()
+		open = open_at(phase)
 	_apply()
 
 
