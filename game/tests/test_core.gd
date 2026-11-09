@@ -84,7 +84,7 @@ func test_input_map_matches_architecture() -> void:
 		"move_right": [KEY_D, KEY_RIGHT],
 		"jump": [KEY_SPACE, KEY_W, KEY_UP],
 		"interact": [KEY_E],
-		"rewind": [KEY_SHIFT],
+		"rewind": [KEY_SHIFT, KEY_Q],
 		"reset_level": [KEY_R],
 		"pause": [KEY_ESCAPE],
 	}
@@ -100,6 +100,15 @@ func test_input_map_matches_architecture() -> void:
 		var wanted: Array = (expected[action] as Array).duplicate()
 		wanted.sort()
 		check(keys == wanted, "keys of '%s' are %s, expected %s" % [action, keys, wanted])
+
+
+func test_rewind_accepts_shift_and_q() -> void:
+	var shift_event := InputEventKey.new()
+	shift_event.physical_keycode = KEY_SHIFT
+	check(InputMap.event_is_action(shift_event, "rewind"), "rewind must accept Shift")
+	var q_event := InputEventKey.new()
+	q_event.physical_keycode = KEY_Q
+	check(InputMap.event_is_action(q_event, "rewind"), "rewind must accept Q")
 
 
 # --- movement rules (no nodes) ----------------------------------------------
