@@ -1,0 +1,62 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/install-godot
+
+      - name: Install Godot Web export templates
+        env:
+          GODOT_VERSION: 4.7.2-stable
+          TEMPLATES_SHA512: ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23e1b92e732ee7bf3461997aa804af74ec2fcd7a93ccb84079
+        run: |
+          set -euo pipefail
+          tpz="Godot_v${GODOT_VERSION}_export_templates.tpz"
+          curl -fsSL -o "$RUNNER_TEMP/$tpz" \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/${tpz}"
+          echo "${TEMPLATES_SHA512}  $RUNNER_TEMP/$tpz" | sha512sum -c -
+          dest="$HOME/.local/share/godot/export_templates/4.7.2.stable"
+          mkdir -p "$dest"
+          unzip -q -j "$RUNNER_TEMP/$tpz" "templates/version.txt" "templates/web_*" -d "$dest"
+          rm -f "$RUNNER_TEMP/$tpz"
+
+      - name: Import project (class cache)
+        run: godot --headless --path game --import
+
+      - name: Rule tests
+        run: godot --headless --path game --script res://tests/test_runner.gd
+
+      - name: UI smoke test
+        run: godot --headless --path game --script res://tests/ui_smoke_test.gd
+
+      - name: Export Web build
+        run: |
+          set -euo pipefail
+          mkdir -p build/web
+          godot --headless --path game --export-release "Web" ../build/web/index.html
+          test -f build/web/index.html
+          test -f build/web/index.pck
+          test -f build/web/index.wasm
+          (cd build/web && zip -r -q ../shift-time-web.zip .)
+          ls -lh build/shift-time-web.zip build/web/
+
+      - name: Upload Web build artifact (itch.io ready zip)
+        uses: actions/upload-artifact@v4
+        with:
+          name: shift-time-web
+          path: build/web/
+          if-no-files-found: error

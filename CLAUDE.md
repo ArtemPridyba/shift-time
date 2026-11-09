@@ -102,7 +102,7 @@ Run from the repository root (`godot` = the Godot 4.7.2 binary):
 - Rule tests: `godot --headless --path game --script res://tests/test_runner.gd`
 - UI smoke test: `godot --headless --path game --script res://tests/ui_smoke_test.gd`
 - Both tests with short output, the usual check in a session: `godot --headless --path game --script res://tests/test_runner.gd 2>&1 | grep -E 'FAIL|SCRIPT ERROR|tests,'; godot --headless --path game --script res://tests/ui_smoke_test.gd 2>&1 | grep -E 'FAIL|SCRIPT ERROR|failed'`. Green is `N tests, 0 failed` and `UI smoke test: 0 failed`.
-- Web export: the preset and the command appear in task 2.0; write them here then.
+- Web export (preset `Web` in `game/export_presets.cfg`, single-threaded Compatibility build into `build/web/index.html`): `mkdir -p build/web && godot --headless --path game --export-release "Web" ../build/web/index.html && (cd build/web && zip -r ../shift-time-web.zip .)`
 - Play: open `game/project.godot` in the Godot editor and press F5. On Windows `run_tests.bat` imports the project and runs both tests; an agent runs `.\run_tests.bat nopause`, because `pause` would wait for a key.
 
 Both test commands exit with code 0 on success. A script error fails the test it happens in; `push_error` only prints.
