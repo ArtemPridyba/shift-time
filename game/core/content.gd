@@ -19,6 +19,8 @@ const TIME_KEYS: Array[String] = [
 const LEVEL_KEYS: Array[String] = ["id", "scene", "prelude_seconds", "title"]
 const DOOR_KEYS: Array[String] = ["open_seconds", "hold_open_seconds", "close_seconds", "hold_closed_seconds"]
 const PLATFORM_KEYS: Array[String] = ["speed", "pause_seconds"]
+const BUTTON_KEYS: Array[String] = ["interact_radius_px"]
+const LEVER_KEYS: Array[String] = ["interact_radius_px"]
 ## Every window in which the player must act is at least this long (design rules).
 const MIN_WINDOW_SECONDS := 3.0
 
@@ -150,15 +152,16 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	var max_step := float(time_data["max_state_step"])
 	if not data.has("carry_margin_px") or not _is_number(data["carry_margin_px"]) or float(data["carry_margin_px"]) <= 0.0:
 		errors.append("objects.json: 'carry_margin_px' must be a number above 0")
-	for section in [["door", DOOR_KEYS], ["platform", PLATFORM_KEYS]]:
-		var name: String = section[0]
-		var entry: Variant = data.get(name)
+	for section: Variant in [["door", DOOR_KEYS], ["platform", PLATFORM_KEYS]]:
+		var sec := section as Array
+		var sec_name: String = sec[0]
+		var entry: Variant = data.get(sec_name)
 		if not entry is Dictionary:
-			errors.append("objects.json: missing object '%s'" % name)
+			errors.append("objects.json: missing object '%s'" % sec_name)
 			continue
-		for key in section[1]:
+		for key: Variant in sec[1]:
 			if not entry.has(key) or not _is_number(entry[key]) or float(entry[key]) <= 0.0:
-				errors.append("objects.json: '%s.%s' must be a number above 0" % [name, key])
+				errors.append("objects.json: '%s.%s' must be a number above 0" % [sec_name, key])
 	if not errors.is_empty():
 		return errors
 	var door: Dictionary = data["door"]
@@ -176,6 +179,16 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 		errors.append("objects.json: 'platform.speed' moves more than max_state_step per tick")
 	if step >= float(data["carry_margin_px"]):
 		errors.append("objects.json: 'platform.speed' per tick must stay below 'carry_margin_px', or a rider reads as crushed")
+	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS]]:
+		var isec := interact_section as Array
+		var isec_name: String = isec[0]
+		var ientry: Variant = data.get(isec_name)
+		if not ientry is Dictionary:
+			errors.append("objects.json: missing object '%s'" % isec_name)
+			continue
+		for key: Variant in isec[1]:
+			if not ientry.has(key) or not _is_number(ientry[key]) or float(ientry[key]) <= 0.0:
+				errors.append("objects.json: '%s.%s' must be a number above 0" % [isec_name, key])
 	return errors
 
 

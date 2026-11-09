@@ -9,5 +9,11 @@
     "speed": 120,
     "pause_seconds": 4
   },
+  "button": {
+    "interact_radius_px": 80
+  },
+  "lever": {
+    "interact_radius_px": 80
+  },
   "carry_margin_px": 8
 }

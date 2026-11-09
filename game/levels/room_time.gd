@@ -66,6 +66,45 @@ func live_action(object_id: String, new_state: Dictionary) -> bool:
 	return world.live_action(temporal_objects(), object_id, new_state)
 
 
+## Returns interaction candidates from buttons and levers in this room.
+## Each entry: { "id": String, "position": Vector2, "radius": float, "node": Node }
+func interaction_candidates() -> Array:
+	var result: Array = []
+	var room := get_parent()
+	if room == null or not is_inside_tree():
+		return result
+	for node: Variant in get_tree().get_nodes_in_group("temporal"):
+		if not room.is_ancestor_of(node as Node):
+			continue
+		if (node as Node).has_method("interaction_candidate"):
+			var c: Dictionary = (node as Node).call("interaction_candidate")
+			c["node"] = node
+			result.append(c)
+	return result
+
+
+## The player calls this when pressing `interact`. Finds the nearest
+## interaction point and applies all its state changes via player_action.
+func player_interact(player_pos: Vector2) -> void:
+	var candidates := interaction_candidates()
+	var nearest_id := InteractionSystem.get_nearest(player_pos, candidates)
+	if nearest_id == "":
+		return
+	var objects := temporal_objects()
+	var interactor: Node = null
+	for c: Variant in candidates:
+		var cd := c as Dictionary
+		if str(cd.get("id", "")) == nearest_id:
+			interactor = cd.get("node") as Node
+			break
+	if interactor == null or not interactor.has_method("get_interaction_change"):
+		return
+	var changes: Array = interactor.call("get_interaction_change", objects)
+	for change: Variant in changes:
+		var ch := change as Dictionary
+		player_action(str(ch.get("id", "")), ch.get("state", {}) as Dictionary)
+
+
 ## Back to the room as it was loaded, with a fresh history.
 func reset() -> void:
 	var objects := temporal_objects()

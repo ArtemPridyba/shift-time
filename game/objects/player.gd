@@ -28,6 +28,8 @@ func _physics_process(delta: float) -> void:
 	if axis != 0.0 and signf(axis) != _facing:
 		_facing = signf(axis)
 		queue_redraw()
+	if Input.is_action_just_pressed("interact"):
+		_try_interact()
 
 
 func _draw() -> void:
@@ -56,3 +58,20 @@ func respawn(at: Vector2) -> void:
 	velocity = Vector2.ZERO
 	_motion.reset()
 	_camera.reset_smoothing()
+
+
+## Asks the parent RoomTime (if any) to handle an interact press.
+func _try_interact() -> void:
+	var room_time := _find_room_time()
+	if room_time != null and room_time.has_method("player_interact"):
+		room_time.call("player_interact", global_position)
+
+
+func _find_room_time() -> Node:
+	var parent := get_parent()
+	if parent == null:
+		return null
+	for child in parent.get_children():
+		if child is RoomTime:
+			return child
+	return null
