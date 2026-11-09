@@ -39,13 +39,13 @@ Week 1 of 4 ends on 9 November with task 1.4. Week 2: 10–16 Nov, week 3: 17–
 
 ## Who does what
 
-Every task card has a label (`**Модель:**`). Claude Code limits are short: it takes only О and О+; everything else goes to Antigravity or the Gemini app.
+Every task card has a label (`**Модель:**`). Claude Code limits are short: on Opus it takes only О and О+, on Sonnet also А (D46). Everything else goes to Antigravity or the Gemini app. A regular Claude chat sees no repository and runs nothing: it only helps next to Antigravity (template in `docs/how-we-work.md`).
 
 | Label | Who | Where |
 | --- | --- | --- |
 | О | Opus, effort high | Claude Code, or Opus in Antigravity |
 | О+ | Opus, effort xhigh | Claude Code |
-| А | Gemini 4 Argon (fallback: Claude Sonnet in Antigravity) | Antigravity |
+| А | Gemini 4 Argon; without it (Google AI Plus) Claude Sonnet 4.6 for code, Gemini 3.8 Flash for short tasks; Sonnet in Claude Code | Antigravity or Claude Code |
 | А− | Gemini: documents, cards, data | Antigravity or the Gemini app |
 | Г | Gemini app: images, video, music, second opinion, playtest videos | the Gemini app |
 | Л | people | — |
@@ -54,7 +54,7 @@ Antigravity and other agents follow `AGENTS.md`, which points back to this file.
 
 ## How every session works
 
-1. **Start.** The hook has printed «Сейчас» of `docs/progress.md`; if not, read that section. Compare your model with the task's label: if it doesn't match, say so, give the first message for the right tool from `docs/how-we-work.md` and wait. Read only your task's section of `docs/roadmap.md`. Check GitHub for open pull requests from earlier sessions: if one is open, tell the user and offer to merge it, then pull the default branch into your branch. If the latest Tests run on the default branch is red, tell the user and fix it first.
+1. **Start.** The hook has printed «Сейчас» of `docs/progress.md`; if not, read that section. Compare your model with the task's label (Sonnet matches А, see «Who does what»): if it doesn't match, say so, give the first message for the right tool from `docs/how-we-work.md` and wait. Read only your task's section of `docs/roadmap.md`. Check GitHub for open pull requests from earlier sessions: if one is open, tell the user and offer to merge it, then pull the default branch into your branch. If the latest Tests run on the default branch is red, tell the user and fix it first.
 2. **Take a task:** the one the user names, or the next one in «Дальше» that nobody has in «Кто что делает». A long dictated message goes through the `golos` skill first. Before coding, state a plan in 3–5 lines. When the task changes what the player sees or the rules of time, the plan also says what the player will see, which decisions you will make yourself and what you need to ask; then wait for «ок». Technical tasks (tests, build, CI) go ahead at once.
 3. Work in small steps and run both test commands after each one.
 4. **End** (the user says «заканчиваем», or the task is done): both tests green; your line in «Сейчас» of `docs/progress.md`, and your row removed from «Кто что делает»; a journal row and new decisions with their reason in `docs/history.md`, with «запишет следующий чат» in the row's price; the done criteria of the chapter that this task closed are ticked in `docs/roadmap.md`; commit, push and open a pull request into the default branch with its title and description in Russian: what changed and how to check it. Wait for the Tests check; if it is red, read the failed step's log and fix it. Before any later push, check that the pull request is still open: commits pushed after a merge never reach `main`; if it was merged, move the new commits onto the fresh default branch and open a new pull request.
@@ -103,7 +103,7 @@ Run from the repository root (`godot` = the Godot 4.7.2 binary):
 - UI smoke test: `godot --headless --path game --script res://tests/ui_smoke_test.gd`
 - Both tests with short output, the usual check in a session: `godot --headless --path game --script res://tests/test_runner.gd 2>&1 | grep -E 'FAIL|SCRIPT ERROR|tests,'; godot --headless --path game --script res://tests/ui_smoke_test.gd 2>&1 | grep -E 'FAIL|SCRIPT ERROR|failed'`. Green is `N tests, 0 failed` and `UI smoke test: 0 failed`.
 - Web export: the preset and the command appear in task 2.0; write them here then.
-- Play: open `game/project.godot` in the Godot editor and press F5. On Windows `run_tests.bat` runs both tests.
+- Play: open `game/project.godot` in the Godot editor and press F5. On Windows `run_tests.bat` imports the project and runs both tests; an agent runs `.\run_tests.bat nopause`, because `pause` would wait for a key.
 
 Both test commands exit with code 0 on success. A script error fails the test it happens in; `push_error` only prints.
 

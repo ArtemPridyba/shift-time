@@ -16,12 +16,17 @@ if /i not "%GODOT%"=="godot" if not exist "%GODOT%" (
     exit /b 1
 )
 
-rem 4. Rule tests: only failures and the total. Green is "N tests, 0 failed"
+rem 4. Import first: after a fresh clone or a new class_name the tests fail without it
+echo === Import ===
+"%GODOT%" --headless --path "%~dp0game" --import >nul 2>&1
+
+rem 5. Rule tests: only failures and the total. Green is "N tests, 0 failed"
 echo === Rule tests ===
 "%GODOT%" --headless --path "%~dp0game" --script res://tests/test_runner.gd 2>&1 | findstr /C:"FAIL" /C:"SCRIPT ERROR" /C:"tests,"
 
-rem 5. UI smoke test. Green is "UI smoke test: 0 failed"
+rem 6. UI smoke test. Green is "UI smoke test: 0 failed"
 echo === UI smoke test ===
 "%GODOT%" --headless --path "%~dp0game" --script res://tests/ui_smoke_test.gd 2>&1 | findstr /C:"FAIL" /C:"SCRIPT ERROR" /C:"failed"
 
-pause
+rem 7. An agent runs "run_tests.bat nopause": pause would wait for a key forever
+if /i not "%~1"=="nopause" pause
