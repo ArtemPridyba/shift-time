@@ -102,7 +102,15 @@ func player_interact(player_pos: Vector2) -> void:
 	var changes: Array = interactor.call("get_interaction_change", objects)
 	for change: Variant in changes:
 		var ch := change as Dictionary
-		player_action(str(ch.get("id", "")), ch.get("state", {}) as Dictionary)
+		var id := str(ch.get("id", ""))
+		var state := (ch.get("state", {}) as Dictionary).duplicate(true)
+		for obj: Variant in objects:
+			if obj is Object and (obj as Object).has_method("capture_state") and str((obj as Object).get("object_id")) == id:
+				var full_state: Dictionary = ((obj as Object).call("capture_state") as Dictionary).duplicate(true)
+				full_state.merge(state, true)
+				state = full_state
+				break
+		player_action(id, state)
 
 
 ## Back to the room as it was loaded, with a fresh history.

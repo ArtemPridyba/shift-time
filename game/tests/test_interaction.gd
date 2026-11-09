@@ -106,7 +106,7 @@ func test_button_press_produces_self_change_without_target() -> void:
 
 func test_lever_initial_state() -> void:
 	var lv := Lever.new()
-	var state := lv.capture_state()
+	var state: Dictionary = lv.capture_state()
 	check(state.has("on"), "lever state must have 'on'")
 	check(state["on"] == false, "lever must start off")
 	lv.free()
@@ -115,9 +115,11 @@ func test_lever_initial_state() -> void:
 func test_lever_restore_state_round_trips() -> void:
 	var lv := Lever.new()
 	lv.restore_state({"on": true})
-	check(lv.capture_state()["on"] == true, "round-trip on=true")
+	var state_on: Dictionary = lv.capture_state()
+	check(state_on["on"] == true, "round-trip on=true")
 	lv.restore_state({"on": false})
-	check(lv.capture_state()["on"] == false, "round-trip on=false")
+	var state_off: Dictionary = lv.capture_state()
+	check(state_off["on"] == false, "round-trip on=false")
 	lv.free()
 
 
@@ -125,7 +127,7 @@ func test_lever_toggle_produces_on_change() -> void:
 	var lv := Lever.new()
 	lv.object_id = "lv1"
 	lv.target_id = ""
-	var changes := lv.get_interaction_change([])
+	var changes: Array = lv.get_interaction_change([])
 	check(changes.size() == 1, "without target one change, got %d" % changes.size())
 	check(changes[0]["state"]["on"] == true, "first press must set on=true")
 	lv.free()
@@ -136,10 +138,10 @@ func test_lever_toggle_twice_returns_off() -> void:
 	lv.object_id = "lv1"
 	lv.target_id = ""
 	# First press: should return on=true (but we don't apply it here; we simulate).
-	var c1 := lv.get_interaction_change([])
+	var c1: Array = lv.get_interaction_change([])
 	# Apply the state to the lever.
 	lv.restore_state(c1[0]["state"])
-	var c2 := lv.get_interaction_change([])
+	var c2: Array = lv.get_interaction_change([])
 	check(c2[0]["state"]["on"] == false, "second press must set on=false")
 	lv.free()
 
@@ -235,15 +237,18 @@ func test_button_press_while_rewinding_records_state_and_cuts_future() -> void:
 	# Simulate forward 30 ticks to have some history.
 	for i in 30:
 		world.tick(FWD, objects, Rect2())
-	check(door.open > 0, "door must have opened a bit after 30 forward ticks")
+	check(world.timeline.head() == 30, "timeline must have 30 forward ticks")
 
 	# Rewind 15 ticks.
 	for i in 15:
 		world.tick(BACK, objects, Rect2())
+	check(world.timeline.cursor() == 15, "cursor must be at tick 15 after rewind")
 
 	# Press button while cursor is left of the head.
 	_press_button(world, door, btn)
 
+	check(world.timeline.at_head(), "branching must cut future so cursor is at head")
+	check(world.timeline.head() == 15, "timeline head must be 15 after branch")
 	check(btn.pressed, "button must be pressed after interaction")
 	check(door.powered, "door must be powered after interaction")
 
@@ -274,8 +279,8 @@ func test_button_press_state_in_frame_has_both_button_and_door() -> void:
 
 	# Advance one tick: the new frame should contain pressed=true and powered=true.
 	world.tick(FWD, objects, Rect2())
-	var btn_state := btn.capture_state()
-	var door_state := door.capture_state()
+	var btn_state: Dictionary = btn.capture_state()
+	var door_state: Dictionary = door.capture_state()
 	check(btn_state["pressed"] == true, "frame after interaction must have btn.pressed=true")
 	check(door_state["powered"] == true, "frame after interaction must have door.powered=true")
 
@@ -287,30 +292,32 @@ func test_lever_toggle_twice_powered_returns_false() -> void:
 	lv.target_id = "door1"
 
 	# First press: on=true, door powered=true.
-	var c1 := lv.get_interaction_change([door])
+	var c1: Array = lv.get_interaction_change([door])
 	# c1 should have two entries.
 	check(c1.size() == 2, "first press must produce 2 changes (lever + door); got %d" % c1.size())
-	var door_change_1: Variant = null
-	for item in c1:
-		if item["id"] == "door1":
-			door_change_1 = item
-	check(door_change_1 != null, "first press must include a change for door1")
-	if door_change_1 != null:
-		check((door_change_1 as Dictionary)["state"]["powered"] == true,
+	var door_change_1: Dictionary = {}
+	for item: Variant in c1:
+		var d := item as Dictionary
+		if str(d.get("id", "")) == "door1":
+			door_change_1 = d
+	check(not door_change_1.is_empty(), "first press must include a change for door1")
+	if not door_change_1.is_empty():
+		check(bool((door_change_1.get("state", {}) as Dictionary).get("powered", false)) == true,
 			"first press must set powered=true on door")
 
 	# Apply the lever state.
 	lv.restore_state({"on": true})
 
 	# Second press: on=false, door powered=false.
-	var c2 := lv.get_interaction_change([door])
-	var door_change_2: Variant = null
-	for item in c2:
-		if item["id"] == "door1":
-			door_change_2 = item
-	check(door_change_2 != null, "second press must include a change for door1")
-	if door_change_2 != null:
-		check((door_change_2 as Dictionary)["state"]["powered"] == false,
+	var c2: Array = lv.get_interaction_change([door])
+	var door_change_2: Dictionary = {}
+	for item: Variant in c2:
+		var d := item as Dictionary
+		if str(d.get("id", "")) == "door1":
+			door_change_2 = d
+	check(not door_change_2.is_empty(), "second press must include a change for door1")
+	if not door_change_2.is_empty():
+		check(bool((door_change_2.get("state", {}) as Dictionary).get("powered", false)) == false,
 			"second press must set powered=false on door")
 	lv.free()
 

@@ -75,9 +75,9 @@ func get_interaction_change(room_objects: Array) -> Array:
 
 
 func _find_state(id: String, objects: Array) -> Dictionary:
-	for obj in objects:
-		if obj.has_method("capture_state") and obj.get("object_id") == id:
-			return obj.capture_state()
+	for obj: Variant in objects:
+		if obj is Object and (obj as Object).has_method("capture_state") and str((obj as Object).get("object_id")) == id:
+			return ((obj as Object).call("capture_state") as Dictionary).duplicate(true)
 	return {}
 
 
