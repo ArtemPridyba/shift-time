@@ -15,5 +15,13 @@
   "lever": {
     "interact_radius_px": 80
   },
+  "lamp": {
+    "break_seconds": 8,
+    "light_radius_px": 280
+  },
+  "darkness": {
+    "ambient": 0.02,
+    "player_outline_alpha": 0.3
+  },
   "carry_margin_px": 8
 }

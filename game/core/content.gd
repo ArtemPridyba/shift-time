@@ -21,6 +21,8 @@ const DOOR_KEYS: Array[String] = ["open_seconds", "hold_open_seconds", "close_se
 const PLATFORM_KEYS: Array[String] = ["speed", "pause_seconds"]
 const BUTTON_KEYS: Array[String] = ["interact_radius_px"]
 const LEVER_KEYS: Array[String] = ["interact_radius_px"]
+const LAMP_KEYS: Array[String] = ["break_seconds", "light_radius_px"]
+const DARKNESS_KEYS: Array[String] = ["ambient", "player_outline_alpha"]
 ## Every window in which the player must act is at least this long (design rules).
 const MIN_WINDOW_SECONDS := 3.0
 
@@ -182,7 +184,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 		errors.append("objects.json: 'platform.speed' moves more than max_state_step per tick")
 	if step >= float(data["carry_margin_px"]):
 		errors.append("objects.json: 'platform.speed' per tick must stay below 'carry_margin_px', or a rider reads as crushed")
-	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS]]:
+	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["lamp", LAMP_KEYS]]:
 		var isec := interact_section as Array
 		var isec_name: String = isec[0]
 		var ientry: Variant = data.get(isec_name)
@@ -192,6 +194,16 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 		for key: Variant in isec[1]:
 			if not ientry.has(key) or not _is_number(ientry[key]) or float(ientry[key]) <= 0.0:
 				errors.append("objects.json: '%s.%s' must be a number above 0" % [isec_name, key])
+	if errors.is_empty():
+		if float(data["lamp"]["break_seconds"]) < MIN_WINDOW_SECONDS:
+			errors.append("objects.json: 'lamp.break_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
+		var dark: Variant = data.get("darkness")
+		if not dark is Dictionary:
+			errors.append("objects.json: missing object 'darkness'")
+		else:
+			for key: Variant in DARKNESS_KEYS:
+				if not dark.has(key) or not _is_number(dark[key]) or float(dark[key]) < 0.0 or float(dark[key]) > 1.0:
+					errors.append("objects.json: 'darkness.%s' must be a number from 0 to 1" % key)
 	return errors
 
 
