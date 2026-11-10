@@ -13,6 +13,7 @@ const SUITES: Array[String] = [
 	"res://tests/test_interaction.gd",
 	"res://tests/test_interaction_room.gd",
 	"res://tests/test_level_loader.gd",
+	"res://tests/test_lamp.gd",
 ]
 
 var _errors := ScriptErrors.new()
