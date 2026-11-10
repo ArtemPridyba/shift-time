@@ -20,6 +20,8 @@
     "fall_seconds": 1.2,
     "shatter_seconds": 0.5,
     "fall_distance_px": 356,
+    "flash_seconds": 0.3,
+    "flash_radius_px": 380,
     "light_radius_px": 560
   },
   "darkness": {

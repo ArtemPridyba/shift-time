@@ -21,7 +21,7 @@ const DOOR_KEYS: Array[String] = ["open_seconds", "hold_open_seconds", "close_se
 const PLATFORM_KEYS: Array[String] = ["speed", "pause_seconds"]
 const BUTTON_KEYS: Array[String] = ["interact_radius_px"]
 const LEVER_KEYS: Array[String] = ["interact_radius_px"]
-const LAMP_KEYS: Array[String] = ["break_seconds", "fall_seconds", "shatter_seconds", "fall_distance_px", "light_radius_px"]
+const LAMP_KEYS: Array[String] = ["break_seconds", "fall_seconds", "shatter_seconds", "fall_distance_px", "flash_seconds", "flash_radius_px", "light_radius_px"]
 const DARKNESS_KEYS: Array[String] = ["ambient", "player_outline_alpha"]
 ## Every window in which the player must act is at least this long (design rules).
 const MIN_WINDOW_SECONDS := 3.0

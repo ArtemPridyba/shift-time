@@ -53,6 +53,27 @@ func test_lamp_hangs_then_falls_dimming_and_shatters() -> void:
 	lamp.free()
 
 
+func test_impact_flashes_the_floor_then_fades() -> void:
+	var lamp := _lamp(1.0)
+	var objects := [lamp]
+	var world := TimeWorld.new(Timeline.new(600))
+	var fall_ticks := int(round(float(Content.objects()["lamp"]["fall_seconds"]) * 60.0))
+	var flash_ticks := int(round(float(Content.objects()["lamp"]["flash_seconds"]) * 60.0))
+	_run(world, objects, FWD, 60 + fall_ticks - 1)
+	check(lamp.flash == 0 and lamp.light > 0, "before the impact there must be no flash")
+	_run(world, objects, FWD, 5)
+	check(lamp.flash > 0 and lamp.light == 0, "at the impact the flash must light up while the lamp's own light is out")
+	var source := lamp.light_source()
+	check(not source.is_empty(), "the impact flash must give light")
+	var floor_y := lamp.position.y + Lamp.FLOOR_OFFSET.y
+	check(not source.is_empty() and is_equal_approx((source["position"] as Vector2).y, floor_y), "the flash must be on the floor where the lamp landed")
+	_run(world, objects, FWD, flash_ticks + 5)
+	check(lamp.flash == 0 and lamp.light_source().is_empty(), "the flash must be over and the room dark after it fades")
+	_run(world, objects, BACK, 200)
+	check(lamp.flash == 0 and lamp.light == Lamp.FULL, "under Shift the lamp must be back up with no flash")
+	lamp.free()
+
+
 func test_lamp_falls_smoothly_without_big_steps() -> void:
 	var lamp := _lamp(1.0)
 	var objects := [lamp]
@@ -95,7 +116,7 @@ func test_shift_flies_the_lamp_back_and_release_drops_it_again() -> void:
 func test_lamp_state_is_simple_and_round_trips() -> void:
 	var lamp := _lamp(1.0)
 	var state := lamp.capture_state()
-	for key in ["lit", "broken", "phase", "drop", "light", "shatter"]:
+	for key in ["lit", "broken", "phase", "drop", "light", "shatter", "flash"]:
 		check(state.has(key), "lamp state must have '%s'" % key)
 	var recorder := TemporalRecorder.new()
 	check(recorder.validate([lamp]).is_empty(), "the lamp must satisfy the temporal contract")
@@ -161,6 +182,9 @@ func test_data_check_reports_bad_lamp_and_darkness_numbers() -> void:
 	var short_lamp: Dictionary = Content.objects().duplicate(true)
 	short_lamp["lamp"]["break_seconds"] = 1
 	check(not Content.validate_objects(short_lamp, time_data).is_empty(), "a lamp that breaks within 3 s must be reported")
+	var no_flash: Dictionary = Content.objects().duplicate(true)
+	no_flash["lamp"]["flash_seconds"] = 0
+	check(not Content.validate_objects(no_flash, time_data).is_empty(), "a lamp with no flash time must be reported")
 	var quick_fall: Dictionary = Content.objects().duplicate(true)
 	quick_fall["lamp"]["fall_seconds"] = 0.1
 	check(not Content.validate_objects(quick_fall, time_data).is_empty(), "a lamp falling faster than max_state_step must be reported")
