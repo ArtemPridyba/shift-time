@@ -109,6 +109,7 @@ game/
 | `InteractionSystem` | `objects/player.gd` и точки взаимодействия | игрок жмёт `interact` рядом с точкой; точка вызывает `TimeWorld.player_action(object_id, new_state)`, тот делает `branch()` при необходимости |
 | `Player` (`CharacterBody2D`) | `objects/player.tscn` | управление не зависит от направления времени; ездит на платформах |
 | `LevelController` | `levels/` | загрузка, сброс по `reset_level`, переход к следующему уровню, выход |
+| `LevelLoader` (автозагрузка) | `autoload/level_loader.gd` | `load_level(id)` по `levels.json`, `go_to_list()`, `current_id`; действие `back_to_list` (Backspace) возвращает из уровня в список `ui/level_select.tscn` — главную сцену; новая сцена стартует в прямом времени |
 | живой объект (обратные предметы) | `objects/*` | группа `live`, не `temporal`: нет `capture_state`; в каждый тик либо действует на игрока, либо зовёт `TimeWorld.live_action(...)` (раздел 2.5) |
 
 Временные объекты узнаются по группе `temporal` и по набору методов (утиная типизация), потому что платформа и дверь наследуют `AnimatableBody2D`, а кнопка — `Area2D`, и общий базовый класс невозможен. Тест проверяет, что каждый узел группы имеет все нужные методы.

@@ -112,6 +112,9 @@ static func validate_levels(data: Variant, history_seconds: float) -> PackedStri
 	if not data is Array:
 		errors.append("levels.json: expected a list")
 		return errors
+	if data.is_empty():
+		errors.append("levels.json: the list must hold at least one level")
+		return errors
 	var seen := {}
 	for i in data.size():
 		var entry: Variant = data[i]
