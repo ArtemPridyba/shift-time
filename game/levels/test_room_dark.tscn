@@ -8,15 +8,15 @@
 [node name="TestRoomDark" instance=ExtResource("1_room")]
 
 [node name="Lamp" parent="." index="7" instance=ExtResource("2_lamp")]
-position = Vector2(480, 780)
+position = Vector2(1280, 640)
 object_id = "lamp"
 
 [node name="GlowNear" type="Node2D" parent="." index="8"]
-position = Vector2(400, 990)
+position = Vector2(1120, 990)
 script = ExtResource("3_glow")
 
 [node name="GlowFar" type="Node2D" parent="." index="9"]
-position = Vector2(1300, 990)
+position = Vector2(300, 990)
 script = ExtResource("3_glow")
 
 [node name="Darkness" type="CanvasLayer" parent="." index="10"]
