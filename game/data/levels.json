@@ -10,5 +10,11 @@
 		"scene": "res://levels/test_room_buttons.tscn",
 		"prelude_seconds": 0,
 		"title": "Test room: buttons and lever"
+	},
+	{
+		"id": "test_room_dark",
+		"scene": "res://levels/test_room_dark.tscn",
+		"prelude_seconds": 0,
+		"title": "Test room: dark and lamp"
 	}
 ]
