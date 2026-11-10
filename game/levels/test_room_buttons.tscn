@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://levels/test_room.tscn" id="1_room"]
+[ext_resource type="PackedScene" path="res://objects/push_button.tscn" id="2_pbtn"]
+[ext_resource type="PackedScene" path="res://objects/lever.tscn" id="3_lever"]
+
+[node name="TestRoomButtons" instance=ExtResource("1_room")]
+
+[node name="Door" parent="." index="3"]
+linked_id = "button"
+
+[node name="PushButton" parent="." index="7" instance=ExtResource("2_pbtn")]
+position = Vector2(1480, 820)
+object_id = "button"
+target_id = "door"
+
+[node name="Lever" parent="." index="8" instance=ExtResource("3_lever")]
+position = Vector2(1620, 832)
+object_id = "lever"
+target_id = "door"
