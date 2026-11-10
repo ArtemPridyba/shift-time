@@ -68,6 +68,9 @@ func test_data_check_catches_broken_data() -> void:
 	var long_prelude := level.duplicate()
 	long_prelude["prelude_seconds"] = 21
 	check(not Content.validate_levels([long_prelude], 20.0).is_empty(), "prelude above history length must be reported")
+	check(not Content.validate_levels([], 20.0).is_empty(), "an empty level list must be reported")
+	check(not Content.validate_levels({}, 20.0).is_empty(), "levels.json that is not a list must be reported")
+	check(not Content.levels().is_empty(), "levels.json must list the test rooms")
 
 
 func test_physics_rate_matches_data() -> void:

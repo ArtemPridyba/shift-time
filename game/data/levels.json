@@ -1,1 +1,14 @@
-[]
+[
+	{
+		"id": "test_room",
+		"scene": "res://levels/test_room.tscn",
+		"prelude_seconds": 0,
+		"title": "Test room"
+	},
+	{
+		"id": "test_room_buttons",
+		"scene": "res://levels/test_room_buttons.tscn",
+		"prelude_seconds": 0,
+		"title": "Test room: buttons and lever"
+	}
+]

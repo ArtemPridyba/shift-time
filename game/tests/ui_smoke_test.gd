@@ -1,6 +1,7 @@
 extends SceneTree
-## UI smoke test: the game starts from its main scene, runs for a moment and
-## shows a camera on the player without script errors.
+## UI smoke test: the game starts from its main scene, the level list, which
+## builds one button per entry of levels.json; the first level then runs for a
+## moment and shows a camera on the player without script errors.
 ##
 ##   godot --headless --path game --script res://tests/ui_smoke_test.gd
 
@@ -29,18 +30,30 @@ func _run() -> void:
 	if ResourceLoader.exists(main_path):
 		var main: Node = (load(main_path) as PackedScene).instantiate()
 		root.add_child(main)
+		for i in 5:
+			await process_frame
+		_check_level_list(main)
+		main.queue_free()
+		await process_frame
+
+	var levels := Content.levels()
+	_check(not levels.is_empty(), "levels.json lists no levels")
+	if not levels.is_empty():
+		var level_path := str((levels[0] as Dictionary)["scene"])
+		var level: Node = (load(level_path) as PackedScene).instantiate()
+		root.add_child(level)
 		for i in 20:
 			await process_frame
 		for i in 10:
 			await physics_frame
 		var camera := root.get_viewport().get_camera_2d()
-		_check(camera != null, "no active Camera2D in the main scene")
-		var player := main.get_node_or_null("Player") as Player
-		_check(player != null, "no Player in the main scene")
+		_check(camera != null, "no active Camera2D in the first level")
+		var player := level.get_node_or_null("Player") as Player
+		_check(player != null, "no Player in the first level")
 		if camera != null and player != null:
 			_check(camera.get_parent() == player, "the camera must follow the player")
-		await _check_time_label(main)
-		main.queue_free()
+		await _check_time_label(level)
+		level.queue_free()
 		await process_frame
 
 	for message in _errors.messages:
@@ -48,6 +61,26 @@ func _run() -> void:
 		print("FAIL SCRIPT ERROR ", message)
 	print("UI smoke test: %d failed" % _failed)
 	quit(1 if _failed > 0 else 0)
+
+
+## The list shows one focusable button per level, titled from levels.json.
+func _check_level_list(main: Node) -> void:
+	var list := main.get_node_or_null("Center/Box/List")
+	_check(list != null, "no level list in the main scene")
+	if list == null:
+		return
+	var levels := Content.levels()
+	_check(list.get_child_count() == levels.size(), "the list has %d buttons, levels.json has %d levels" % [list.get_child_count(), levels.size()])
+	for i in mini(list.get_child_count(), levels.size()):
+		var button := list.get_child(i) as Button
+		_check(button != null, "list item %d must be a Button" % i)
+		if button == null:
+			continue
+		_check(button.text == str((levels[i] as Dictionary)["title"]), "button %d must show the title '%s', got '%s'" % [i, (levels[i] as Dictionary)["title"], button.text])
+		_check(str(button.get_meta("level_id", "")) == str((levels[i] as Dictionary)["id"]), "button %d must carry the level id" % i)
+		_check(button.focus_mode != Control.FOCUS_NONE, "button %d must be focusable for the keyboard" % i)
+	if list.get_child_count() > 0:
+		_check((list.get_child(0) as Control).has_focus(), "the first button must have the focus at the start")
 
 
 ## The temporary direction label switches with Shift, and the arrows differ as
