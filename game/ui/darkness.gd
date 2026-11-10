@@ -23,6 +23,7 @@ func _ready() -> void:
 	_outline_alpha = float(data.get("player_outline_alpha", 0.3))
 	_material = ShaderMaterial.new()
 	_material.shader = load("res://ui/darkness.gdshader") as Shader
+	_material.set_shader_parameter("falloff_power", LightField.FALLOFF_POWER)
 	_material.set_shader_parameter("ambient", float(data.get("ambient", 0.02)))
 	_mask = ColorRect.new()
 	_mask.material = _material
@@ -39,12 +40,12 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	var to_screen := get_viewport().get_canvas_transform()
 	var scale := to_screen.get_scale().x
-	var lights := PackedVector3Array()
+	var lights := PackedVector4Array()
 	for source: Dictionary in light_sources():
 		if lights.size() >= MAX_LIGHTS:
 			break
 		var screen := to_screen * (source["position"] as Vector2)
-		lights.append(Vector3(screen.x, screen.y, float(source["radius"]) * scale))
+		lights.append(Vector4(screen.x, screen.y, float(source["radius"]) * scale, float(source.get("intensity", 1.0))))
 	var count := lights.size()
 	lights.resize(MAX_LIGHTS)
 	_material.set_shader_parameter("mask_size", _mask.size)

@@ -21,7 +21,7 @@ const DOOR_KEYS: Array[String] = ["open_seconds", "hold_open_seconds", "close_se
 const PLATFORM_KEYS: Array[String] = ["speed", "pause_seconds"]
 const BUTTON_KEYS: Array[String] = ["interact_radius_px"]
 const LEVER_KEYS: Array[String] = ["interact_radius_px"]
-const LAMP_KEYS: Array[String] = ["break_seconds", "light_radius_px"]
+const LAMP_KEYS: Array[String] = ["break_seconds", "fall_seconds", "shatter_seconds", "fall_distance_px", "light_radius_px"]
 const DARKNESS_KEYS: Array[String] = ["ambient", "player_outline_alpha"]
 ## Every window in which the player must act is at least this long (design rules).
 const MIN_WINDOW_SECONDS := 3.0
@@ -197,6 +197,12 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	if errors.is_empty():
 		if float(data["lamp"]["break_seconds"]) < MIN_WINDOW_SECONDS:
 			errors.append("objects.json: 'lamp.break_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
+		var lamp: Dictionary = data["lamp"]
+		# The fall is quadratic: its last tick moves the lamp twice the average step.
+		if 2000.0 / (float(lamp["fall_seconds"]) * ticks) > max_step:
+			errors.append("objects.json: 'lamp.fall_seconds' is too short: the lamp would jump more than max_state_step per tick")
+		if 1000.0 / (float(lamp["shatter_seconds"]) * ticks) > max_step:
+			errors.append("objects.json: 'lamp.shatter_seconds' is too short: the shards would jump more than max_state_step per tick")
 		var dark: Variant = data.get("darkness")
 		if not dark is Dictionary:
 			errors.append("objects.json: missing object 'darkness'")

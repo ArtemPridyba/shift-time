@@ -17,7 +17,10 @@
   },
   "lamp": {
     "break_seconds": 8,
-    "light_radius_px": 280
+    "fall_seconds": 1.2,
+    "shatter_seconds": 0.5,
+    "fall_distance_px": 356,
+    "light_radius_px": 560
   },
   "darkness": {
     "ambient": 0.02,

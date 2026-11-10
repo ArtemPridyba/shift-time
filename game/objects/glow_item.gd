@@ -9,9 +9,14 @@ const BODY_COLOR := Color("#3a4048")
 const SIZE := 18.0
 
 
-## True while a lit lamp of this room reaches the item.
+## True while a lit lamp of this room lights the item well enough.
 func is_glowing() -> bool:
 	return LightField.is_lit(position, _sources())
+
+
+## How brightly the item is lit, 0..1.
+func brightness() -> float:
+	return LightField.brightness(position, _sources())
 
 
 func _process(_delta: float) -> void:
@@ -20,9 +25,11 @@ func _process(_delta: float) -> void:
 
 func _draw() -> void:
 	draw_circle(Vector2.ZERO, SIZE, BODY_COLOR)
-	if is_glowing():
-		draw_circle(Vector2.ZERO, SIZE * 0.6, GLOW_COLOR)
-		draw_arc(Vector2.ZERO, SIZE * 1.4, 0.0, TAU, 32, GLOW_COLOR, 2.0)
+	var sources := _sources()
+	if LightField.is_lit(position, sources):
+		var glow := Color(GLOW_COLOR, clampf(LightField.brightness(position, sources) * 1.4, 0.0, 1.0))
+		draw_circle(Vector2.ZERO, SIZE * 0.6, glow)
+		draw_arc(Vector2.ZERO, SIZE * 1.4, 0.0, TAU, 32, glow, 2.0)
 
 
 func _sources() -> Array:
