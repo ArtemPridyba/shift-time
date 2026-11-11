@@ -5,21 +5,22 @@ extends RefCounted
 ##
 ## The direction of time never reads from color alone: forward and rewind
 ## differ by the arrows (`>>` or `<<`), by the sweep of light along them, by
-## the flicker and by the way the motes fly (outwards or inwards).
+## the flicker and by the streaks that run left only in rewind.
 
 const FORWARD := 1
 const BACKWARD := -1
 const GLYPH_FORWARD := ">>"
 const GLYPH_REWIND := "<<"
-const GOLDEN_ANGLE := 2.399963
+## Spreads the lanes of the streaks evenly (the golden ratio).
+const LANE_STEP := 0.618034
 
 ## +1 while time runs forward, -1 while the world is rewound.
 var direction := FORWARD
 ## 0 in forward time, 1 in rewind; eases over `edges.fade_seconds`.
 ## The view scales it by `edges.strength`.
 var edge_amount := 0.0
-## Phase of the motes, in cycles: grows in forward time and shrinks in rewind,
-## so every mote flies the same path the other way.
+## Phase of the streaks, in cycles. It runs only in rewind and shrinks, so every
+## streak moves left; in forward time there are no streaks.
 var particle_phase := 0.0
 ## Phase of the sweep along the arrows and of the flicker, in cycles. They run
 ## only in rewind; forward time is a steady glow.
@@ -60,8 +61,8 @@ func glyph() -> String:
 
 
 func step(delta: float) -> void:
-	particle_phase += float(direction) * delta / _cycle_seconds
 	if direction == BACKWARD:
+		particle_phase -= delta / _cycle_seconds
 		sweep_phase += delta * _sweep_hz
 		flicker_phase += delta * _flicker_hz
 	edge_amount = move_toward(edge_amount, 1.0 if direction == BACKWARD else 0.0, delta / _fade_seconds)
@@ -83,17 +84,23 @@ func sweep_position() -> float:
 	return 1.0 - fposmod(sweep_phase, 1.0)
 
 
-## One mote: `progress` from 0 (at the plate) to 1 (far away), the direction of
-## its flight as an angle and its opacity. In forward time the motes drift out
-## and fade; in rewind the same motes come back and brighten.
-func mote(index: int) -> Dictionary:
+## True while the streaks are shown: only in rewind.
+func streaks_active() -> bool:
+	return direction == BACKWARD
+
+
+## One streak: `progress` from 0 (far left) to 1 (far right) across the device,
+## the height of its lane from 0 (next to the plate) to 1 (the outermost) and its
+## opacity, which is zero at both ends. The phase shrinks in rewind, so the
+## progress falls and the streak runs to the left.
+func streak(index: int) -> Dictionary:
 	var progress := fposmod(particle_phase + float(index) / float(maxi(_count, 1)), 1.0)
 	return {
 		"progress": progress,
-		"angle": float(index) * GOLDEN_ANGLE,
-		"alpha": 1.0 - progress,
+		"lane": fposmod(float(index) * LANE_STEP, 1.0),
+		"alpha": sin(PI * progress),
 	}
 
 
-func mote_count() -> int:
+func streak_count() -> int:
 	return _count

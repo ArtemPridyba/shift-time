@@ -3,9 +3,9 @@ extends Node2D
 ## The wrist device with the time-direction indicator (task 1.5). A plate pinned
 ## to the hero with two pins; on it two arrows, `>>` in forward time and `<<`
 ## while Shift is held. In rewind the light sweeps along the arrows from right
-## to left, the device flickers, the motes around it fly back in, and the edges
-## of the screen darken with a light grain. The direction never reads from
-## color alone.
+## to left, the device flickers, thin streaks run left above and below it, and
+## the edges of the screen darken. Forward time has no streaks. The direction
+## never reads from color alone.
 ##
 ## It is a child of the player, so the device goes where the hero goes. The
 ## state lives in `TimeIndicatorState`; this node only draws it. All colors and
@@ -16,7 +16,7 @@ const EDGE_LAYER := 60
 const GLOW_TEXTURE_SIZE := 128
 const PIN_RADIUS := 2.2
 const PIN_INSET := 4.0
-const MOTE_START_PX := 12.0
+const LANE_GAP_PX := 4.0
 
 var state: TimeIndicatorState
 var sound: TimeSound
@@ -29,7 +29,9 @@ var _offset := Vector2(22.0, -58.0)
 var _glyph_height := 10.0
 var _glow_alpha := 0.55
 var _spread := 36.0
-var _mote_size := 2.5
+var _streak_width := 1.5
+var _dash := 9.0
+var _lane := 14.0
 var _glow: Sprite2D
 var _edges: ColorRect
 var _edge_material: ShaderMaterial
@@ -72,7 +74,7 @@ func _draw() -> void:
 		draw_circle(pin, PIN_RADIUS, _pin_color)
 		draw_circle(pin, PIN_RADIUS * 0.4, _plate_color.darkened(0.5))
 	_draw_arrows()
-	_draw_motes()
+	_draw_streaks()
 
 
 func _on_direction_changed(direction: int) -> void:
@@ -105,15 +107,18 @@ func _draw_arrows() -> void:
 		draw_polyline(points, Color(_accent, alpha * glow), 2.5, true)
 
 
-## Small motes around the device: out and fading in forward time, back in and
-## brightening in rewind (the same paths, the other way).
-func _draw_motes() -> void:
-	for i in state.mote_count():
-		var mote := state.mote(i)
-		var progress := float(mote["progress"])
-		var direction := Vector2.from_angle(float(mote["angle"]))
-		var position_px := direction * lerpf(MOTE_START_PX, _spread, progress)
-		draw_circle(position_px, _mote_size * (1.0 - 0.5 * progress), Color(_accent, float(mote["alpha"]) * 0.9))
+## Thin horizontal streaks above and below the plate, only in rewind: they run
+## to the left and fade at both ends, like speed lines.
+func _draw_streaks() -> void:
+	if not state.streaks_active():
+		return
+	for i in state.streak_count():
+		var streak := state.streak(i)
+		var progress := float(streak["progress"])
+		var side := 1.0 if i % 2 == 0 else -1.0
+		var y := side * (_plate.y / 2.0 + LANE_GAP_PX + float(streak["lane"]) * _lane)
+		var x := lerpf(-_spread, _spread, progress)
+		draw_line(Vector2(x, y), Vector2(x + _dash, y), Color(_accent, float(streak["alpha"]) * 0.9), _streak_width)
 
 
 func _read_config(config: Dictionary) -> void:
@@ -127,8 +132,10 @@ func _read_config(config: Dictionary) -> void:
 	_glyph_height = float(device.get("glyph_height_px", 10.0))
 	_glow_alpha = float(device.get("glow_alpha", 0.55))
 	var particles := config.get("particles", {}) as Dictionary
-	_spread = float(particles.get("spread_px", 36.0))
-	_mote_size = float(particles.get("size_px", 2.5))
+	_spread = float(particles.get("spread_px", 44.0))
+	_streak_width = float(particles.get("size_px", 1.5))
+	_dash = float(particles.get("dash_px", 9.0))
+	_lane = float(particles.get("lane_px", 14.0))
 	_edge_strength = float((config.get("edges", {}) as Dictionary).get("strength", 0.55))
 
 

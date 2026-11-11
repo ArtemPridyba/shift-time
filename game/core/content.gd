@@ -221,7 +221,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 
 
 ## The wrist device and the time indicator (task 1.5): colors, sizes, flicker,
-## particles, darkened edges and the (still empty) sound paths.
+## streaks, darkened edges and the (still empty) sound paths.
 static func validate_time_hud(data: Variant) -> PackedStringArray:
 	var errors := PackedStringArray()
 	if not data is Dictionary:
@@ -251,6 +251,8 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 	_check_range(errors, particles, "particles", "cycle_seconds", 0.0, 60.0, true)
 	_check_range(errors, particles, "particles", "spread_px", 0.0, 1000.0, true)
 	_check_range(errors, particles, "particles", "size_px", 0.0, 100.0, true)
+	_check_range(errors, particles, "particles", "dash_px", 0.0, 200.0, true)
+	_check_range(errors, particles, "particles", "lane_px", 0.0, 200.0, true)
 	var edges: Dictionary = data["edges"]
 	_check_range(errors, edges, "edges", "strength", 0.0, 1.0)
 	_check_range(errors, edges, "edges", "width", 0.0, 0.5, true)

@@ -44,6 +44,9 @@ func test_data_check_reports_broken_time_hud_data() -> void:
 	var deep_flicker: Dictionary = good.duplicate(true)
 	deep_flicker["rewind"]["flicker_depth"] = 2.0
 	check(not Content.validate_time_hud(deep_flicker).is_empty(), "a flicker depth above 1 must be reported")
+	var no_dash: Dictionary = good.duplicate(true)
+	no_dash["particles"]["dash_px"] = 0
+	check(not Content.validate_time_hud(no_dash).is_empty(), "a zero streak length must be reported")
 	var no_fade: Dictionary = good.duplicate(true)
 	no_fade["edges"]["fade_seconds"] = 0
 	check(not Content.validate_time_hud(no_fade).is_empty(), "a zero fade time must be reported")
@@ -92,23 +95,36 @@ func test_sweep_runs_from_right_to_left_in_rewind() -> void:
 	check(after < before, "the sweep must move leftwards in rewind: %f then %f" % [before, after])
 
 
-func test_motes_fly_out_in_forward_time_and_back_in_rewind() -> void:
+func test_streaks_run_left_only_in_rewind() -> void:
 	var state := TimeIndicatorState.new(Content.time_hud())
-	check(state.mote_count() > 0, "the device must have motes")
-	# A mote from the middle of its path, so no step wraps it around the ends.
-	var index := int(float(state.mote_count()) / 2.0)
-	var start := float(state.mote(index)["progress"])
-	state.step(STEP)
-	var forward := float(state.mote(index)["progress"])
-	check(forward > start, "a mote must move away from the plate in forward time: %f then %f" % [start, forward])
+	check(state.streak_count() > 0, "the device must have streaks")
+	check(not state.streaks_active(), "there are no streaks in forward time")
+	var phase := state.particle_phase
+	for i in 30:
+		state.step(STEP)
+	check(state.particle_phase == phase, "the streaks must not move in forward time")
 	state.set_direction(-1)
+	check(state.streaks_active(), "the streaks must show in rewind")
+	# A streak from the middle of its path, so no step wraps it around the ends.
+	var index := int(float(state.streak_count()) / 2.0)
+	var before := float(state.streak(index)["progress"])
 	state.step(STEP)
-	state.step(STEP)
-	var backward := float(state.mote(index)["progress"])
-	check(backward < forward, "the same mote must come back in rewind: %f then %f" % [forward, backward])
-	var alpha_before := float(state.mote(index)["alpha"])
-	state.step(STEP)
-	check(float(state.mote(index)["alpha"]) > alpha_before, "a mote that comes back must brighten")
+	var after := float(state.streak(index)["progress"])
+	check(after < before, "a streak must run left in rewind: %f then %f" % [before, after])
+	var lane := float(state.streak(index)["lane"])
+	check(lane >= 0.0 and lane < 1.0, "a lane must stay between 0 and 1, got %f" % lane)
+
+
+func test_streaks_fade_at_both_ends() -> void:
+	var state := TimeIndicatorState.new(Content.time_hud())
+	state.set_direction(-1)
+	for i in state.streak_count():
+		var streak := state.streak(i)
+		var progress := float(streak["progress"])
+		var alpha := float(streak["alpha"])
+		check(alpha >= 0.0 and alpha <= 1.0, "a streak's opacity must stay between 0 and 1, got %f" % alpha)
+		if progress < 0.05 or progress > 0.95:
+			check(alpha < 0.2, "a streak near an end must be faint, got %f at %f" % [alpha, progress])
 
 
 func test_edges_darken_in_rewind_and_clear_after() -> void:
