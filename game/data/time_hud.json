@@ -1,0 +1,43 @@
+{
+	"colors": {
+		"accent": "#7FE8FF",
+		"plate": "#3A3D42",
+		"pin": "#9AA0A8"
+	},
+	"device": {
+		"plate_width_px": 34,
+		"plate_height_px": 20,
+		"offset_x_px": 22,
+		"offset_y_px": -58,
+		"glyph_height_px": 10,
+		"glow_radius_px": 32,
+		"glow_alpha": 0.35
+	},
+	"rewind": {
+		"flicker_hz": 9.0,
+		"flicker_depth": 0.45,
+		"sweep_hz": 1.6
+	},
+	"particles": {
+		"count": 9,
+		"cycle_seconds": 0.9,
+		"spread_px": 44,
+		"size_px": 1.5,
+		"dash_px": 9,
+		"lane_px": 14
+	},
+	"edges": {
+		"glow_strength": 0.18,
+		"width": 0.09,
+		"fade_seconds": 0.25,
+		"streak_strength": 0.85,
+		"streak_density": 0.4,
+		"streak_length": 0.12,
+		"streak_rows": 54,
+		"streak_thickness": 0.07
+	},
+	"audio": {
+		"forward": "",
+		"rewind": ""
+	}
+}

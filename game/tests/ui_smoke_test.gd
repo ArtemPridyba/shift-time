@@ -52,7 +52,7 @@ func _run() -> void:
 		_check(player != null, "no Player in the first level")
 		if camera != null and player != null:
 			_check(camera.get_parent() == player, "the camera must follow the player")
-		await _check_time_label(level)
+		await _check_time_indicator(level)
 		level.queue_free()
 		await process_frame
 
@@ -83,24 +83,24 @@ func _check_level_list(main: Node) -> void:
 		_check((list.get_child(0) as Control).has_focus(), "the first button must have the focus at the start")
 
 
-## The temporary direction label switches with Shift, and the arrows differ as
-## well as the words (the direction never reads from color alone).
-func _check_time_label(main: Node) -> void:
-	var layer := main.get_node_or_null("TimeDebugLabel")
-	_check(layer != null and layer.get_child_count() > 0, "no time-direction label in the main scene")
-	if layer == null or layer.get_child_count() == 0:
+## The wrist device switches with Shift, and the arrows differ as well as the
+## colors (the direction never reads from color alone).
+func _check_time_indicator(main: Node) -> void:
+	var hud := main.get_node_or_null("Player/TimeHud") as TimeHud
+	_check(hud != null, "no time indicator (TimeHud) on the player in the first level")
+	if hud == null:
 		return
-	var label := layer.get_child(0) as Label
-	_check(label != null, "the time-direction label must be a Label")
-	if label == null:
-		return
-	_check(">>" in label.text and "FORWARD" in label.text, "the label must show forward time at the start, got '%s'" % label.text)
+	_check(main.get_node_or_null("TimeDebugLabel") == null, "the temporary time label must be gone")
+	_check(hud.state.glyph() == ">>", "the device must show forward arrows at the start, got '%s'" % hud.state.glyph())
 	Input.action_press("rewind")
 	for i in 3:
 		await physics_frame
-	_check("<<" in label.text and "REWIND" in label.text, "the label must show rewind while Shift is held, got '%s'" % label.text)
-	_check(not (">>" in label.text), "the rewind label must not keep the forward arrows")
+	_check(hud.state.glyph() == "<<", "the device must show rewind arrows while Shift is held, got '%s'" % hud.state.glyph())
+	_check(hud.state.is_rewinding(), "the indicator must switch to rewind with Shift")
+	for i in 30:
+		await process_frame
+	_check(hud.state.edge_amount > 0.0, "the screen edges must glow in rewind")
 	Input.action_release("rewind")
 	for i in 3:
 		await physics_frame
-	_check(">>" in label.text and "FORWARD" in label.text, "the label must return to forward time after the release, got '%s'" % label.text)
+	_check(hud.state.glyph() == ">>", "the device must return to forward arrows after the release, got '%s'" % hud.state.glyph())
