@@ -47,6 +47,9 @@ func test_data_check_reports_broken_time_hud_data() -> void:
 	var no_dash: Dictionary = good.duplicate(true)
 	no_dash["particles"]["dash_px"] = 0
 	check(not Content.validate_time_hud(no_dash).is_empty(), "a zero streak length must be reported")
+	var no_rows: Dictionary = good.duplicate(true)
+	no_rows["edges"].erase("streak_rows")
+	check(not Content.validate_time_hud(no_rows).is_empty(), "a missing edge streak field must be reported")
 	var no_fade: Dictionary = good.duplicate(true)
 	no_fade["edges"]["fade_seconds"] = 0
 	check(not Content.validate_time_hud(no_fade).is_empty(), "a zero fade time must be reported")
@@ -127,20 +130,20 @@ func test_streaks_fade_at_both_ends() -> void:
 			check(alpha < 0.2, "a streak near an end must be faint, got %f at %f" % [alpha, progress])
 
 
-func test_edges_darken_in_rewind_and_clear_after() -> void:
+func test_edge_glow_appears_in_rewind_and_clears_after() -> void:
 	var config := Content.time_hud()
 	var fade := float((config["edges"] as Dictionary)["fade_seconds"])
 	var state := TimeIndicatorState.new(config)
-	check(state.edge_amount == 0.0, "the edges must be clear at the start")
+	check(state.edge_amount == 0.0, "the edge glow must be off at the start")
 	state.set_direction(-1)
 	var ticks := int(ceil(fade / STEP)) + 2
 	for i in ticks:
 		state.step(STEP)
-	check(is_equal_approx(state.edge_amount, 1.0), "the edges must be fully dark after the fade, got %f" % state.edge_amount)
+	check(is_equal_approx(state.edge_amount, 1.0), "the edge glow must be full after the fade, got %f" % state.edge_amount)
 	state.set_direction(1)
 	for i in ticks:
 		state.step(STEP)
-	check(is_equal_approx(state.edge_amount, 0.0), "the edges must clear after the release, got %f" % state.edge_amount)
+	check(is_equal_approx(state.edge_amount, 0.0), "the edge glow must clear after the release, got %f" % state.edge_amount)
 
 
 # --- the grey block set -------------------------------------------------------
@@ -191,6 +194,11 @@ func test_hud_follows_time_manager_in_the_room() -> void:
 	await _ticks(3)
 	check(hud.state.glyph() == "<<", "the device must show '<<' while Shift is held, got '%s'" % hud.state.glyph())
 	check(hud.state.is_rewinding(), "the indicator must be in rewind while Shift is held")
+	var phase_before := float(hud.edge_parameter("phase"))
+	await _ticks(10)
+	var phase_after := float(hud.edge_parameter("phase"))
+	check(phase_after < phase_before, "the edge streaks must run left in rewind: phase %f then %f" % [phase_before, phase_after])
+	check(float(hud.edge_parameter("amount")) > 0.0, "the edge glow must show in rewind")
 	Input.action_release("rewind")
 	await _ticks(3)
 	check(hud.state.glyph() == ">>", "the device must return to '>>' after the release, got '%s'" % hud.state.glyph())

@@ -221,7 +221,8 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 
 
 ## The wrist device and the time indicator (task 1.5): colors, sizes, flicker,
-## streaks, darkened edges and the (still empty) sound paths.
+## streaks, the glow and streaks along the screen edges and the (still empty)
+## sound paths.
 static func validate_time_hud(data: Variant) -> PackedStringArray:
 	var errors := PackedStringArray()
 	if not data is Dictionary:
@@ -233,7 +234,7 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 	if not errors.is_empty():
 		return errors
 	var colors: Dictionary = data["colors"]
-	for key: String in ["accent", "plate", "pin", "edge"]:
+	for key: String in ["accent", "plate", "pin"]:
 		if not colors.get(key) is String or not Color.html_is_valid(colors[key]):
 			errors.append("time_hud.json: 'colors.%s' must be a color like \"#7FE8FF\"" % key)
 	var device: Dictionary = data["device"]
@@ -254,10 +255,14 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 	_check_range(errors, particles, "particles", "dash_px", 0.0, 200.0, true)
 	_check_range(errors, particles, "particles", "lane_px", 0.0, 200.0, true)
 	var edges: Dictionary = data["edges"]
-	_check_range(errors, edges, "edges", "strength", 0.0, 1.0)
+	_check_range(errors, edges, "edges", "glow_strength", 0.0, 1.0)
 	_check_range(errors, edges, "edges", "width", 0.0, 0.5, true)
-	_check_range(errors, edges, "edges", "grain", 0.0, 1.0)
 	_check_range(errors, edges, "edges", "fade_seconds", 0.0, 10.0, true)
+	_check_range(errors, edges, "edges", "streak_strength", 0.0, 1.0)
+	_check_range(errors, edges, "edges", "streak_density", 0.0, 1.0)
+	_check_range(errors, edges, "edges", "streak_length", 0.0, 1.0, true)
+	_check_range(errors, edges, "edges", "streak_rows", 1.0, 200.0)
+	_check_range(errors, edges, "edges", "streak_thickness", 0.0, 0.5, true)
 	var audio: Dictionary = data["audio"]
 	for key: String in ["forward", "rewind"]:
 		if not audio.get(key) is String:

@@ -2,8 +2,7 @@
 	"colors": {
 		"accent": "#7FE8FF",
 		"plate": "#3A3D42",
-		"pin": "#9AA0A8",
-		"edge": "#000000"
+		"pin": "#9AA0A8"
 	},
 	"device": {
 		"plate_width_px": 34,
@@ -28,10 +27,14 @@
 		"lane_px": 14
 	},
 	"edges": {
-		"strength": 0.3,
-		"width": 0.14,
-		"grain": 0.0,
-		"fade_seconds": 0.25
+		"glow_strength": 0.18,
+		"width": 0.09,
+		"fade_seconds": 0.25,
+		"streak_strength": 0.85,
+		"streak_density": 0.4,
+		"streak_length": 0.12,
+		"streak_rows": 54,
+		"streak_thickness": 0.07
 	},
 	"audio": {
 		"forward": "",

@@ -4,8 +4,8 @@ extends Node2D
 ## to the hero with two pins; on it two arrows, `>>` in forward time and `<<`
 ## while Shift is held. In rewind the light sweeps along the arrows from right
 ## to left, the device flickers, thin streaks run left above and below it, and
-## the edges of the screen darken. Forward time has no streaks. The direction
-## never reads from color alone.
+## the edges of the screen glow with the same light and the same streaks.
+## Forward time has none of this. The direction never reads from color alone.
 ##
 ## It is a child of the player, so the device goes where the hero goes. The
 ## state lives in `TimeIndicatorState`; this node only draws it. All colors and
@@ -35,7 +35,6 @@ var _lane := 14.0
 var _glow: Sprite2D
 var _edges: ColorRect
 var _edge_material: ShaderMaterial
-var _edge_strength := 0.55
 
 
 func _ready() -> void:
@@ -62,6 +61,7 @@ func _process(delta: float) -> void:
 	position = Vector2(_offset.x * facing, _offset.y)
 	_glow.modulate = Color(_accent, _glow_alpha * state.glow())
 	_edge_material.set_shader_parameter("amount", state.edge_amount)
+	_edge_material.set_shader_parameter("phase", state.particle_phase)
 	_edges.visible = state.edge_amount > 0.001
 	queue_redraw()
 
@@ -136,7 +136,6 @@ func _read_config(config: Dictionary) -> void:
 	_streak_width = float(particles.get("size_px", 1.5))
 	_dash = float(particles.get("dash_px", 9.0))
 	_lane = float(particles.get("lane_px", 14.0))
-	_edge_strength = float((config.get("edges", {}) as Dictionary).get("strength", 0.55))
 
 
 ## A soft round halo behind the plate, drawn with additive blending (cheap in
@@ -164,24 +163,30 @@ func _build_glow() -> void:
 	add_child(_glow)
 
 
-## Darkened screen edges with grain, a full-screen layer above the room.
+## The glow and the streaks along the screen edges: a full-screen layer above
+## the room, added over the picture (see `time_edges.gdshader`).
 func _build_edges(config: Dictionary) -> void:
 	var edges := config.get("edges", {}) as Dictionary
-	var colors := config.get("colors", {}) as Dictionary
 	var layer := CanvasLayer.new()
 	layer.name = "Edges"
 	layer.layer = EDGE_LAYER
 	add_child(layer)
 	_edge_material = ShaderMaterial.new()
 	_edge_material.shader = load("res://ui/time_edges.gdshader") as Shader
-	_edge_material.set_shader_parameter("edge_color", Color.html(str(colors.get("edge", "#000000"))))
-	_edge_material.set_shader_parameter("strength", _edge_strength)
-	_edge_material.set_shader_parameter("width", float(edges.get("width", 0.22)))
-	_edge_material.set_shader_parameter("grain", float(edges.get("grain", 0.06)))
+	_edge_material.set_shader_parameter("glow_color", _accent)
+	for key: String in ["glow_strength", "width", "streak_strength", "streak_density", "streak_length", "streak_rows", "streak_thickness"]:
+		if edges.has(key):
+			_edge_material.set_shader_parameter(key, float(edges[key]))
 	_edge_material.set_shader_parameter("amount", 0.0)
+	_edge_material.set_shader_parameter("phase", 0.0)
 	_edges = ColorRect.new()
 	_edges.material = _edge_material
 	_edges.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_edges.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_edges.visible = false
 	layer.add_child(_edges)
+
+
+## A parameter of the edge shader, for tests.
+func edge_parameter(parameter: StringName) -> Variant:
+	return _edge_material.get_shader_parameter(parameter)

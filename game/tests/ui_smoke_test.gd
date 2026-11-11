@@ -99,7 +99,7 @@ func _check_time_indicator(main: Node) -> void:
 	_check(hud.state.is_rewinding(), "the indicator must switch to rewind with Shift")
 	for i in 30:
 		await process_frame
-	_check(hud.state.edge_amount > 0.0, "the screen edges must darken in rewind")
+	_check(hud.state.edge_amount > 0.0, "the screen edges must glow in rewind")
 	Input.action_release("rewind")
 	for i in 3:
 		await physics_frame

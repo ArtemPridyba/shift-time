@@ -16,8 +16,8 @@ const LANE_STEP := 0.618034
 
 ## +1 while time runs forward, -1 while the world is rewound.
 var direction := FORWARD
-## 0 in forward time, 1 in rewind; eases over `edges.fade_seconds`.
-## The view scales it by `edges.strength`.
+## 0 in forward time, 1 in rewind; eases over `edges.fade_seconds`. The glow
+## along the screen edges fades in and out with it.
 var edge_amount := 0.0
 ## Phase of the streaks, in cycles. It runs only in rewind and shrinks, so every
 ## streak moves left; in forward time there are no streaks.
