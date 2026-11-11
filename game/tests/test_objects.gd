@@ -97,6 +97,29 @@ func test_crush_rule_of_door_and_platform() -> void:
 	platform.free()
 
 
+func test_door_rising_under_the_player_is_riding_not_crushing() -> void:
+	var door: Door = (load(DOOR_PATH) as PackedScene).instantiate()
+	door.position = Vector2(500, 500)
+	# The hero stands on the door's top at every tick of the opening; the next
+	# frame lifts the top by about a pixel, which is riding like on a platform.
+	var ticks: int = door.cycle_ticks()
+	var worst := 0
+	for tick in ticks:
+		var before := door.open_at(tick)
+		var after := door.open_at(tick + 1)
+		if after <= before:
+			continue
+		var top := door.rect_at(before).position.y
+		var standing := Rect2(door.position.x - 22.0, top - 92.0, 44.0, 92.0)
+		if door.blocks_player_at({"open": after, "locked": false, "phase": 0}, standing):
+			worst += 1
+	check(worst == 0, "a door rising under the hero's feet must not count as crushing (%d ticks did)" % worst)
+	# A door that comes down on the head is still a crush.
+	var head := Rect2(door.position.x - 22.0, door.rect_at(Door.OPEN_MAX).end.y - 6.0, 44.0, 92.0)
+	check(door.blocks_player_at({"open": Door.OPEN_MAX, "locked": false, "phase": 0}, head), "a door resting on the hero's head still crushes")
+	door.free()
+
+
 # --- in the test room -------------------------------------------------------
 
 func test_room_objects_keep_the_contract() -> void:
@@ -179,6 +202,28 @@ func test_world_waits_instead_of_crushing_in_room() -> void:
 	player.respawn(Vector2(160, 960))
 	await _ticks(3)
 	check(time.last_step == TimeWorld.Step.RECORDED, "once the player steps away the world goes on")
+	await _free_room(room)
+
+
+func test_world_keeps_going_while_the_hero_rides_the_rising_door_in_room() -> void:
+	var room := await _load_room()
+	var time: RoomTime = room.get_node("RoomTime")
+	var door: Door = room.get_node("Door")
+	var platform: MovingPlatform = room.get_node("Platform")
+	var player: Player = room.get_node("Player")
+	var top := door.rect_at(0).position.y
+	player.respawn(Vector2(door.position.x, top))
+	var start_y := player.position.y
+	var platform_x := platform.position.x
+	var waited := 0
+	for i in 90:
+		await _ticks(1)
+		if time.last_step == TimeWorld.Step.WAITED:
+			waited += 1
+	check(waited == 0, "the world must not wait while the hero rides the rising door (%d waits)" % waited)
+	check(door.open > 0, "the door must keep opening under the hero")
+	check(player.position.y < start_y - 10.0, "the hero must be carried up by the door: %.1f px" % (start_y - player.position.y))
+	check(platform.position.x != platform_x, "the platform must keep moving while the hero rides the door")
 	await _free_room(room)
 
 
