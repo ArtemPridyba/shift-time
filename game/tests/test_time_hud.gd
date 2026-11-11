@@ -127,6 +127,22 @@ func test_edges_darken_in_rewind_and_clear_after() -> void:
 	check(is_equal_approx(state.edge_amount, 0.0), "the edges must clear after the release, got %f" % state.edge_amount)
 
 
+# --- the grey block set -------------------------------------------------------
+
+func test_grey_block_set_loads_with_collisions() -> void:
+	var tile_set := load("res://art/blocks/grey_blocks.tres") as TileSet
+	check(tile_set != null, "the grey block set must load")
+	if tile_set == null:
+		return
+	check(tile_set.tile_size == Vector2i(64, 64), "blocks must sit on the 64 px grid")
+	var source := tile_set.get_source(0) as TileSetAtlasSource
+	check(source != null and source.get_tiles_count() == 3, "the set must hold three blocks: block, surface, hatch")
+	if source != null:
+		for i in source.get_tiles_count():
+			var data := source.get_tile_data(source.get_tile_id(i), 0)
+			check(data.get_collision_polygons_count(0) == 1, "block %d must have a collision shape" % i)
+
+
 # --- the sound place ----------------------------------------------------------
 
 func test_empty_sound_paths_play_nothing_and_break_nothing() -> void:

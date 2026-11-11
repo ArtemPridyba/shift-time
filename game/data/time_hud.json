@@ -11,8 +11,8 @@
 		"offset_x_px": 22,
 		"offset_y_px": -58,
 		"glyph_height_px": 10,
-		"glow_radius_px": 46,
-		"glow_alpha": 0.55
+		"glow_radius_px": 32,
+		"glow_alpha": 0.35
 	},
 	"rewind": {
 		"flicker_hz": 9.0,
