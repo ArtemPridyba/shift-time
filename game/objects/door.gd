@@ -33,6 +33,10 @@ var phase := 0
 var powered := false
 ## +1 or -1, from TimeManager through TimeWorld; for looks and sound later.
 var time_direction := 1
+## The bottom of the player's body this deep inside the door is riding it, not
+## being crushed: a door that rises under the hero's feet carries the hero like
+## a platform. Same value as the platform's (`carry_margin_px` in objects.json).
+var carry_margin := 8.0
 
 var _closed_position := Vector2.ZERO
 var _has_base := false
@@ -44,7 +48,9 @@ var _hold_closed_ticks := 1
 
 func _init() -> void:
 	sync_to_physics = true
-	configure(Content.objects().get("door", {}), Content.time())
+	var data := Content.objects()
+	configure(data.get("door", {}), Content.time())
+	carry_margin = float(data.get("carry_margin_px", 8))
 
 
 ## Reads the cycle from data: seconds into ticks.
@@ -98,11 +104,14 @@ func on_time_direction_changed(direction: int) -> void:
 
 
 ## True when the door in `state` would overlap the player (rects in the
-## parent's coordinates). Touching is not overlapping.
+## parent's coordinates) above the feet: standing on a rising door is riding,
+## anything deeper (a door coming down on the head, a wall at the side) crushes.
+## Touching is not overlapping.
 func blocks_player_at(state: Dictionary, player_rect: Rect2) -> bool:
 	if not player_rect.has_area():
 		return false
-	return rect_at(int(state["open"])).intersects(player_rect)
+	var body := Rect2(player_rect.position, player_rect.size - Vector2(0.0, carry_margin))
+	return rect_at(int(state["open"])).intersects(body)
 
 
 func cycle_ticks() -> int:
