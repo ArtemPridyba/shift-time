@@ -88,6 +88,7 @@ Everything a step reads stays in the conversation and is read again by every lat
 - `game/ui/` — HUD, menus, time-direction indicator. Presentation only.
 - `game/data/` — numbers and settings as JSON (recording step, history length, burn time, player, level list, texts). The team edits these without code.
 - `game/assets/` — images and sounds; every file has a line in `docs/art/log.md`.
+- `game/art/` — block sets for levels (`art/blocks`, made by `tools/make_grey_blocks.py`); `game/audio/` — the place for the two time sounds (`time_sound.gd`, paths in `data/time_hud.json`).
 - `game/tests/` — headless tests: `test_runner.gd`, rule tests, determinism test, level solution tests (`solutions/`), UI smoke test.
 - `docs/` — the documents above; `docs/art/` — concept frames, the style sheet, the asset log `docs/art/log.md`.
 - `tools/` — scripts outside the game: blockout, concept frames; art and audio scripts later.
