@@ -7,6 +7,7 @@ const PLAYER_PATH := "res://data/player.json"
 const TIME_PATH := "res://data/time.json"
 const LEVELS_PATH := "res://data/levels.json"
 const OBJECTS_PATH := "res://data/objects.json"
+const TIME_HUD_PATH := "res://data/time_hud.json"
 
 const PLAYER_KEYS: Array[String] = [
 	"walk_speed", "acceleration", "friction", "gravity",
@@ -49,6 +50,11 @@ static func objects() -> Dictionary:
 	return data if data is Dictionary else {}
 
 
+static func time_hud() -> Dictionary:
+	var data: Variant = load_json(TIME_HUD_PATH)
+	return data if data is Dictionary else {}
+
+
 static func levels() -> Array:
 	var data: Variant = load_json(LEVELS_PATH)
 	return data if data is Array else []
@@ -66,6 +72,7 @@ static func validate() -> PackedStringArray:
 	errors.append_array(validate_levels(load_json(LEVELS_PATH), history_seconds))
 	if time_data is Dictionary and validate_time(time_data).is_empty():
 		errors.append_array(validate_objects(load_json(OBJECTS_PATH), time_data))
+	errors.append_array(validate_time_hud(load_json(TIME_HUD_PATH)))
 	return errors
 
 
@@ -211,6 +218,61 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 				if not dark.has(key) or not _is_number(dark[key]) or float(dark[key]) < 0.0 or float(dark[key]) > 1.0:
 					errors.append("objects.json: 'darkness.%s' must be a number from 0 to 1" % key)
 	return errors
+
+
+## The wrist device and the time indicator (task 1.5): colors, sizes, flicker,
+## particles, darkened edges and the (still empty) sound paths.
+static func validate_time_hud(data: Variant) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not data is Dictionary:
+		errors.append("time_hud.json: expected an object")
+		return errors
+	for section_name: String in ["colors", "device", "rewind", "particles", "edges", "audio"]:
+		if not data.get(section_name) is Dictionary:
+			errors.append("time_hud.json: missing section '%s'" % section_name)
+	if not errors.is_empty():
+		return errors
+	var colors: Dictionary = data["colors"]
+	for key: String in ["accent", "plate", "pin", "edge"]:
+		if not colors.get(key) is String or not Color.html_is_valid(colors[key]):
+			errors.append("time_hud.json: 'colors.%s' must be a color like \"#7FE8FF\"" % key)
+	var device: Dictionary = data["device"]
+	for key: String in ["plate_width_px", "plate_height_px", "glyph_height_px", "glow_radius_px"]:
+		_check_range(errors, device, "device", key, 0.0, 1000.0, true)
+	_check_range(errors, device, "device", "offset_x_px", -1000.0, 1000.0)
+	_check_range(errors, device, "device", "offset_y_px", -1000.0, 1000.0)
+	_check_range(errors, device, "device", "glow_alpha", 0.0, 1.0)
+	var rewind: Dictionary = data["rewind"]
+	_check_range(errors, rewind, "rewind", "flicker_hz", 0.0, 60.0, true)
+	_check_range(errors, rewind, "rewind", "flicker_depth", 0.0, 1.0)
+	_check_range(errors, rewind, "rewind", "sweep_hz", 0.0, 60.0, true)
+	var particles: Dictionary = data["particles"]
+	_check_range(errors, particles, "particles", "count", 0.0, 32.0)
+	_check_range(errors, particles, "particles", "cycle_seconds", 0.0, 60.0, true)
+	_check_range(errors, particles, "particles", "spread_px", 0.0, 1000.0, true)
+	_check_range(errors, particles, "particles", "size_px", 0.0, 100.0, true)
+	var edges: Dictionary = data["edges"]
+	_check_range(errors, edges, "edges", "strength", 0.0, 1.0)
+	_check_range(errors, edges, "edges", "width", 0.0, 0.5, true)
+	_check_range(errors, edges, "edges", "grain", 0.0, 1.0)
+	_check_range(errors, edges, "edges", "fade_seconds", 0.0, 10.0, true)
+	var audio: Dictionary = data["audio"]
+	for key: String in ["forward", "rewind"]:
+		if not audio.get(key) is String:
+			errors.append("time_hud.json: 'audio.%s' must be a path or an empty string" % key)
+		elif str(audio[key]) != "" and not ResourceLoader.exists(audio[key]):
+			errors.append("time_hud.json: 'audio.%s' points to a missing file '%s'" % [key, audio[key]])
+	return errors
+
+
+## A number between `low` and `high` (`low` itself is allowed unless `above_low`).
+static func _check_range(errors: PackedStringArray, section: Dictionary, section_name: String, key: String, low: float, high: float, above_low := false) -> void:
+	if not section.has(key) or not _is_number(section[key]):
+		errors.append("time_hud.json: '%s.%s' must be a number" % [section_name, key])
+		return
+	var value := float(section[key])
+	if value < low or value > high or (above_low and value <= low):
+		errors.append("time_hud.json: '%s.%s' must be %s %s and at most %s" % [section_name, key, "above" if above_low else "at least", low, high])
 
 
 static func _is_number(value: Variant) -> bool:

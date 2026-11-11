@@ -48,6 +48,11 @@ func set_camera_limits(rect: Rect2i) -> void:
 	_camera.limit_bottom = rect.end.y
 
 
+## +1 while the hero faces right, -1 while left; the wrist device follows it.
+func facing() -> float:
+	return _facing
+
+
 ## The player's body in the parent's coordinates (the origin is at the feet).
 func body_rect() -> Rect2:
 	return Rect2(position - Vector2(_size.x / 2.0, _size.y), _size)
