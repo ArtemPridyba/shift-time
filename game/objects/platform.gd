@@ -43,8 +43,11 @@ func _ready() -> void:
 	_base()
 
 
+## The position comes from the phase, not from the node: with `sync_to_physics`
+## the physics server writes the body's transform back a step late, and an
+## interference captured outside the tick would record a stale position.
 func capture_state() -> Dictionary:
-	return {"phase": phase, "position": position}
+	return {"phase": phase, "position": position_at(phase)}
 
 
 func restore_state(state: Dictionary) -> void:
