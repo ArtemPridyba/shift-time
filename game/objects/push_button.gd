@@ -13,8 +13,10 @@ const PRESSED_COLOR := Color("#2d5c3a")
 const SIZE := Vector2(48.0, 24.0)
 
 @export var object_id := "button"
-## The object_id of the Door this button controls.
+## The object_id of the object this button controls (older scenes).
 @export var target_id := ""
+## Every object this button powers.
+@export var target_ids := PackedStringArray()
 
 ## Interaction radius in pixels, read from objects.json.
 var _radius := 80.0
@@ -64,21 +66,8 @@ func get_interaction_change(room_objects: Array) -> Array:
 		return []  # One-way: already pressed, nothing to do.
 	# Change for self: mark as pressed.
 	var self_change := {"id": object_id, "state": {"pressed": true}}
-	# Change for linked door: set powered = true, merging with its current state.
-	if target_id == "":
-		return [self_change]
-	var door_state := _find_state(target_id, room_objects)
-	if door_state.is_empty():
-		return [self_change]
-	door_state["powered"] = true
-	return [self_change, {"id": target_id, "state": door_state}]
-
-
-func _find_state(id: String, objects: Array) -> Dictionary:
-	for obj: Variant in objects:
-		if obj is Object and (obj as Object).has_method("capture_state") and str((obj as Object).get("object_id")) == id:
-			return ((obj as Object).call("capture_state") as Dictionary).duplicate(true)
-	return {}
+	var targets := InteractionSystem.target_list(target_id, target_ids)
+	return [self_change] + InteractionSystem.power_changes(targets, room_objects, true)
 
 
 func _draw() -> void:

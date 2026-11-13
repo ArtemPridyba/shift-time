@@ -23,6 +23,7 @@ func _ready() -> void:
 	_player.set_camera_limits(Rect2i(rect.position * cell, rect.size * cell))
 	if _spawn != null:
 		_player.respawn(_spawn.global_position)
+	_player.drowned.connect(restart)
 
 
 func _physics_process(_delta: float) -> void:
@@ -33,7 +34,13 @@ func _physics_process(_delta: float) -> void:
 		if _spawn != null:
 			_player.respawn(_spawn.global_position)
 	if Input.is_action_just_pressed("reset_level"):
-		if _spawn != null:
-			_player.respawn(_spawn.global_position)
-		if _time != null:
-			_time.reset()
+		restart()
+
+
+## The room as it was loaded and the player back at the spawn: the reset key,
+## and drowning.
+func restart() -> void:
+	if _spawn != null and _player != null:
+		_player.respawn(_spawn.global_position)
+	if _time != null:
+		_time.reset()

@@ -1,7 +1,7 @@
 class_name Lever
 extends Area2D
-## A toggle interaction point. Each press flips `on`; the linked door's
-## `powered` follows the lever's `on` state.
+## A toggle interaction point. Each press flips `on`; the `powered` of every
+## target (a door, a water source) follows the lever's `on` state.
 ##
 ## State recorded: { "on": bool }
 ##
@@ -12,13 +12,15 @@ const ON_COLOR := Color("#d4a853")
 const SIZE := Vector2(32.0, 64.0)
 
 @export var object_id := "lever"
-## The object_id of the Door this lever controls.
+## The object_id of the object this lever controls (older scenes).
 @export var target_id := ""
+## Every object this lever controls, such as one valve for two tanks.
+@export var target_ids := PackedStringArray()
+## The lever's state when the room loads.
+@export var on := false
 
 ## Interaction radius in pixels, read from objects.json.
 var _radius := 80.0
-
-var on := false
 
 
 func _init() -> void:
@@ -60,21 +62,8 @@ func interaction_candidate() -> Dictionary:
 ## Returns the list of state changes to apply via RoomTime.player_action.
 func get_interaction_change(room_objects: Array) -> Array:
 	var new_on := not on
-	var self_change := {"id": object_id, "state": {"on": new_on}}
-	if target_id == "":
-		return [self_change]
-	var door_state := _find_state(target_id, room_objects)
-	if door_state.is_empty():
-		return [self_change]
-	door_state["powered"] = new_on
-	return [self_change, {"id": target_id, "state": door_state}]
-
-
-func _find_state(id: String, objects: Array) -> Dictionary:
-	for obj: Variant in objects:
-		if obj is Object and (obj as Object).has_method("capture_state") and str((obj as Object).get("object_id")) == id:
-			return ((obj as Object).call("capture_state") as Dictionary).duplicate(true)
-	return {}
+	var targets := InteractionSystem.target_list(target_id, target_ids)
+	return [{"id": object_id, "state": {"on": new_on}}] + InteractionSystem.power_changes(targets, room_objects, new_on)
 
 
 func _draw() -> void:
