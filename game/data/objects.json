@@ -28,5 +28,9 @@
     "ambient": 0.02,
     "player_outline_alpha": 0.3
   },
-  "carry_margin_px": 8
+  "carry_margin_px": 8,
+  "water": {
+    "full_seconds": 12,
+    "float_draft_px": 8
+  }
 }
