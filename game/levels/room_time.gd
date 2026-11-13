@@ -3,8 +3,9 @@ extends Node
 ## The node that runs `TimeWorld` in a room. Every physics tick it reads the
 ## direction from TimeManager, collects the room's nodes of the group
 ## `temporal` and lets the world rewind, replay or record them. It forwards
-## direction changes to the objects and is the door for interference
-## (`player_action`, `live_action`) and for the level reset.
+## direction changes to the objects, lets the live sources (group `live`) act
+## after every tick and is the door for interference (`player_action`,
+## `live_action`) and for the level reset.
 ##
 ## Put it as a direct child of the room, next to the player and the objects:
 ## the player's rect and the objects' positions are both in the room's
@@ -52,7 +53,25 @@ func _physics_process(_delta: float) -> void:
 	var manager := get_node_or_null("/root/TimeManager")
 	var direction: int = manager.direction if manager != null else TimeWorld.FORWARD
 	last_step = world.tick(direction, temporal_objects(), _player_rect())
+	_tell_live_sources(direction)
 	_tell_world_clock()
+
+
+## Live sources (group `live`, reverse items) act after the world moved, by
+## the direction of this tick (docs/architecture.md, section 2.5). They get
+## this node as an argument and keep no reference to it.
+func _tell_live_sources(direction: int) -> void:
+	var room := get_parent()
+	if room == null:
+		return
+	for node in get_tree().get_nodes_in_group("live"):
+		if room.is_ancestor_of(node) and node.has_method("act"):
+			node.call("act", self, direction)
+
+
+## The frame the world shows now.
+func cursor() -> int:
+	return world.timeline.cursor()
 
 
 ## Decoration that is drawn from world time (the look of water, task 2.3А)
@@ -130,11 +149,17 @@ func player_interact(player_pos: Vector2) -> void:
 				state = full_state
 				break
 		player_action(id, state)
+		if bool(ch.get("rewrite_past", false)):
+			world.rewrite_past(temporal_objects(), id)
 
 
 ## Back to the room as it was loaded, with a fresh history and its prelude
 ## run again: the player comes back into the same past.
 func reset() -> void:
+	var room := get_parent()
+	for node in get_tree().get_nodes_in_group("carried"):
+		if room != null and room.is_ancestor_of(node) and node.has_method("forget_hands"):
+			node.call("forget_hands")
 	var objects := temporal_objects()
 	_recorder.restore(_initial, objects)
 	world.start(objects)

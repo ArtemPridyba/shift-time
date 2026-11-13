@@ -150,6 +150,18 @@ func live_action(objects: Array, object_id: String, new_state: Dictionary) -> bo
 	return _interfere(objects, object_id, new_state)
 
 
+## The live player let an item go (task 2.7): the item had been in the
+## player's hands, so its frames before the cursor hold nothing it could
+## rewind along. They all get its present state: under Shift the item stays
+## where it was let go, as the world does at frame 0, and never jumps.
+func rewrite_past(objects: Array, object_id: String) -> bool:
+	var target := _object(objects, object_id)
+	if target == null or timeline.is_empty():
+		return false
+	timeline.rewrite_past(object_id, (target.call("capture_state") as Dictionary).duplicate(true))
+	return true
+
+
 ## True when a solid object, put into its state from `frame`, would overlap the
 ## player in a way it is not allowed to (`blocks_player_at`).
 func crushes(frame: Dictionary, objects: Array, player_rect: Rect2) -> bool:

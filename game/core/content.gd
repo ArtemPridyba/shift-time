@@ -15,6 +15,7 @@ const PLAYER_KEYS: Array[String] = [
 	"water_walk_factor", "water_gravity", "water_max_sink_speed", "water_drag",
 	"water_jump_velocity", "water_float_up_speed", "head_px",
 	"breath_seconds", "breath_refill_seconds", "breath_vignette_alpha", "breath_vignette_radius",
+	"fire_seconds", "fire_cool_seconds",
 ]
 const TIME_KEYS: Array[String] = [
 	"physics_ticks_per_second", "snapshot_every_ticks", "history_seconds",
@@ -34,6 +35,10 @@ const BUTTON_KEYS: Array[String] = ["interact_radius_px"]
 const LEVER_KEYS: Array[String] = ["interact_radius_px"]
 const LAMP_KEYS: Array[String] = ["break_seconds", "fall_seconds", "shatter_seconds", "fall_distance_px", "flash_seconds", "flash_radius_px", "light_radius_px"]
 const DARKNESS_KEYS: Array[String] = ["ambient", "player_outline_alpha"]
+## Fire (task 2.7): wood zones, the steam of a doused fire, the reverse flamethrower.
+const WOOD_KEYS: Array[String] = ["burn_seconds", "flame_px", "flame_side_px", "flames_per_cell", "sparks"]
+const STEAM_KEYS: Array[String] = ["seconds", "puffs", "rise_px", "radius_px"]
+const FLAMETHROWER_KEYS: Array[String] = ["interact_radius_px", "reach_px", "jet_px", "follow_px", "gravity", "max_fall_speed"]
 ## Every window in which the player must act is at least this long (design rules).
 const MIN_WINDOW_SECONDS := 3.0
 
@@ -114,6 +119,10 @@ static func validate_player(data: Variant) -> PackedStringArray:
 			errors.append("player.json: '%s' must be at most 1" % key)
 	if float(data["breath_seconds"]) < MIN_WINDOW_SECONDS:
 		errors.append("player.json: 'breath_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
+	if float(data["fire_seconds"]) < MIN_WINDOW_SECONDS:
+		errors.append("player.json: 'fire_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
+	if not data.has("fire_vignette_color") or not data["fire_vignette_color"] is String or not Color.html_is_valid(str(data["fire_vignette_color"])):
+		errors.append("player.json: 'fire_vignette_color' must be a color like \"#5c1800\"")
 	# 92 px is the body of player.tscn.
 	if float(data["head_px"]) >= 92.0:
 		errors.append("player.json: 'head_px' must be less than the player's height (92 px)")
@@ -256,7 +265,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	# 10000 is Water.LEVEL_MAX (core/ does not refer to objects/).
 	if 10000.0 / (float(data["water"]["full_seconds"]) * ticks) > max_step:
 		errors.append("objects.json: 'water.full_seconds' is too short: the level would jump more than max_state_step per tick")
-	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["lamp", LAMP_KEYS]]:
+	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["flamethrower", FLAMETHROWER_KEYS]]:
 		var isec := interact_section as Array
 		var isec_name: String = isec[0]
 		var ientry: Variant = data.get(isec_name)
@@ -275,6 +284,14 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 			errors.append("objects.json: 'lamp.fall_seconds' is too short: the lamp would jump more than max_state_step per tick")
 		if 1000.0 / (float(lamp["shatter_seconds"]) * ticks) > max_step:
 			errors.append("objects.json: 'lamp.shatter_seconds' is too short: the shards would jump more than max_state_step per tick")
+		if float(data["wood"]["burn_seconds"]) < MIN_WINDOW_SECONDS:
+			errors.append("objects.json: 'wood.burn_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
+		var thrower: Dictionary = data["flamethrower"]
+		for key in ["follow_px"]:
+			if float(thrower[key]) > max_step:
+				errors.append("objects.json: 'flamethrower.%s' moves more than max_state_step per tick" % key)
+		if float(thrower["max_fall_speed"]) / ticks > max_step:
+			errors.append("objects.json: 'flamethrower.max_fall_speed' moves more than max_state_step per tick")
 		var dark: Variant = data.get("darkness")
 		if not dark is Dictionary:
 			errors.append("objects.json: missing object 'darkness'")

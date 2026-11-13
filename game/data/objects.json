@@ -49,5 +49,26 @@
     "splash_drops": 8,
     "outlet_inset_px": 64,
     "valve_turns_per_tank": 6
+  },
+  "wood": {
+    "burn_seconds": 3,
+    "flame_px": 40,
+    "flame_side_px": 12,
+    "flames_per_cell": 2,
+    "sparks": 10
+  },
+  "steam": {
+    "seconds": 2.5,
+    "puffs": 10,
+    "rise_px": 150,
+    "radius_px": 18
+  },
+  "flamethrower": {
+    "interact_radius_px": 80,
+    "reach_px": 224,
+    "jet_px": 120,
+    "follow_px": 24,
+    "gravity": 2200,
+    "max_fall_speed": 1200
   }
 }

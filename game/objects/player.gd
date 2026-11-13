@@ -3,16 +3,22 @@ extends CharacterBody2D
 ## The player: reads input, applies PlayerMotion, follows the room with the camera.
 ## The player is not a temporal object: it is never recorded and does not
 ## listen to the direction of world time. In water the player sinks and holds
-## the breath (`Breath`); out of air, `drowned` tells the room to reset.
+## the breath (`Breath`); out of air, `drowned` tells the room to reset. In
+## the flames of a burning wood zone the heat grows (`Scorch`); after
+## `fire_seconds`, `burned` tells the room to reset.
 
 ## The air ran out under water: the room resets.
 signal drowned
+## The player stood in fire too long: the room resets.
+signal burned
 
 const BODY_COLOR := Color("#d9dde3")
 const MARK_COLOR := Color("#7b828c")
 
 var _motion: PlayerMotion
 var _breath: Breath
+var _scorch: Scorch
+var _in_fire := false
 var _facing := 1.0
 var _size := Vector2(44, 92)
 var _head_px := 28.0
@@ -29,6 +35,7 @@ func _ready() -> void:
 	var params := Content.player()
 	_motion = PlayerMotion.new(params)
 	_breath = Breath.new(params)
+	_scorch = Scorch.new(params)
 	_head_px = float(params.get("head_px", 28))
 	_size = (_shape.shape as RectangleShape2D).size
 	_bubbles = _make_bubbles()
@@ -49,6 +56,9 @@ func _physics_process(delta: float) -> void:
 	_bubbles.position.x = 8.0 * _facing
 	if _breath.step(_head_under, delta):
 		drowned.emit()
+	_in_fire = is_in_fire()
+	if _scorch.step(_in_fire, delta):
+		burned.emit()
 	if Input.is_action_just_pressed("interact"):
 		_try_interact()
 
@@ -105,12 +115,30 @@ func is_head_under_water() -> bool:
 	return _head_under
 
 
+## 0 when cool, 1 when the fire has burned the player; the vignette reads it.
+func heat_fraction() -> float:
+	return _scorch.fraction() if _scorch != null else 0.0
+
+
+## True while the body is in the flames of a burning wood zone (group `fire`).
+func is_in_fire() -> bool:
+	if not is_inside_tree():
+		return false
+	var body := Rect2(global_position - Vector2(_size.x / 2.0, _size.y), _size)
+	for node in get_tree().get_nodes_in_group("fire"):
+		if node.has_method("burns_rect") and bool(node.call("burns_rect", body)):
+			return true
+	return false
+
+
 func respawn(at: Vector2) -> void:
 	global_position = at
 	velocity = Vector2.ZERO
 	_motion.reset()
 	if _breath != null:
 		_breath.reset()
+	if _scorch != null:
+		_scorch.reset()
 	_camera.reset_smoothing()
 
 
