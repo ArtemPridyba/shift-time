@@ -5,11 +5,17 @@ extends Area2D
 ##
 ## State recorded: { "on": bool }
 ##
+## Looks like a lever or like a valve. A valve's wheel turns with the level of
+## the water it controls (found by the group `water` on every frame), so it
+## turns only while the water flows, and backward under Shift.
+##
 ## Temporal object contract: docs/architecture.md, section 4.1.
 
 const BODY_COLOR := Color("#8b7355")
 const ON_COLOR := Color("#d4a853")
 const SIZE := Vector2(32.0, 64.0)
+const METAL_COLOR := Color("#8a9096")
+const WHEEL_RADIUS := 22.0
 
 @export var object_id := "lever"
 ## The object_id of the object this lever controls (older scenes).
@@ -18,13 +24,37 @@ const SIZE := Vector2(32.0, 64.0)
 @export var target_ids := PackedStringArray()
 ## The lever's state when the room loads.
 @export var on := false
+@export_enum("Lever", "Valve") var look := 0
 
 ## Interaction radius in pixels, read from objects.json.
 var _radius := 80.0
+var _wheel_angle := 0.0
 
 
 func _init() -> void:
 	_radius = float(Content.objects().get("lever", {}).get("interact_radius_px", 80))
+
+
+func _process(_delta: float) -> void:
+	if look != 1:
+		return
+	var angle := wheel_angle()
+	if not is_equal_approx(angle, _wheel_angle):
+		_wheel_angle = angle
+		queue_redraw()
+
+
+## The valve wheel's angle: from the level of the first water this valve
+## controls; 0 when it controls none. Decoration, never recorded.
+func wheel_angle() -> float:
+	if not is_inside_tree():
+		return 0.0
+	var targets := InteractionSystem.target_list(target_id, target_ids)
+	for node in get_tree().get_nodes_in_group("water"):
+		var water := node as Water
+		if water != null and targets.has(water.object_id):
+			return water.look.valve_angle(float(water.level) / Water.LEVEL_MAX)
+	return 0.0
 
 
 func _ready() -> void:
@@ -67,6 +97,9 @@ func get_interaction_change(room_objects: Array) -> Array:
 
 
 func _draw() -> void:
+	if look == 1:
+		_draw_valve()
+		return
 	# Draw the base.
 	draw_rect(Rect2(Vector2(-SIZE.x / 2.0, -SIZE.y * 0.3), Vector2(SIZE.x, SIZE.y * 0.3)), BODY_COLOR)
 	# Draw the handle angled left (off) or right (on).
@@ -75,3 +108,15 @@ func _draw() -> void:
 	var tip := Vector2(sin(angle) * handle_len, -cos(angle) * handle_len)
 	draw_line(Vector2.ZERO, tip, ON_COLOR if on else BODY_COLOR, 6.0, true)
 	draw_circle(tip, 7.0, ON_COLOR if on else BODY_COLOR)
+
+
+## A pipe stub and a wheel with spokes on it; a lamp on the pipe shows `on`.
+func _draw_valve() -> void:
+	draw_rect(Rect2(Vector2(-6.0, -SIZE.y * 0.5), Vector2(12.0, SIZE.y * 0.5)), BODY_COLOR)
+	var hub := Vector2(0.0, -SIZE.y * 0.5)
+	draw_arc(hub, WHEEL_RADIUS, 0.0, TAU, 32, METAL_COLOR, 5.0, true)
+	for i in 4:
+		var spoke := Vector2.from_angle(_wheel_angle + i * TAU / 4.0) * WHEEL_RADIUS
+		draw_line(hub, hub + spoke, METAL_COLOR, 3.0, true)
+	draw_circle(hub + Vector2.from_angle(_wheel_angle) * WHEEL_RADIUS, 5.0, METAL_COLOR.lightened(0.2))
+	draw_circle(hub, 5.0, ON_COLOR if on else BODY_COLOR)

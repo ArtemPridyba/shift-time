@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" path="res://objects/player.tscn" id="9_qwepm"]
 [ext_resource type="Script" path="res://objects/player.gd" id="10_n7q3t"]
 [ext_resource type="Script" path="res://levels/room_time.gd" id="11_dptu2"]
+[ext_resource type="PackedScene" path="res://objects/platform.tscn" id="12_wlook"]
 
 [node name="TestRoomWater" type="Node2D" unique_id=1097133996]
 script = ExtResource("1_p6063")
@@ -44,6 +45,12 @@ script = ExtResource("8_orm5s")
 object_id = "valve"
 target_ids = PackedStringArray("water")
 on = true
+look = 1
+
+[node name="DipPlatform" parent="." instance=ExtResource("12_wlook")]
+position = Vector2(1100, 880)
+object_id = "dip_platform"
+travel = Vector2(0, -320)
 
 [node name="Player" type="CharacterBody2D" parent="." unique_id=1140322590 instance=ExtResource("9_qwepm")]
 collision_layer = 2

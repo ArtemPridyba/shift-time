@@ -24,6 +24,12 @@ const LEVEL_KEYS: Array[String] = ["id", "scene", "prelude_seconds", "title"]
 const DOOR_KEYS: Array[String] = ["open_seconds", "hold_open_seconds", "close_seconds", "hold_closed_seconds"]
 const PLATFORM_KEYS: Array[String] = ["speed", "pause_seconds"]
 const WATER_KEYS: Array[String] = ["full_seconds", "float_draft_px"]
+## The look of water (decoration, task 2.3А): all numbers above 0.
+const WATER_LOOK_KEYS: Array[String] = [
+	"ripple_px", "ripple_length_px", "wave_px", "wave_length_px", "wave_speed_px",
+	"wave_seconds", "drip_seconds", "drips_per_second", "drip_gravity_px", "streak_px",
+	"jet_drops", "jet_cycles_per_second", "splash_drops", "outlet_inset_px", "valve_turns_per_tank",
+]
 const BUTTON_KEYS: Array[String] = ["interact_radius_px"]
 const LEVER_KEYS: Array[String] = ["interact_radius_px"]
 const LAMP_KEYS: Array[String] = ["break_seconds", "fall_seconds", "shatter_seconds", "fall_distance_px", "flash_seconds", "flash_radius_px", "light_radius_px"]
@@ -178,7 +184,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	var max_step := float(time_data["max_state_step"])
 	if not data.has("carry_margin_px") or not _is_number(data["carry_margin_px"]) or float(data["carry_margin_px"]) <= 0.0:
 		errors.append("objects.json: 'carry_margin_px' must be a number above 0")
-	for section: Variant in [["door", DOOR_KEYS], ["platform", PLATFORM_KEYS], ["water", WATER_KEYS]]:
+	for section: Variant in [["door", DOOR_KEYS], ["platform", PLATFORM_KEYS], ["water", WATER_KEYS], ["water_look", WATER_LOOK_KEYS]]:
 		var sec := section as Array
 		var sec_name: String = sec[0]
 		var entry: Variant = data.get(sec_name)

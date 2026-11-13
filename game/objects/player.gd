@@ -24,6 +24,8 @@ var _bubbles: CPUParticles2D
 
 
 func _ready() -> void:
+	# Live, never `temporal`: the look of water finds the player by this group.
+	add_to_group("player")
 	var params := Content.player()
 	_motion = PlayerMotion.new(params)
 	_breath = Breath.new(params)
