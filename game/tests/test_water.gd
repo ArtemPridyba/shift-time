@@ -207,6 +207,90 @@ func test_water_data_is_checked() -> void:
 	check(not Content.validate_player(fast).is_empty(), "walking faster in water must be reported")
 
 
+# --- the look of water (task 2.3А) -----------------------------------------
+
+func test_look_of_water_is_the_same_forward_and_back() -> void:
+	var room := await _load_room()
+	var water: Water = room.get_node("Water")
+	var valve: Lever = room.get_node("Lever")
+	var forward := {}
+	var angles := {}
+	var saw_drops := false
+	var saw_jet := false
+	var saw_streak := false
+	for i in 240:
+		await _tree.physics_frame
+		var shot := water.look_snapshot()
+		forward[int(shot["tick"])] = shot
+		angles[int(shot["tick"])] = valve.wheel_angle()
+		saw_drops = saw_drops or not (shot["drops"] as PackedVector2Array).is_empty()
+		saw_jet = saw_jet or not (shot["jet"] as PackedVector3Array).is_empty()
+		saw_streak = saw_streak or float((shot["streaks"] as Dictionary).get("platform:dip_platform", 0.0)) > 0.0
+	check(water.look.mark_count() > 0, "the platform dipping into the well must leave marks")
+	check(saw_drops and saw_streak, "the platform leaving the water must drip")
+	check(saw_jet, "the draining well must show its jet")
+	var first_angle: float = angles[angles.keys().min()]
+	var last_angle: float = angles[angles.keys().max()]
+	check(not is_equal_approx(first_angle, last_angle), "the valve wheel must turn while the water flows")
+	Input.action_press("rewind")
+	var compared := 0
+	var same := true
+	var same_wheel := true
+	for i in 200:
+		await _tree.physics_frame
+		var shot := water.look_snapshot()
+		var tick := int(shot["tick"])
+		if forward.has(tick):
+			compared += 1
+			same = same and shot == forward[tick]
+			same_wheel = same_wheel and is_equal_approx(valve.wheel_angle(), float(angles[tick]))
+	check(compared > 150, "the rewind must pass the ticks seen going forward, compared %d" % compared)
+	check(same, "the look at a world tick must be the same going forward and rewinding")
+	check(same_wheel, "under Shift the valve wheel must turn back through the same angles")
+	await _free_room(room)
+
+
+func test_look_marks_come_only_from_recorded_ticks_and_a_branch_drops_them() -> void:
+	var look := WaterLook.new(Content.objects()["water_look"], Content.time())
+	var dry := {"key": "p", "rect": Rect2(-50, -300, 100, 20)}
+	var wet := {"key": "p", "rect": Rect2(-50, -200, 100, 20)}
+	look.observe(10, true, -250.0, 400.0, [dry])
+	look.observe(11, true, -250.0, 400.0, [wet])
+	check(look.mark_count() == 1, "entering the water at the head leaves one mark")
+	look.observe(12, false, -250.0, 400.0, [dry])
+	check(look.mark_count() == 1, "replay and rewind add no marks")
+	look.observe(11, true, -250.0, 400.0, [wet])
+	check(look.mark_count() == 0, "a tick recorded after a branch drops the marks of the cut future")
+
+
+func test_look_waves_grow_from_nothing() -> void:
+	var look := WaterLook.new(Content.objects()["water_look"], Content.time())
+	look.observe(0, true, -250.0, 400.0, [{"key": "p", "rect": Rect2(-50, -300, 100, 20)}])
+	var before := []
+	for x in [-60.0, -20.0, 0.0, 20.0, 60.0]:
+		before.append(look.surface_offset(x, 1.0, -1.0))
+	look.observe(1, true, -250.0, 400.0, [{"key": "p", "rect": Rect2(-50, -240, 100, 20)}])
+	var after := []
+	for x in [-60.0, -20.0, 0.0, 20.0, 60.0]:
+		after.append(look.surface_offset(x, 1.0, -1.0))
+	check(before == after, "a wave must not pop in at the tick of its mark")
+	var live := WaterLook.new(Content.objects()["water_look"], Content.time())
+	live.observe_live(0, "hero", Rect2(-10, -300, 20, 40), -250.0, 400.0)
+	live.observe_live(1, "hero", Rect2(-10, -260, 20, 40), -250.0, 400.0)
+	check(live.surface_offset(40.0, 500.0, 20.0) != live.surface_offset(40.0, 500.0, -1.0), "the hero's wave follows the hero's clock")
+
+
+func test_water_look_data_is_checked() -> void:
+	var time_data := Content.time()
+	var objects := Content.objects()
+	var missing := objects.duplicate(true)
+	missing.erase("water_look")
+	check(not Content.validate_objects(missing, time_data).is_empty(), "a missing water_look section must be reported")
+	var broken := objects.duplicate(true)
+	broken["water_look"]["wave_seconds"] = 0
+	check(not Content.validate_objects(broken, time_data).is_empty(), "a water_look number at 0 must be reported")
+
+
 # --- the water test room ---------------------------------------------------
 
 func test_shift_lifts_the_player_in_the_well_to_the_rim() -> void:

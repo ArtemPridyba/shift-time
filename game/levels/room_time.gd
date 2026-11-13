@@ -48,6 +48,20 @@ func _physics_process(_delta: float) -> void:
 	var manager := get_node_or_null("/root/TimeManager")
 	var direction: int = manager.direction if manager != null else TimeWorld.FORWARD
 	last_step = world.tick(direction, temporal_objects(), _player_rect())
+	_tell_world_clock()
+
+
+## Decoration that is drawn from world time (the look of water, task 2.3А)
+## joins the group `world_clock` and gets the cursor every tick, and whether
+## this tick was recorded at the head. Nothing in that group is recorded.
+func _tell_world_clock() -> void:
+	var room := get_parent()
+	if room == null:
+		return
+	var recorded := last_step == TimeWorld.Step.RECORDED
+	for node in get_tree().get_nodes_in_group("world_clock"):
+		if room.is_ancestor_of(node) and node.has_method("on_world_tick"):
+			node.call("on_world_tick", world.timeline.cursor(), recorded)
 
 
 ## The recorded objects of this room, in tree order.

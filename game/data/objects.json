@@ -32,5 +32,22 @@
   "water": {
     "full_seconds": 12,
     "float_draft_px": 8
+  },
+  "water_look": {
+    "ripple_px": 1.5,
+    "ripple_length_px": 96,
+    "wave_px": 5,
+    "wave_length_px": 40,
+    "wave_speed_px": 180,
+    "wave_seconds": 1.6,
+    "drip_seconds": 3,
+    "drips_per_second": 5,
+    "drip_gravity_px": 900,
+    "streak_px": 14,
+    "jet_drops": 16,
+    "jet_cycles_per_second": 1.6,
+    "splash_drops": 8,
+    "outlet_inset_px": 64,
+    "valve_turns_per_tank": 6
   }
 }
