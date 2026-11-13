@@ -28,3 +28,27 @@ static func get_nearest(player_pos: Vector2, candidates: Array) -> String:
 			best_dist = dist
 			best_id = str((d as Dictionary).get("id", ""))
 	return best_id
+
+
+## The targets of a control: `target_ids` plus the older single `target_id`,
+## without empty names and duplicates, in order.
+static func target_list(target_id: String, target_ids: PackedStringArray) -> PackedStringArray:
+	var result := PackedStringArray()
+	for id in [target_id] + Array(target_ids):
+		if str(id) != "" and not result.has(str(id)):
+			result.append(str(id))
+	return result
+
+
+## The changes that set `powered` on every target found among `objects`, each
+## merged into the target's current state. Unknown targets are skipped.
+static func power_changes(targets: PackedStringArray, objects: Array, powered: bool) -> Array:
+	var changes: Array = []
+	for id in targets:
+		for obj: Variant in objects:
+			if obj is Object and (obj as Object).has_method("capture_state") and str((obj as Object).get("object_id")) == id:
+				var state := ((obj as Object).call("capture_state") as Dictionary).duplicate(true)
+				state["powered"] = powered
+				changes.append({"id": id, "state": state})
+				break
+	return changes
