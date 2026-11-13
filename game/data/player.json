@@ -16,5 +16,6 @@
   "head_px": 28,
   "breath_seconds": 5,
   "breath_refill_seconds": 1.5,
-  "breath_vignette_alpha": 0.85
+  "breath_vignette_alpha": 0.97,
+  "breath_vignette_radius": 0.9
 }

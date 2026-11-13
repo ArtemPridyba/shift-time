@@ -14,7 +14,7 @@ const PLAYER_KEYS: Array[String] = [
 	"jump_velocity", "max_fall_speed", "coyote_seconds", "jump_buffer_seconds",
 	"water_walk_factor", "water_gravity", "water_max_sink_speed", "water_drag",
 	"water_jump_velocity", "water_float_up_speed", "head_px",
-	"breath_seconds", "breath_refill_seconds", "breath_vignette_alpha",
+	"breath_seconds", "breath_refill_seconds", "breath_vignette_alpha", "breath_vignette_radius",
 ]
 const TIME_KEYS: Array[String] = [
 	"physics_ticks_per_second", "snapshot_every_ticks", "history_seconds",
@@ -92,7 +92,7 @@ static func validate_player(data: Variant) -> PackedStringArray:
 			errors.append("player.json: '%s' must be a number above 0" % key)
 	if not errors.is_empty():
 		return errors
-	for key in ["water_walk_factor", "breath_vignette_alpha"]:
+	for key in ["water_walk_factor", "breath_vignette_alpha", "breath_vignette_radius"]:
 		if float(data[key]) > 1.0:
 			errors.append("player.json: '%s' must be at most 1" % key)
 	if float(data["breath_seconds"]) < MIN_WINDOW_SECONDS:

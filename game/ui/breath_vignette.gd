@@ -1,31 +1,56 @@
 class_name BreathVignette
 extends CanvasLayer
-## The screen edges darken while the player runs out of air under water, as
-## if the hero were going under. A child of the player; it reads the parent's
-## `breath_fraction()` every frame. Presentation only.
+## Darkness closes in from the screen edges while the player runs out of air
+## under water: the clear circle in the middle shrinks as the hidden breath
+## gauge fills, and just before drowning the screen is almost black. A child
+## of the player; it reads the parent's `breath_fraction()` every frame.
+## Presentation only.
 
-var max_alpha := 0.85
+const SHADER := """
+shader_type canvas_item;
 
-var _rect: TextureRect
+uniform float amount : hint_range(0.0, 1.0) = 0.0;
+uniform float max_alpha : hint_range(0.0, 1.0) = 0.97;
+uniform float start_radius = 0.9;
+uniform float softness = 0.35;
+uniform vec2 aspect = vec2(1.777, 1.0);
+
+void fragment() {
+	// Distance from the centre, 1.0 at a corner whatever the screen shape.
+	vec2 p = (UV - vec2(0.5)) * aspect;
+	float d = length(p) / length(aspect * 0.5);
+	// The clear radius shrinks from start_radius to below zero: at the end
+	// even the centre is dark.
+	float clear = mix(start_radius, -softness, amount);
+	float dark = smoothstep(clear, clear + softness, d);
+	// The darkness itself also deepens: faint at first, nearly black at the end.
+	COLOR = vec4(0.0, 0.0, 0.0, dark * max_alpha * pow(amount, 0.6));
+}
+"""
+
+var max_alpha := 0.97
+var start_radius := 0.9
+## The width of the soft edge between clear and dark, as in the shader.
+const SOFTNESS := 0.35
+
+var _rect: ColorRect
+var _material: ShaderMaterial
 
 
 func _ready() -> void:
 	layer = 5
-	max_alpha = clampf(float(Content.player().get("breath_vignette_alpha", 0.85)), 0.0, 1.0)
-	var gradient := Gradient.new()
-	gradient.set_color(0, Color(0, 0, 0, 0))
-	gradient.set_color(1, Color(0, 0, 0, 1))
-	gradient.add_point(0.45, Color(0, 0, 0, 0))
-	var texture := GradientTexture2D.new()
-	texture.gradient = gradient
-	texture.fill = GradientTexture2D.FILL_RADIAL
-	texture.fill_from = Vector2(0.5, 0.5)
-	texture.fill_to = Vector2(1.0, 0.5)
-	texture.width = 256
-	texture.height = 144
-	_rect = TextureRect.new()
-	_rect.texture = texture
-	_rect.stretch_mode = TextureRect.STRETCH_SCALE
+	var data := Content.player()
+	max_alpha = clampf(float(data.get("breath_vignette_alpha", 0.97)), 0.0, 1.0)
+	var shader := Shader.new()
+	shader.code = SHADER
+	_material = ShaderMaterial.new()
+	_material.shader = shader
+	_material.set_shader_parameter("max_alpha", max_alpha)
+	start_radius = float(data.get("breath_vignette_radius", 0.9))
+	_material.set_shader_parameter("start_radius", start_radius)
+	_material.set_shader_parameter("softness", SOFTNESS)
+	_rect = ColorRect.new()
+	_rect.material = _material
 	_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_rect)
@@ -36,15 +61,30 @@ func _process(_delta: float) -> void:
 	_update()
 
 
-## 0 with full lungs, `max_alpha` out of air.
-func strength() -> float:
+## How much air is gone: 0 with full lungs, 1 out of air.
+func amount() -> float:
 	var parent := get_parent()
 	var fraction := 1.0
 	if parent != null and parent.has_method("breath_fraction"):
 		fraction = float(parent.call("breath_fraction"))
-	return max_alpha * (1.0 - clampf(fraction, 0.0, 1.0))
+	return 1.0 - clampf(fraction, 0.0, 1.0)
+
+
+## The darkness at the screen edges: 0 with full lungs, `max_alpha` out of air.
+func strength() -> float:
+	return max_alpha * amount()
+
+
+## The radius of the clear middle, as a share of the distance to a corner:
+## `breath_vignette_radius` with full lungs, below 0 (all dark) out of air.
+func clear_radius() -> float:
+	return start_radius * (1.0 - amount()) - SOFTNESS * amount()
 
 
 func _update() -> void:
-	_rect.modulate.a = strength()
-	_rect.visible = _rect.modulate.a > 0.001
+	var a := amount()
+	_material.set_shader_parameter("amount", a)
+	var size := _rect.get_viewport_rect().size
+	if size.y > 0.0:
+		_material.set_shader_parameter("aspect", Vector2(size.x / size.y, 1.0))
+	_rect.visible = a > 0.001
