@@ -337,6 +337,69 @@ func test_drop_under_shift_keeps_the_item_still() -> void:
 	await _free_room(room)
 
 
+func test_fire_look_catches_dies_down_and_ash_falls() -> void:
+	var look := FireLook.new()
+	look.configure(Content.objects(), Content.time())
+	var ticks := 180
+	var first := look.flame_strength(BURNING, 0, ticks)
+	var middle := look.flame_strength(BURNING, 90, ticks)
+	var last := look.flame_strength(BURNING, ticks - 1, ticks)
+	check(first > 0.0 and first < 0.2, "just lit, the flames must be small (%s)" % first)
+	check(is_equal_approx(middle, 1.0), "in the middle of burning the flames are full")
+	check(last < middle and last >= 0.25, "at the end the flames die down to a glow (%s)" % last)
+	check(look.flame_strength(WHOLE, 0, ticks) == 0.0 and look.flame_strength(BURNT, ticks, ticks) == 0.0, "no flames unless burning")
+	var size := Vector2(256, 32)
+	var early := look.ash_at(0.05, size)
+	var later := look.ash_at(0.6, size)
+	check(early.size() == look.ash_pieces and later.size() == look.ash_pieces, "every ash piece is shown while the ash falls")
+	check(later[0].y > early[0].y, "ash falls as the burnt-out age grows")
+	check(look.ash_at(look.ash_seconds + 0.1, size).is_empty() and look.ash_at(-1.0, size).is_empty(), "no ash outside its seconds")
+	var shot := look.snapshot(500, {"phase": BURNING, "burn": 60, "doused": -1, "burnt": -1}, ticks, size)
+	check(shot == look.snapshot(500, {"phase": BURNING, "burn": 60, "doused": -1, "burnt": -1}, ticks, size), "the look is a function of world time and state")
+	check(not (shot["sparks"] as Array).is_empty() and not (shot["smoke"] as Array).is_empty(), "a burning zone shows sparks and smoke")
+
+
+func test_fire_look_data_is_checked() -> void:
+	var time_data := Content.time()
+	var missing := Content.objects().duplicate(true)
+	missing.erase("fire_look")
+	check(not Content.validate_objects(missing, time_data).is_empty(), "a missing fire_look section must be reported")
+	var bright := Content.objects().duplicate(true)
+	bright["fire_look"]["glow_alpha"] = 2
+	check(not Content.validate_objects(bright, time_data).is_empty(), "glow_alpha above 1 must be reported")
+
+
+func test_fire_look_is_the_same_forward_and_back() -> void:
+	var room: Node = await _load_room()
+	var wall: WoodZone = room.get_node("Wall")
+	var room_time: RoomTime = room.get_node("RoomTime")
+	room_time.live_action("wall", wall.ignite_change())
+	var forward := {}
+	var saw := {"sparks": false, "smoke": false, "ash": false}
+	for i in 240:
+		await _tree.physics_frame
+		var shot := wall.look_snapshot()
+		forward[int(shot["tick"])] = shot
+		for key in saw:
+			saw[key] = saw[key] or not (shot[key] as Array).is_empty()
+	check(saw["sparks"] and saw["smoke"] and saw["ash"], "burning and burning out must show sparks, smoke and ash: %s" % [saw])
+	check(wall.burn.phase == BURNT, "the wall must have burnt out")
+	Input.action_press("rewind")
+	var compared := 0
+	var same := true
+	for i in 230:
+		await _tree.physics_frame
+		var shot := wall.look_snapshot()
+		var tick := int(shot["tick"])
+		if forward.has(tick):
+			compared += 1
+			same = same and shot == forward[tick]
+	check(compared > 200, "the rewind must pass the recorded ticks (%d)" % compared)
+	check(same, "the look of fire on a world tick must be the same forward and rewinding")
+	check(wall.burn.phase == BURNING or wall.burn.phase == WHOLE, "rewound, the wall is back")
+	await _free_room(room)
+
+
 ## Picks the flamethrower up where it lies and walks the player to `x`; the
 ## item follows into the hands.
 func _hold_flamethrower_near(room: Node, x: float) -> void:

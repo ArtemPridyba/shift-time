@@ -36,7 +36,13 @@ const LEVER_KEYS: Array[String] = ["interact_radius_px"]
 const LAMP_KEYS: Array[String] = ["break_seconds", "fall_seconds", "shatter_seconds", "fall_distance_px", "flash_seconds", "flash_radius_px", "light_radius_px"]
 const DARKNESS_KEYS: Array[String] = ["ambient", "player_outline_alpha"]
 ## Fire (task 2.7): wood zones, the steam of a doused fire, the reverse flamethrower.
-const WOOD_KEYS: Array[String] = ["burn_seconds", "flame_px", "flame_side_px", "flames_per_cell", "sparks"]
+const WOOD_KEYS: Array[String] = ["burn_seconds", "flame_px", "flame_side_px"]
+## The look of fire (decoration, task 2.7А): all numbers above 0.
+const FIRE_LOOK_KEYS: Array[String] = [
+	"ignite_seconds", "fade_seconds", "flame_rise_px", "sparks", "spark_rise_px", "spark_seconds",
+	"smoke_puffs", "smoke_rise_px", "smoke_seconds", "smoke_after_seconds", "ash_pieces",
+	"ash_seconds", "ash_gravity_px", "glow_radius_px", "glow_alpha", "jet_speed_px",
+]
 const STEAM_KEYS: Array[String] = ["seconds", "puffs", "rise_px", "radius_px"]
 const FLAMETHROWER_KEYS: Array[String] = ["interact_radius_px", "reach_px", "jet_px", "follow_px", "gravity", "max_fall_speed"]
 ## Every window in which the player must act is at least this long (design rules).
@@ -265,7 +271,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	# 10000 is Water.LEVEL_MAX (core/ does not refer to objects/).
 	if 10000.0 / (float(data["water"]["full_seconds"]) * ticks) > max_step:
 		errors.append("objects.json: 'water.full_seconds' is too short: the level would jump more than max_state_step per tick")
-	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["flamethrower", FLAMETHROWER_KEYS]]:
+	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS]]:
 		var isec := interact_section as Array
 		var isec_name: String = isec[0]
 		var ientry: Variant = data.get(isec_name)
@@ -286,6 +292,8 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 			errors.append("objects.json: 'lamp.shatter_seconds' is too short: the shards would jump more than max_state_step per tick")
 		if float(data["wood"]["burn_seconds"]) < MIN_WINDOW_SECONDS:
 			errors.append("objects.json: 'wood.burn_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
+		if float(data["fire_look"]["glow_alpha"]) > 1.0:
+			errors.append("objects.json: 'fire_look.glow_alpha' must be at most 1")
 		var thrower: Dictionary = data["flamethrower"]
 		for key in ["follow_px"]:
 			if float(thrower[key]) > max_step:
