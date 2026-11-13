@@ -68,10 +68,75 @@ func tick(direction: int, objects: Array, player_rect: Rect2 = Rect2()) -> Step:
 
 
 ## Runs the room without the player for `ticks` ticks, recording every frame
-## (the prelude, section 2.2).
-func run_prelude(objects: Array, ticks: int) -> void:
+## (the prelude, section 2.2). `events` are the scripted events of the level
+## (`prelude_events_from_data`): an event on tick k changes the frame recorded
+## k ticks after the prelude starts (0 is the starting frame). The prelude
+## runs at the head, so an event is ordinary recording, never a branch.
+## Events of one tick apply in their order in the data.
+func run_prelude(objects: Array, ticks: int, events: Array = []) -> void:
+	_apply_events(objects, events, 0)
 	for i in maxi(ticks, 0):
 		tick(FORWARD, objects)
+		_apply_events(objects, events, i + 1)
+
+
+## The scripted events of a level's entry in `levels.json`, with their second
+## turned into a tick: {"tick": k, "press": id} presses an interaction point as
+## the player would (a lever with all its targets), {"tick": k, "id": id,
+## "state": {...}} sets fields of an object's state (a manipulator, a reverse
+## item baked into the prelude).
+static func prelude_events_from_data(events: Variant, ticks_per_second: float) -> Array:
+	var result := []
+	if not events is Array:
+		return result
+	for event: Variant in events:
+		if not event is Dictionary:
+			continue
+		var data := event as Dictionary
+		var out := {"tick": int(round(float(data.get("second", 0.0)) * ticks_per_second))}
+		if data.has("press"):
+			out["press"] = str(data["press"])
+		else:
+			out["id"] = str(data.get("id", ""))
+			out["state"] = (data.get("state", {}) as Dictionary).duplicate(true)
+		result.append(out)
+	return result
+
+
+func _apply_events(objects: Array, events: Array, at_tick: int) -> void:
+	var changed := false
+	for event: Variant in events:
+		var data := event as Dictionary
+		if int(data.get("tick", -1)) != at_tick:
+			continue
+		var changes: Array = []
+		if data.has("press"):
+			var source := _object(objects, str(data["press"]))
+			if source != null and source.has_method("get_interaction_change"):
+				changes = source.call("get_interaction_change", objects)
+		else:
+			changes = [{"id": str(data.get("id", "")), "state": data.get("state", {})}]
+		for change: Variant in changes:
+			var target := _object(objects, str((change as Dictionary).get("id", "")))
+			if target == null:
+				continue
+			var state: Dictionary = (target.call("capture_state") as Dictionary).duplicate(true)
+			state.merge(((change as Dictionary).get("state", {}) as Dictionary).duplicate(true), true)
+			target.call("restore_state", state)
+			changed = true
+	if not changed:
+		return
+	if timeline.is_empty():
+		timeline.record(_recorder.capture(objects))
+	else:
+		timeline.replace_current(_recorder.capture(objects))
+
+
+func _object(objects: Array, object_id: String) -> Object:
+	for object in objects:
+		if object is Object and str((object as Object).get("object_id")) == object_id:
+			return object
+	return null
 
 
 ## The player changed a recorded object (button, lever, valve).

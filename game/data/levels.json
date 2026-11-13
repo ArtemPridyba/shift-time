@@ -21,6 +21,9 @@
 		"id": "test_room_water",
 		"scene": "res://levels/test_room_water.tscn",
 		"prelude_seconds": 8,
+		"prelude_events": [
+			{ "second": 1, "press": "valve" }
+		],
 		"title": "Test room: water and float"
 	}
 ]

@@ -65,6 +65,17 @@ static func time_hud() -> Dictionary:
 	return data if data is Dictionary else {}
 
 
+## The entry of `levels.json` whose scene is `scene_path`, or an empty
+## dictionary (a room opened on its own, a test scene).
+static func level_for_scene(scene_path: String) -> Dictionary:
+	if scene_path.is_empty():
+		return {}
+	for entry: Variant in levels():
+		if entry is Dictionary and str((entry as Dictionary).get("scene", "")) == scene_path:
+			return entry
+	return {}
+
+
 static func levels() -> Array:
 	var data: Variant = load_json(LEVELS_PATH)
 	return data if data is Array else []
@@ -171,6 +182,37 @@ static func validate_levels(data: Variant, history_seconds: float) -> PackedStri
 			errors.append("%s: 'prelude_seconds' must be between 0 and the history length" % where)
 		if not entry["title"] is String:
 			errors.append("%s: 'title' must be a string" % where)
+		if entry.has("prelude_events") and _is_number(entry["prelude_seconds"]):
+			errors.append_array(_prelude_event_problems(entry["prelude_events"], float(entry["prelude_seconds"]), where))
+	return errors
+
+
+## Scripted events of a level's prelude (section 2.2): each at a `second`
+## inside the prelude, and either `press` (an interaction point) or `id` with
+## a `state` to set.
+static func _prelude_event_problems(events: Variant, prelude_seconds: float, where: String) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not events is Array:
+		errors.append("%s: 'prelude_events' must be a list" % where)
+		return errors
+	for i in (events as Array).size():
+		var event: Variant = events[i]
+		var at := "%s.prelude_events[%d]" % [where, i]
+		if not event is Dictionary:
+			errors.append("%s: expected an object" % at)
+			continue
+		var second: Variant = event.get("second")
+		if not _is_number(second) or float(second) < 0.0 or float(second) > prelude_seconds:
+			errors.append("%s: 'second' must be a number inside the prelude (0 to %s)" % [at, prelude_seconds])
+		var press: bool = event.has("press")
+		var sets: bool = event.has("id") or event.has("state")
+		if press == sets:
+			errors.append("%s: give either 'press' or 'id' with 'state'" % at)
+		elif press and (not event["press"] is String or (event["press"] as String).is_empty()):
+			errors.append("%s: 'press' must be an object id" % at)
+		elif sets and (not event.get("id") is String or (event.get("id") as String).is_empty() \
+				or not event.get("state") is Dictionary or (event.get("state") as Dictionary).is_empty()):
+			errors.append("%s: 'id' must be an object id and 'state' a non-empty object" % at)
 	return errors
 
 

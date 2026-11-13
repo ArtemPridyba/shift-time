@@ -2,7 +2,8 @@ extends SceneTree
 ## Builds the water test room `levels/test_room_water.tscn` (task 2.3): a high
 ## well with a ledge for the player and the lever on the left, a float on the
 ## water and the exit ledge at the rim on the right. The well starts full and
-## drains through the prelude; under Shift the water rises back to the rim.
+## drains through the prelude (8 s and the event that opens the valve at 1 s
+## live in data/levels.json); under Shift the water rises back to the rim.
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
 ##   godot --headless --path game --script $PWD/tools/build_water_room.gd
@@ -20,7 +21,6 @@ const TANK_CELLS := Rect2i(1, 5, 20, 10)  # columns 1-20, rows 5-14
 const RIM_PX := 16.0
 ## The float's centre, in cells from the left.
 const FLOAT_COLUMN := 13.5
-const PRELUDE_SECONDS := 8.0
 
 const MAP := [
 	"##############################",
@@ -59,7 +59,6 @@ func _initialize() -> void:
 	lever.name = "Lever"
 	lever.object_id = "valve"
 	lever.target_ids = PackedStringArray(["water"])
-	lever.on = true
 
 	for y in MAP.size():
 		var row: String = MAP[y]
@@ -83,7 +82,6 @@ func _initialize() -> void:
 	water.position = Vector2((left + right) / 2.0, bottom)
 	water.size = Vector2(right - left, bottom - top)
 	water.level = Water.LEVEL_MAX
-	water.powered = true
 	water.open_flow = -1
 	_own(root, water)
 	var float_body: WaterFloat = (load("res://objects/water_float.tscn") as PackedScene).instantiate()
@@ -98,7 +96,6 @@ func _initialize() -> void:
 	var room_time := RoomTime.new()
 	room_time.name = "RoomTime"
 	room_time.player_path = NodePath("../Player")
-	room_time.prelude_seconds = PRELUDE_SECONDS
 	_own(root, room_time)
 
 	var packed := PackedScene.new()
