@@ -53,15 +53,31 @@
   "wood": {
     "burn_seconds": 3,
     "flame_px": 40,
-    "flame_side_px": 12,
-    "flames_per_cell": 2,
-    "sparks": 10
+    "flame_side_px": 12
   },
   "steam": {
     "seconds": 2.5,
     "puffs": 10,
     "rise_px": 150,
     "radius_px": 18
+  },
+  "fire_look": {
+    "ignite_seconds": 0.35,
+    "fade_seconds": 0.6,
+    "flame_rise_px": 90,
+    "sparks": 12,
+    "spark_rise_px": 120,
+    "spark_seconds": 1.1,
+    "smoke_puffs": 6,
+    "smoke_rise_px": 170,
+    "smoke_seconds": 2.4,
+    "smoke_after_seconds": 2.0,
+    "ash_pieces": 24,
+    "ash_seconds": 1.4,
+    "ash_gravity_px": 700,
+    "glow_radius_px": 150,
+    "glow_alpha": 0.35,
+    "jet_speed_px": 420
   },
   "flamethrower": {
     "interact_radius_px": 80,

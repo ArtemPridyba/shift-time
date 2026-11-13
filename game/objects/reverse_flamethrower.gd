@@ -26,10 +26,12 @@ extends CharacterBody2D
 ## Temporal object contract: docs/architecture.md, section 4.1.
 
 const BODY_COLOR := Color("#8c939c")
+const DARK_COLOR := Color("#4a5058")
 const TANK_COLOR := Color("#5d646d")
+const RUST_COLOR := Color("#7a4a32")
 const ACCENT_COLOR := Color("#7FE8FF")
-const FIRE_COLOR := Color("#ff8c33")
-const SUCK_COLOR := Color("#c9d3da")
+const NOZZLE_HOT_COLOR := Color("#ff9a4a")
+const JET_SHADER := preload("res://objects/flamethrower_jet.gdshader")
 const SIZE := Vector2(48, 20)
 ## Where the item sits in the hands, from the player's feet (facing right).
 const HAND := Vector2(26, -40)
@@ -59,6 +61,7 @@ var _max_fall := 1200.0
 var _per_second := 60.0
 ## The item's own clock for the look of the jet, in its own (live) time.
 var _live_t := 0.0
+var _jet_rect: ColorRect
 
 
 func _init() -> void:
@@ -78,6 +81,17 @@ func _ready() -> void:
 	add_to_group("temporal")
 	add_to_group("live")
 	add_to_group("carried")
+	_jet_rect = ColorRect.new()
+	_jet_rect.name = "Jet"
+	_jet_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_jet_rect.size = Vector2(_reach, _jet)
+	var mat := ShaderMaterial.new()
+	mat.shader = JET_SHADER
+	mat.set_shader_parameter("rect_size", _jet_rect.size)
+	mat.set_shader_parameter("speed_px", float(Content.objects().get("fire_look", {}).get("jet_speed_px", 420)))
+	_jet_rect.material = mat
+	_jet_rect.visible = false
+	add_child(_jet_rect)
 
 
 func capture_state() -> Dictionary:
@@ -189,8 +203,24 @@ func _physics_process(_delta: float) -> void:
 
 func _process(delta: float) -> void:
 	_live_t += delta
-	if firing:
-		queue_redraw()
+	_update_jet()
+	queue_redraw()
+
+
+## The jet shader from the nozzle the way the item points: fire out under
+## Shift, air and fire pulled in in normal time, in the item's own time.
+func _update_jet() -> void:
+	if _jet_rect == null:
+		return
+	_jet_rect.visible = firing
+	if not firing:
+		return
+	var nozzle := Vector2(facing * SIZE.x / 2.0, -SIZE.y / 2.0)
+	_jet_rect.position = nozzle + Vector2(0.0, -_jet / 2.0)
+	_jet_rect.scale = Vector2(float(facing), 1.0)
+	var mat := _jet_rect.material as ShaderMaterial
+	mat.set_shader_parameter("time", _live_t)
+	mat.set_shader_parameter("flow", 1.0 if fire_direction < 0 else -1.0)
 
 
 func _player() -> Node2D:
@@ -205,22 +235,26 @@ func _player() -> Node2D:
 
 func _draw() -> void:
 	var f := float(facing)
-	# The tank, the barrel towards the nozzle, the cyan time mark.
-	draw_rect(Rect2(Vector2(-SIZE.x / 2.0, -SIZE.y), Vector2(SIZE.x * 0.45, SIZE.y)), TANK_COLOR)
-	var barrel := Rect2(Vector2(-SIZE.x * 0.05, -SIZE.y * 0.7), Vector2(SIZE.x * 0.55, SIZE.y * 0.4))
-	if f < 0.0:
-		barrel.position.x = -barrel.end.x
-	draw_rect(barrel, BODY_COLOR)
-	draw_rect(Rect2(Vector2(-SIZE.x * 0.4, -SIZE.y * 0.75), Vector2(SIZE.x * 0.3, 4.0)), ACCENT_COLOR)
-	if not firing:
-		return
-	# The jet: under Shift fire flies out of the nozzle; in normal time air
-	# and fire stream into it. Its own time, so it always reads the way it acts.
-	var nozzle := Vector2(f * SIZE.x / 2.0, -SIZE.y / 2.0)
-	var out := fire_direction < 0
-	for i in 12:
-		var along := fposmod(_live_t * 2.2 + i / 12.0, 1.0)
-		var d := along if out else 1.0 - along
-		var p := nozzle + Vector2(f * d * _reach, sin(_live_t * 11.0 + i) * _jet * 0.35 * d)
-		var color := FIRE_COLOR if out else SUCK_COLOR
-		draw_circle(p, 3.0 + 7.0 * d, Color(color, 0.85 * (1.0 - d * 0.6)))
+	# A worn tank on the back end, a barrel with a bell nozzle to the front,
+	# a grip below, the cyan time ring and its arrow (it points the way the
+	# jet acts: out under Shift, in in normal time).
+	var tank_centre := Vector2(-f * SIZE.x * 0.26, -SIZE.y * 0.5)
+	draw_circle(tank_centre, SIZE.y * 0.5, TANK_COLOR)
+	draw_rect(Rect2(tank_centre - Vector2(SIZE.y * 0.5, SIZE.y * 0.5), Vector2(SIZE.y, SIZE.y * 0.3)), TANK_COLOR.lightened(0.08))
+	draw_circle(tank_centre + Vector2(-f * 4.0, 5.0), 2.5, RUST_COLOR)
+	var barrel_from := tank_centre + Vector2(f * SIZE.y * 0.3, -2.0)
+	var barrel_to := Vector2(f * SIZE.x * 0.38, -SIZE.y * 0.55)
+	draw_line(barrel_from, barrel_to, BODY_COLOR, 6.0, true)
+	var mouth := Vector2(f * SIZE.x * 0.5, -SIZE.y * 0.55)
+	draw_colored_polygon(PackedVector2Array([
+		barrel_to + Vector2(0.0, -3.0), mouth + Vector2(0.0, -6.0),
+		mouth + Vector2(0.0, 6.0), barrel_to + Vector2(0.0, 3.0)]), DARK_COLOR)
+	if firing and fire_direction < 0:
+		draw_circle(mouth, 4.0, Color(NOZZLE_HOT_COLOR, 0.6 + 0.4 * sin(_live_t * 30.0)))
+	draw_line(tank_centre + Vector2(f * 6.0, SIZE.y * 0.3), tank_centre + Vector2(f * 10.0, SIZE.y * 0.65), DARK_COLOR, 4.0, true)
+	var ring := tank_centre + Vector2(f * SIZE.y * 0.42, -1.0)
+	draw_arc(ring, 5.0, 0.0, TAU, 16, ACCENT_COLOR, 2.0, true)
+	var way := f if not firing or fire_direction < 0 else -f
+	var pulse := 1.0 + (0.3 * sin(_live_t * 12.0) if firing else 0.0)
+	draw_colored_polygon(PackedVector2Array([
+		ring + Vector2(way * 3.0 * pulse, 0.0), ring + Vector2(-way * 2.0, -2.5), ring + Vector2(-way * 2.0, 2.5)]), ACCENT_COLOR)
