@@ -1,9 +1,11 @@
 class_name PlayerMotion
 extends RefCounted
 ## Movement rules of the player: acceleration, friction, gravity, jump with
-## coyote time and jump buffer, and water: the hero walks slower under water,
-## sinks to the bottom, cannot jump out, and rising water carries the hero up
-## to its surface. Pure rules, no nodes: testable headless.
+## coyote time and jump buffer, and in water: the player walks slower, sinks
+## slowly and jumps lower from the bottom, but rising water carries the player
+## up on its surface (the world moves the player). There is no swimming: a
+## player under water who cannot get out runs out of breath (`Breath`).
+## Pure rules, no nodes: testable headless.
 ##
 ## The player's time always runs forward, so nothing here knows about the
 ## direction of world time (see docs/architecture.md, sections 1 and 2).
@@ -19,15 +21,16 @@ func _init(params: Dictionary) -> void:
 
 ## Returns the new velocity for one physics tick.
 ## `axis` is -1..1 (left..right), `jump_pressed` is true on the tick of the press.
-## `water_depth` is how far the feet are below a water surface, in px, or
-## negative out of water; `surface_rise` is how fast that surface goes up
-## (px/s, 0 or less while it stands or falls).
+## `water` is the player's contact with water (`water_contact`), empty on land.
 func step(
 	velocity: Vector2, axis: float, jump_pressed: bool, on_floor: bool, delta: float,
-	water_depth := -1.0, surface_rise := 0.0
+	water: Dictionary = {}
 ) -> Vector2:
 	var v := velocity
-	var in_water := water_depth >= 0.0
+	var depth := float(water.get("depth", 0.0))
+	var in_water := depth > 0.0
+	# Rising water carries the player on its surface, like a platform.
+	var carried := in_water and float(water.get("rise", 0.0)) > 0.0
 	var walk := float(_params["walk_speed"])
 	if in_water:
 		walk *= float(_params["water_walk_factor"])
@@ -39,7 +42,7 @@ func step(
 		v.x = move_toward(v.x, 0.0, float(_params["friction"]) * delta)
 
 	# Timers: coyote time after leaving the floor, buffer before landing.
-	if on_floor:
+	if on_floor or carried:
 		_coyote_left = float(_params["coyote_seconds"])
 	else:
 		_coyote_left = maxf(0.0, _coyote_left - delta)
@@ -48,28 +51,26 @@ func step(
 	else:
 		_buffer_left = maxf(0.0, _buffer_left - delta)
 
-	if in_water:
-		# No jump out of the water: it blocks the way.
-		_coyote_left = 0.0
-		_buffer_left = 0.0
-		if surface_rise > 0.0:
-			# Rising water lifts the hero to its surface and carries the hero up.
-			v.y = -minf(float(_params["water_lift_speed"]), surface_rise + water_depth / delta)
-		elif on_floor:
-			v.y = minf(v.y, 0.0)
-		else:
-			v.y = move_toward(v.y, float(_params["water_sink_speed"]), float(_params["gravity"]) * delta)
-		return v
-
-	# Vertical: gravity in the air, rest on the floor.
-	if on_floor:
+	# Vertical: gravity in the air, rest on the floor; in water the surface
+	# lifts the player while it rises, otherwise the player sinks slowly.
+	if carried:
+		v.y = minf(v.y, -minf(depth / delta, float(_params["water_float_up_speed"])))
+	elif on_floor:
 		v.y = minf(v.y, 0.0)
+	elif in_water:
+		var sink := float(_params["water_max_sink_speed"])
+		if v.y > sink:
+			v.y = move_toward(v.y, sink, float(_params["water_drag"]) * delta)
+		else:
+			v.y = minf(v.y + float(_params["water_gravity"]) * delta, sink)
 	else:
 		v.y = minf(v.y + float(_params["gravity"]) * delta, float(_params["max_fall_speed"]))
 
-	# Jump.
+	# Jump: from the floor, from the surface of rising water, lower from the
+	# bottom of a tank.
 	if _buffer_left > 0.0 and _coyote_left > 0.0:
-		v.y = -float(_params["jump_velocity"])
+		var in_deep := in_water and not carried
+		v.y = -float(_params["water_jump_velocity" if in_deep else "jump_velocity"])
 		_buffer_left = 0.0
 		_coyote_left = 0.0
 
@@ -79,3 +80,21 @@ func step(
 func reset() -> void:
 	_coyote_left = 0.0
 	_buffer_left = 0.0
+
+
+## How the player's body (global rect, feet at the bottom) meets one tank:
+## `depth` is how far the feet are below the surface (0 when out of the water),
+## `rise` the surface's speed upwards in px/s, `head_under` is true when the
+## surface is above the middle of the head (the top `head_px` of the body).
+static func water_contact(body: Rect2, tank: Rect2, surface_y: float, rise: float, head_px: float) -> Dictionary:
+	var centre := body.get_center().x
+	var inside := centre >= tank.position.x and centre <= tank.end.x \
+			and body.end.y > surface_y and body.position.y < tank.end.y
+	if not inside:
+		return {"depth": 0.0, "rise": 0.0, "head_under": false}
+	var depth := minf(body.end.y, tank.end.y) - surface_y
+	return {
+		"depth": maxf(depth, 0.0),
+		"rise": rise,
+		"head_under": surface_y < body.position.y + head_px / 2.0,
+	}

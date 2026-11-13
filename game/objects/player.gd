@@ -2,39 +2,51 @@ class_name Player
 extends CharacterBody2D
 ## The player: reads input, applies PlayerMotion, follows the room with the camera.
 ## The player is not a temporal object: it is never recorded and does not
-## listen to the direction of world time.
+## listen to the direction of world time. In water the player sinks and holds
+## the breath (`Breath`); out of air, `drowned` tells the room to reset.
+
+## The air ran out under water: the room resets.
+signal drowned
 
 const BODY_COLOR := Color("#d9dde3")
 const MARK_COLOR := Color("#7b828c")
-## Feet this close above a water surface still count as in the water, so the
-## hero carried up by rising water does not flicker in and out of it.
-const WATER_CONTACT_PX := 2.0
 
 var _motion: PlayerMotion
+var _breath: Breath
 var _facing := 1.0
 var _size := Vector2(44, 92)
-## The last surface seen of each water (instance id to global y), to know how
-## fast it rises.
-var _surfaces := {}
+var _head_px := 28.0
+var _head_under := false
+var _bubbles: CPUParticles2D
 
 @onready var _shape: CollisionShape2D = $CollisionShape2D
 @onready var _camera: Camera2D = $Camera2D
 
 
 func _ready() -> void:
-	_motion = PlayerMotion.new(Content.player())
+	var params := Content.player()
+	_motion = PlayerMotion.new(params)
+	_breath = Breath.new(params)
+	_head_px = float(params.get("head_px", 28))
 	_size = (_shape.shape as RectangleShape2D).size
+	_bubbles = _make_bubbles()
+	add_child(_bubbles)
 
 
 func _physics_process(delta: float) -> void:
 	var axis := Input.get_axis("move_left", "move_right")
 	var jump := Input.is_action_just_pressed("jump")
-	var water := _water_contact(delta)
-	velocity = _motion.step(velocity, axis, jump, is_on_floor(), delta, water.x, water.y)
+	var water := water_contact()
+	velocity = _motion.step(velocity, axis, jump, is_on_floor(), delta, water)
 	move_and_slide()
 	if axis != 0.0 and signf(axis) != _facing:
 		_facing = signf(axis)
 		queue_redraw()
+	_head_under = bool(water.get("head_under", false))
+	_bubbles.emitting = _head_under
+	_bubbles.position.x = 8.0 * _facing
+	if _breath.step(_head_under, delta):
+		drowned.emit()
 	if Input.is_action_just_pressed("interact"):
 		_try_interact()
 
@@ -65,37 +77,39 @@ func body_rect() -> Rect2:
 	return Rect2(position - Vector2(_size.x / 2.0, _size.y), _size)
 
 
+## The deepest water the player is in this tick (`PlayerMotion.water_contact`);
+## depth 0 on land.
+func water_contact() -> Dictionary:
+	var best := {"depth": 0.0, "rise": 0.0, "head_under": false}
+	if not is_inside_tree():
+		return best
+	var body := Rect2(global_position - Vector2(_size.x / 2.0, _size.y), _size)
+	for node in get_tree().get_nodes_in_group("water"):
+		var water := node as Water
+		if water == null:
+			continue
+		var contact := PlayerMotion.water_contact(body, water.tank_global_rect(), water.surface_global_y(), water.rise_px_per_second, _head_px)
+		if float(contact["depth"]) > float(best["depth"]):
+			best = contact
+	return best
+
+
+## 1 with full lungs, 0 out of air; the vignette reads it.
+func breath_fraction() -> float:
+	return _breath.fraction() if _breath != null else 1.0
+
+
+func is_head_under_water() -> bool:
+	return _head_under
+
+
 func respawn(at: Vector2) -> void:
 	global_position = at
 	velocity = Vector2.ZERO
-	_surfaces.clear()
 	_motion.reset()
+	if _breath != null:
+		_breath.reset()
 	_camera.reset_smoothing()
-
-
-## The water the feet are in: x is the depth below its surface (px, -1 out of
-## water), y how fast that surface rises (px/s). The world moved this tick
-## already (RoomTime runs first), so the rise is the surface's motion now.
-func _water_contact(delta: float) -> Vector2:
-	var parent := get_parent()
-	var contact := Vector2(-1.0, 0.0)
-	var deepest := -INF
-	if parent == null:
-		return contact
-	for node in get_tree().get_nodes_in_group("water"):
-		if not parent.is_ancestor_of(node) or not node.has_method("depth_of"):
-			continue
-		var id := node.get_instance_id()
-		var surface: float = node.call("surface_y")
-		var rise := 0.0
-		if _surfaces.has(id) and delta > 0.0:
-			rise = (float(_surfaces[id]) - surface) / delta
-		_surfaces[id] = surface
-		var depth: float = node.call("depth_of", global_position)
-		if depth >= -WATER_CONTACT_PX and depth > deepest:
-			deepest = depth
-			contact = Vector2(maxf(depth, 0.0), rise)
-	return contact
 
 
 ## Asks the parent RoomTime (if any) to handle an interact press.
@@ -113,3 +127,23 @@ func _find_room_time() -> Node:
 		if child is RoomTime:
 			return child
 	return null
+
+
+## Bubbles from the mouth while the head is under water: decoration, never
+## recorded (the player is live).
+func _make_bubbles() -> CPUParticles2D:
+	var bubbles := CPUParticles2D.new()
+	bubbles.name = "Bubbles"
+	bubbles.position = Vector2(8.0, -_size.y + 18.0)
+	bubbles.emitting = false
+	bubbles.amount = 8
+	bubbles.lifetime = 1.4
+	bubbles.direction = Vector2.UP
+	bubbles.spread = 20.0
+	bubbles.gravity = Vector2(0, -40)
+	bubbles.initial_velocity_min = 20.0
+	bubbles.initial_velocity_max = 45.0
+	bubbles.scale_amount_min = 2.0
+	bubbles.scale_amount_max = 4.0
+	bubbles.color = Color(0.85, 0.95, 1.0, 0.7)
+	return bubbles

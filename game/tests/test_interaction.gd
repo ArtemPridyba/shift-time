@@ -355,3 +355,45 @@ func test_validate_objects_rejects_zero_interact_radius() -> void:
 	objects["button"] = {"interact_radius_px": 0}
 	check(not Content.validate_objects(objects, time_data).is_empty(),
 		"interact_radius_px = 0 must be reported")
+
+
+# ---------------------------------------------------------------------------
+# Several targets: one control drives several objects (one valve, two tanks)
+# ---------------------------------------------------------------------------
+
+func test_lever_powers_every_target_and_the_old_single_target() -> void:
+	var lever: Lever = (load("res://objects/lever.tscn") as PackedScene).instantiate()
+	var first: Door = (load("res://objects/door.tscn") as PackedScene).instantiate()
+	var second: Door = (load("res://objects/door.tscn") as PackedScene).instantiate()
+	first.object_id = "first"
+	first.linked_id = "lever"
+	second.object_id = "second"
+	second.linked_id = "lever"
+	lever.target_id = "first"
+	lever.target_ids = PackedStringArray(["second", "first", "missing"])
+	var changes := lever.get_interaction_change([lever, first, second])
+	var ids: Array = changes.map(func(c: Dictionary) -> String: return str(c["id"]))
+	check(ids == ["lever", "first", "second"], "the lever must change itself and each found target once, got %s" % [ids])
+	for change: Dictionary in changes.slice(1):
+		check(bool(change["state"]["powered"]), "every target must be powered by the lever turned on")
+		check(change["state"].has("open"), "a target's change must keep the rest of its state")
+	lever.free()
+	first.free()
+	second.free()
+
+
+func test_button_powers_every_target() -> void:
+	var button: PushButton = (load("res://objects/push_button.tscn") as PackedScene).instantiate()
+	var first: Door = (load("res://objects/door.tscn") as PackedScene).instantiate()
+	var second: Door = (load("res://objects/door.tscn") as PackedScene).instantiate()
+	first.object_id = "first"
+	first.linked_id = "button"
+	second.object_id = "second"
+	second.linked_id = "button"
+	button.target_ids = PackedStringArray(["first", "second"])
+	var changes := button.get_interaction_change([button, first, second])
+	check(changes.size() == 3, "the button must change itself and both targets")
+	check(changes.slice(1).all(func(c: Dictionary) -> bool: return bool(c["state"]["powered"])), "both targets must be powered")
+	button.free()
+	first.free()
+	second.free()

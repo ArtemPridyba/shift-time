@@ -10,6 +10,7 @@
 | клод, клауд, клод код | Claude, Claude Code |
 | клод д, клод мд, клауд мд | `CLAUDE.md` |
 | агентс мд | `AGENTS.md` |
+| в лодо | в воду |
 | ридми | `README.md` |
 | опус, сонет, хайку | Opus, Sonnet, Haiku |
 | эффорт, хай, медиум, икс хай | усилия (effort): high, medium, xhigh |

@@ -12,7 +12,9 @@ const TIME_HUD_PATH := "res://data/time_hud.json"
 const PLAYER_KEYS: Array[String] = [
 	"walk_speed", "acceleration", "friction", "gravity",
 	"jump_velocity", "max_fall_speed", "coyote_seconds", "jump_buffer_seconds",
-	"water_walk_factor", "water_sink_speed", "water_lift_speed",
+	"water_walk_factor", "water_gravity", "water_max_sink_speed", "water_drag",
+	"water_jump_velocity", "water_float_up_speed", "head_px",
+	"breath_seconds", "breath_refill_seconds", "breath_vignette_alpha", "breath_vignette_radius",
 ]
 const TIME_KEYS: Array[String] = [
 	"physics_ticks_per_second", "snapshot_every_ticks", "history_seconds",
@@ -21,10 +23,9 @@ const TIME_KEYS: Array[String] = [
 const LEVEL_KEYS: Array[String] = ["id", "scene", "prelude_seconds", "title"]
 const DOOR_KEYS: Array[String] = ["open_seconds", "hold_open_seconds", "close_seconds", "hold_closed_seconds"]
 const PLATFORM_KEYS: Array[String] = ["speed", "pause_seconds"]
+const WATER_KEYS: Array[String] = ["full_seconds", "float_draft_px"]
 const BUTTON_KEYS: Array[String] = ["interact_radius_px"]
 const LEVER_KEYS: Array[String] = ["interact_radius_px"]
-const VALVE_KEYS: Array[String] = ["interact_radius_px", "turn_seconds"]
-const WATER_KEYS: Array[String] = ["drain_seconds"]
 const LAMP_KEYS: Array[String] = ["break_seconds", "fall_seconds", "shatter_seconds", "fall_distance_px", "flash_seconds", "flash_radius_px", "light_radius_px"]
 const DARKNESS_KEYS: Array[String] = ["ambient", "player_outline_alpha"]
 ## Every window in which the player must act is at least this long (design rules).
@@ -89,8 +90,16 @@ static func validate_player(data: Variant) -> PackedStringArray:
 			errors.append("player.json: missing '%s'" % key)
 		elif not _is_number(data[key]) or float(data[key]) <= 0.0:
 			errors.append("player.json: '%s' must be a number above 0" % key)
-	if errors.is_empty() and float(data["water_walk_factor"]) > 1.0:
-		errors.append("player.json: 'water_walk_factor' must be at most 1: water slows the hero down")
+	if not errors.is_empty():
+		return errors
+	for key in ["water_walk_factor", "breath_vignette_alpha", "breath_vignette_radius"]:
+		if float(data[key]) > 1.0:
+			errors.append("player.json: '%s' must be at most 1" % key)
+	if float(data["breath_seconds"]) < MIN_WINDOW_SECONDS:
+		errors.append("player.json: 'breath_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
+	# 92 px is the body of player.tscn.
+	if float(data["head_px"]) >= 92.0:
+		errors.append("player.json: 'head_px' must be less than the player's height (92 px)")
 	return errors
 
 
@@ -169,7 +178,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	var max_step := float(time_data["max_state_step"])
 	if not data.has("carry_margin_px") or not _is_number(data["carry_margin_px"]) or float(data["carry_margin_px"]) <= 0.0:
 		errors.append("objects.json: 'carry_margin_px' must be a number above 0")
-	for section: Variant in [["door", DOOR_KEYS], ["platform", PLATFORM_KEYS]]:
+	for section: Variant in [["door", DOOR_KEYS], ["platform", PLATFORM_KEYS], ["water", WATER_KEYS]]:
 		var sec := section as Array
 		var sec_name: String = sec[0]
 		var entry: Variant = data.get(sec_name)
@@ -196,7 +205,10 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 		errors.append("objects.json: 'platform.speed' moves more than max_state_step per tick")
 	if step >= float(data["carry_margin_px"]):
 		errors.append("objects.json: 'platform.speed' per tick must stay below 'carry_margin_px', or a rider reads as crushed")
-	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["lamp", LAMP_KEYS], ["valve", VALVE_KEYS], ["water", WATER_KEYS]]:
+	# 10000 is Water.LEVEL_MAX (core/ does not refer to objects/).
+	if 10000.0 / (float(data["water"]["full_seconds"]) * ticks) > max_step:
+		errors.append("objects.json: 'water.full_seconds' is too short: the level would jump more than max_state_step per tick")
+	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["lamp", LAMP_KEYS]]:
 		var isec := interact_section as Array
 		var isec_name: String = isec[0]
 		var ientry: Variant = data.get(isec_name)
@@ -215,13 +227,6 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 			errors.append("objects.json: 'lamp.fall_seconds' is too short: the lamp would jump more than max_state_step per tick")
 		if 1000.0 / (float(lamp["shatter_seconds"]) * ticks) > max_step:
 			errors.append("objects.json: 'lamp.shatter_seconds' is too short: the shards would jump more than max_state_step per tick")
-		var water: Dictionary = data["water"]
-		if float(water["drain_seconds"]) < MIN_WINDOW_SECONDS:
-			errors.append("objects.json: 'water.drain_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
-		if 1000.0 / (float(water["drain_seconds"]) * ticks) > max_step:
-			errors.append("objects.json: 'water.drain_seconds' is too short: the level would jump more than max_state_step per tick")
-		if 1000.0 / (float(data["valve"]["turn_seconds"]) * ticks) > max_step:
-			errors.append("objects.json: 'valve.turn_seconds' is too short: the wheel would jump more than max_state_step per tick")
 		var dark: Variant = data.get("darkness")
 		if not dark is Dictionary:
 			errors.append("objects.json: missing object 'darkness'")

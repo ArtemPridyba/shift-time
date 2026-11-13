@@ -15,13 +15,6 @@
   "lever": {
     "interact_radius_px": 80
   },
-  "valve": {
-    "interact_radius_px": 80,
-    "turn_seconds": 2
-  },
-  "water": {
-    "drain_seconds": 8
-  },
   "lamp": {
     "break_seconds": 8,
     "fall_seconds": 1.2,
@@ -35,5 +28,9 @@
     "ambient": 0.02,
     "player_outline_alpha": 0.3
   },
-  "carry_margin_px": 8
+  "carry_margin_px": 8,
+  "water": {
+    "full_seconds": 12,
+    "float_draft_px": 8
+  }
 }

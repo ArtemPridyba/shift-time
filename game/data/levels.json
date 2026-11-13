@@ -20,7 +20,7 @@
 	{
 		"id": "test_room_water",
 		"scene": "res://levels/test_room_water.tscn",
-		"prelude_seconds": 0,
-		"title": "Test room: water and valve"
+		"prelude_seconds": 8,
+		"title": "Test room: water and float"
 	}
 ]

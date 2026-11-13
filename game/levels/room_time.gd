@@ -21,6 +21,7 @@ var last_step := TimeWorld.Step.STARTED
 
 var _recorder := TemporalRecorder.new()
 var _initial := {}
+var _prelude_ticks := 0
 
 
 func _init() -> void:
@@ -39,8 +40,8 @@ func _ready() -> void:
 		push_error("RoomTime: " + problem)
 	_initial = _recorder.capture(objects)
 	world.start(objects)
-	var ticks := int(round(prelude_seconds * float(Content.time().get("physics_ticks_per_second", 60))))
-	world.run_prelude(objects, ticks)
+	_prelude_ticks = int(round(prelude_seconds * float(Content.time().get("physics_ticks_per_second", 60))))
+	world.run_prelude(objects, _prelude_ticks)
 
 
 func _physics_process(_delta: float) -> void:
@@ -113,11 +114,13 @@ func player_interact(player_pos: Vector2) -> void:
 		player_action(id, state)
 
 
-## Back to the room as it was loaded, with a fresh history.
+## Back to the room as it was loaded, with a fresh history and its prelude
+## run again: the player comes back into the same past.
 func reset() -> void:
 	var objects := temporal_objects()
 	_recorder.restore(_initial, objects)
 	world.start(objects)
+	world.run_prelude(objects, _prelude_ticks)
 
 
 func _player_rect() -> Rect2:
