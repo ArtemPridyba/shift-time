@@ -197,7 +197,7 @@ game/
 
 `objects.json`: поведение временных объектов: `door` (`open_seconds`, `hold_open_seconds`, `close_seconds`, `hold_closed_seconds`), `platform` (`speed` в px/с, `pause_seconds`), `carry_margin_px` — на сколько пикселей ноги игрока могут уйти в платформу, чтобы это считалось «едет», а не «давит». Скорость платформы за тик должна быть меньше `carry_margin_px`.
 
-`levels.json`: список уровней в порядке прохождения: `id`, `scene`, `prelude_seconds`, `title` и необязательный `prelude_events` (раздел 2.2); проверка — `Content.validate_levels`, а тест `test_every_prelude_event_names_an_object_of_its_room` проверяет, что событие называет объект своей комнаты.
+`levels.json`: список уровней в порядке прохождения: `id`, `scene`, `prelude_seconds`, `title` и необязательный `prelude_events` (раздел 2.2); проверка — `Content.validate_levels`, а тест `test_every_prelude_event_names_an_object_of_its_room` проверяет, что событие называет объект своей комнаты. Необязательное поле `objects` — настройки объектов этого уровня, `object_id → настройки`: `RoomTime` до первого кадра отдаёт их объекту в `apply_settings`. Дверь понимает секунды цикла и `"cycle": "once"` — открыта `hold_open_seconds`, закрывается за `close_seconds` и больше не открывается (уровень 01). Выход из уровня — `objects/exit_zone` (`ExitZone`, не временной объект); сцена уровня со скриптом `levels/level_room.gd` при входе игрока в узел `Exit` ставит `is_completed` и через `exit_zone.delay_seconds` из `objects.json` зовёт `LevelLoader.finish_level()` (пока — назад в список).
 
 ## 7. Ввод
 
@@ -242,7 +242,7 @@ game/
 | у каждого узла группы `temporal` есть методы интерфейса | 1.4 |
 | данные `time.json`, `player.json`, `levels.json` проходят проверку | 1.1 |
 
-**Тест решения уровня.** Для каждого уровня `tests/solutions/level_NN.json` — запись ввода: список отрезков `{ "actions": ["move_right", "rewind"], "ticks": 90 }`. Раннер загружает сцену уровня, проигрывает отрезки по физическим тикам (`Input.action_press` / `action_release`, затем ожидание `physics_frame`) и проверяет, что игрок дошёл до выхода за разумное число тиков. Всё без случайностей и без реального времени.
+**Тест решения уровня.** Для каждого уровня `tests/solutions/level_NN.json` — запись ввода: список отрезков `{ "actions": ["move_right", "rewind"], "ticks": 90 }`. Раннер загружает сцену уровня, проигрывает отрезки по физическим тикам (`Input.action_press` / `action_release`, затем ожидание `physics_frame`) и проверяет, что игрок дошёл до выхода за разумное число тиков. Всё без случайностей и без реального времени. Прогонщик — `tests/test_solutions.gd`: играет каждый файл папки; поле `level` — id из `levels.json`, `expect` — `exit` (дойти до выхода) или `no_exit` (так пройти нельзя). У каждого уровня с id `level_NN` обязаны быть `level_NN.json` и `level_NN_no_shift.json` (без `rewind`, `expect: no_exit`), иначе тест падает.
 
 ## 9. CI
 

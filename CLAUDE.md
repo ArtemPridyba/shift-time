@@ -91,7 +91,7 @@ Everything a step reads stays in the conversation and is read again by every lat
 - `game/art/` — block sets for levels (`art/blocks`, made by `tools/make_grey_blocks.py`); `game/audio/` — the place for the two time sounds (`time_sound.gd`, paths in `data/time_hud.json`).
 - `game/tests/` — headless tests: `test_runner.gd`, rule tests, determinism test, level solution tests (`solutions/`), UI smoke test.
 - `docs/` — the documents above; `docs/art/` — concept frames, the style sheet, the asset log `docs/art/log.md`.
-- `tools/` — scripts outside the game: blockout, concept frames; art and audio scripts later.
+- `tools/` — scripts outside the game: blockout, room and level builders (`build_level_01.gd`), concept frames; art and audio scripts later.
 - `.github/workflows/tests.yml` — both test commands on every push; `build.yml` (tasks 2.0 and 4.5) — after every merge into `main`: tests, then the web build and the Windows build.
 - `.claude/` — skills `razbor` (sorts jobs by cost) and `golos` (dictated messages), subagents `helper` (Sonnet) and `reader` (Haiku), the session-start hook. `AGENTS.md` and `.agents/workflows/` — the same rules for Antigravity.
 

@@ -27,6 +27,8 @@ var _initial := {}
 var _prelude_ticks := 0
 ## The prelude's scripted events from the same entry, in ticks.
 var _prelude_events: Array = []
+## Per-level object settings from the same entry: `object_id -> settings`.
+var _object_settings := {}
 
 
 func _init() -> void:
@@ -43,9 +45,10 @@ func _ready() -> void:
 	var objects := temporal_objects()
 	for problem in _recorder.validate(objects):
 		push_error("RoomTime: " + problem)
+	_read_prelude()
+	_apply_object_settings(objects)
 	_initial = _recorder.capture(objects)
 	world.start(objects)
-	_read_prelude()
 	world.run_prelude(objects, _prelude_ticks, _prelude_events)
 
 
@@ -166,11 +169,22 @@ func reset() -> void:
 	world.run_prelude(objects, _prelude_ticks, _prelude_events)
 
 
+## Hands every object its settings from `objects` of the level's entry
+## (`object_id -> settings`), before the room's first state is captured.
+func _apply_object_settings(objects: Array) -> void:
+	for object: Variant in objects:
+		var settings: Variant = _object_settings.get(str(object.get("object_id")))
+		if settings is Dictionary and object.has_method("apply_settings"):
+			object.call("apply_settings", settings)
+
+
 func _read_prelude() -> void:
 	var time_data := Content.time()
 	var per_second := float(time_data.get("physics_ticks_per_second", 60))
 	var room := get_parent()
 	var entry := Content.level_for_scene(room.scene_file_path if room != null else "")
+	var settings: Variant = entry.get("objects", {})
+	_object_settings = settings if settings is Dictionary else {}
 	prelude_seconds = float(entry.get("prelude_seconds", time_data.get("default_prelude_seconds", 0)))
 	_prelude_ticks = int(round(prelude_seconds * per_second))
 	_prelude_events = TimeWorld.prelude_events_from_data(entry.get("prelude_events", []), per_second)

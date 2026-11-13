@@ -5,6 +5,7 @@ extends Node
 
 signal level_started(id: String)
 signal list_opened
+signal level_finished(id: String)
 
 const LIST_SCENE := "res://ui/level_select.tscn"
 const BACK_ACTION := "back_to_list"
@@ -41,6 +42,15 @@ func go_to_list() -> bool:
 	current_id = ""
 	list_opened.emit()
 	return true
+
+
+## The running level is passed. Until the next level exists this returns to
+## the list.
+func finish_level() -> bool:
+	if current_id.is_empty():
+		return false
+	level_finished.emit(current_id)
+	return go_to_list()
 
 
 func _unhandled_input(event: InputEvent) -> void:
