@@ -6,10 +6,16 @@ extends CharacterBody2D
 
 const BODY_COLOR := Color("#d9dde3")
 const MARK_COLOR := Color("#7b828c")
+## Feet this close above a water surface still count as in the water, so the
+## hero carried up by rising water does not flicker in and out of it.
+const WATER_CONTACT_PX := 2.0
 
 var _motion: PlayerMotion
 var _facing := 1.0
 var _size := Vector2(44, 92)
+## The last surface seen of each water (instance id to global y), to know how
+## fast it rises.
+var _surfaces := {}
 
 @onready var _shape: CollisionShape2D = $CollisionShape2D
 @onready var _camera: Camera2D = $Camera2D
@@ -23,7 +29,8 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	var axis := Input.get_axis("move_left", "move_right")
 	var jump := Input.is_action_just_pressed("jump")
-	velocity = _motion.step(velocity, axis, jump, is_on_floor(), delta)
+	var water := _water_contact(delta)
+	velocity = _motion.step(velocity, axis, jump, is_on_floor(), delta, water.x, water.y)
 	move_and_slide()
 	if axis != 0.0 and signf(axis) != _facing:
 		_facing = signf(axis)
@@ -61,8 +68,34 @@ func body_rect() -> Rect2:
 func respawn(at: Vector2) -> void:
 	global_position = at
 	velocity = Vector2.ZERO
+	_surfaces.clear()
 	_motion.reset()
 	_camera.reset_smoothing()
+
+
+## The water the feet are in: x is the depth below its surface (px, -1 out of
+## water), y how fast that surface rises (px/s). The world moved this tick
+## already (RoomTime runs first), so the rise is the surface's motion now.
+func _water_contact(delta: float) -> Vector2:
+	var parent := get_parent()
+	var contact := Vector2(-1.0, 0.0)
+	var deepest := -INF
+	if parent == null:
+		return contact
+	for node in get_tree().get_nodes_in_group("water"):
+		if not parent.is_ancestor_of(node) or not node.has_method("depth_of"):
+			continue
+		var id := node.get_instance_id()
+		var surface: float = node.call("surface_y")
+		var rise := 0.0
+		if _surfaces.has(id) and delta > 0.0:
+			rise = (float(_surfaces[id]) - surface) / delta
+		_surfaces[id] = surface
+		var depth: float = node.call("depth_of", global_position)
+		if depth >= -WATER_CONTACT_PX and depth > deepest:
+			deepest = depth
+			contact = Vector2(maxf(depth, 0.0), rise)
+	return contact
 
 
 ## Asks the parent RoomTime (if any) to handle an interact press.
