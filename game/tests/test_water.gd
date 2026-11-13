@@ -306,17 +306,25 @@ func test_shift_lifts_the_player_in_the_well_to_the_rim() -> void:
 	check(player.is_head_under_water(), "at the bottom of the well the head is under water")
 	Input.action_press("rewind")
 	var lowest := player.global_position.y
-	var pinned := false
+	var full := false
 	for i in 900:
 		await _tree.physics_frame
 		lowest = minf(lowest, player.global_position.y)
+		if water.level == Water.LEVEL_MAX:
+			full = true
+			break
+	check(full, "Shift must raise the water back to the rim")
+	check(lowest <= water.surface_global_y() + 2.0, "the rising water must lift the player to the rim, feet at %.0f, surface %.0f" % [lowest, water.surface_global_y()])
+	check(not player.is_head_under_water() and player.breath_fraction() > 0.5, "lifted on the surface the player breathes")
+	# Before the scripted press opened the valve (levels.json) the full well
+	# stood still; Shift goes on back through that second to frame 0.
+	var pinned := false
+	for i in 120:
+		await _tree.physics_frame
 		if time.last_step == TimeWorld.Step.PINNED:
 			pinned = true
 			break
-	check(pinned, "Shift must rewind the well to frame 0")
-	check(water.level == Water.LEVEL_MAX, "at frame 0 the well is full")
-	check(lowest <= water.surface_global_y() + 2.0, "the rising water must lift the player to the rim, feet at %.0f, surface %.0f" % [lowest, water.surface_global_y()])
-	check(not player.is_head_under_water() and player.breath_fraction() > 0.5, "lifted on the surface the player breathes")
+	check(pinned and water.level == Water.LEVEL_MAX, "at frame 0 the well is full and the world stands")
 	await _free_room(room)
 
 

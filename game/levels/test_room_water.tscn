@@ -28,7 +28,6 @@ process_physics_priority = -40
 position = Vector2(704, 960)
 script = ExtResource("4_5vxid")
 size = Vector2(1280, 656)
-powered = true
 
 [node name="Float" type="AnimatableBody2D" parent="Water" unique_id=1907908277 instance=ExtResource("5_sctg0")]
 position = Vector2(160, 0)
@@ -44,7 +43,6 @@ monitorable = false
 script = ExtResource("8_orm5s")
 object_id = "valve"
 target_ids = PackedStringArray("water")
-on = true
 look = 1
 
 [node name="DipPlatform" parent="." instance=ExtResource("12_wlook")]
@@ -60,4 +58,3 @@ script = ExtResource("10_n7q3t")
 process_physics_priority = -50
 script = ExtResource("11_dptu2")
 player_path = NodePath("../Player")
-prelude_seconds = 8.0

@@ -12,8 +12,10 @@ extends Node
 
 ## The player, for the crush check; empty means no player in the room.
 @export var player_path: NodePath
-## Seconds the room runs without the player before it starts (section 2.2).
-@export var prelude_seconds := 0.0
+## Seconds the room runs without the player before it starts (section 2.2):
+## from the room's entry in `data/levels.json` (found by the room's scene),
+## else `default_prelude_seconds` of `data/time.json`.
+var prelude_seconds := 0.0
 
 var world: TimeWorld
 ## What the last tick did: a `TimeWorld.Step`.
@@ -22,6 +24,8 @@ var last_step := TimeWorld.Step.STARTED
 var _recorder := TemporalRecorder.new()
 var _initial := {}
 var _prelude_ticks := 0
+## The prelude's scripted events from the same entry, in ticks.
+var _prelude_events: Array = []
 
 
 func _init() -> void:
@@ -40,8 +44,8 @@ func _ready() -> void:
 		push_error("RoomTime: " + problem)
 	_initial = _recorder.capture(objects)
 	world.start(objects)
-	_prelude_ticks = int(round(prelude_seconds * float(Content.time().get("physics_ticks_per_second", 60))))
-	world.run_prelude(objects, _prelude_ticks)
+	_read_prelude()
+	world.run_prelude(objects, _prelude_ticks, _prelude_events)
 
 
 func _physics_process(_delta: float) -> void:
@@ -134,7 +138,17 @@ func reset() -> void:
 	var objects := temporal_objects()
 	_recorder.restore(_initial, objects)
 	world.start(objects)
-	world.run_prelude(objects, _prelude_ticks)
+	world.run_prelude(objects, _prelude_ticks, _prelude_events)
+
+
+func _read_prelude() -> void:
+	var time_data := Content.time()
+	var per_second := float(time_data.get("physics_ticks_per_second", 60))
+	var room := get_parent()
+	var entry := Content.level_for_scene(room.scene_file_path if room != null else "")
+	prelude_seconds = float(entry.get("prelude_seconds", time_data.get("default_prelude_seconds", 0)))
+	_prelude_ticks = int(round(prelude_seconds * per_second))
+	_prelude_events = TimeWorld.prelude_events_from_data(entry.get("prelude_events", []), per_second)
 
 
 func _player_rect() -> Rect2:
