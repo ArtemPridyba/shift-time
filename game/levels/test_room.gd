@@ -24,6 +24,7 @@ func _ready() -> void:
 	if _spawn != null:
 		_player.respawn(_spawn.global_position)
 	_player.drowned.connect(restart)
+	_player.burned.connect(restart)
 
 
 func _physics_process(_delta: float) -> void:
@@ -38,7 +39,7 @@ func _physics_process(_delta: float) -> void:
 
 
 ## The room as it was loaded and the player back at the spawn: the reset key,
-## and drowning.
+## drowning and burning.
 func restart() -> void:
 	if _spawn != null and _player != null:
 		_player.respawn(_spawn.global_position)

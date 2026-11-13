@@ -17,5 +17,8 @@
   "breath_seconds": 5,
   "breath_refill_seconds": 1.5,
   "breath_vignette_alpha": 0.97,
-  "breath_vignette_radius": 0.9
+  "breath_vignette_radius": 0.9,
+  "fire_seconds": 3,
+  "fire_cool_seconds": 1.5,
+  "fire_vignette_color": "#5c1800"
 }

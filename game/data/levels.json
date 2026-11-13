@@ -25,5 +25,14 @@
 			{ "second": 1, "press": "valve" }
 		],
 		"title": "Test room: water and float"
+	},
+	{
+		"id": "test_room_fire",
+		"scene": "res://levels/test_room_fire.tscn",
+		"prelude_seconds": 6,
+		"prelude_events": [
+			{ "second": 1, "id": "bridge", "state": { "phase": 1 } }
+		],
+		"title": "Test room: fire and flamethrower"
 	}
 ]

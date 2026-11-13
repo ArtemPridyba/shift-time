@@ -130,6 +130,17 @@ func replace_current(frame: Dictionary) -> bool:
 	return true
 
 
+## Writes `state` as the state of `object_id` in every kept frame left of the
+## cursor. Used when the live player lets an item go: the item has no past of
+## its own before that moment (docs/architecture.md, section 2.5).
+func rewrite_past(object_id: String, state: Dictionary) -> void:
+	if is_empty():
+		return
+	for number in range(_first, _cursor):
+		var frame: Dictionary = _slots[number % _capacity]
+		frame[object_id] = state.duplicate(true)
+
+
 ## Forgets everything.
 func clear() -> void:
 	_slots.fill(null)
