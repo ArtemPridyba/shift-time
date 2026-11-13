@@ -15,13 +15,6 @@
   "lever": {
     "interact_radius_px": 80
   },
-  "valve": {
-    "interact_radius_px": 80,
-    "turn_seconds": 2
-  },
-  "water": {
-    "drain_seconds": 8
-  },
   "lamp": {
     "break_seconds": 8,
     "fall_seconds": 1.2,

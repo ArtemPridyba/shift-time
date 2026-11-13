@@ -16,11 +16,5 @@
 		"scene": "res://levels/test_room_dark.tscn",
 		"prelude_seconds": 0,
 		"title": "Test room: dark and lamp"
-	},
-	{
-		"id": "test_room_water",
-		"scene": "res://levels/test_room_water.tscn",
-		"prelude_seconds": 0,
-		"title": "Test room: water and valve"
 	}
 ]
