@@ -6,5 +6,8 @@
   "jump_velocity": 780,
   "max_fall_speed": 1200,
   "coyote_seconds": 0.08,
-  "jump_buffer_seconds": 0.1
+  "jump_buffer_seconds": 0.1,
+  "water_walk_factor": 0.5,
+  "water_sink_speed": 160,
+  "water_lift_speed": 320
 }
