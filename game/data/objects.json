@@ -86,5 +86,8 @@
     "follow_px": 24,
     "gravity": 2200,
     "max_fall_speed": 1200
+  },
+  "exit_zone": {
+    "delay_seconds": 0.6
   }
 }

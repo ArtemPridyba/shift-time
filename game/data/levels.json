@@ -1,5 +1,14 @@
 [
 	{
+		"id": "level_01",
+		"scene": "res://levels/level_01.tscn",
+		"prelude_seconds": 3.5,
+		"objects": {
+			"door": { "cycle": "once", "hold_open_seconds": 1, "close_seconds": 5 }
+		},
+		"title": "01 Effect"
+	},
+	{
 		"id": "test_room",
 		"scene": "res://levels/test_room.tscn",
 		"prelude_seconds": 0,

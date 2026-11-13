@@ -22,6 +22,8 @@ const TIME_KEYS: Array[String] = [
 	"default_prelude_seconds", "max_state_step",
 ]
 const LEVEL_KEYS: Array[String] = ["id", "scene", "prelude_seconds", "title"]
+const LEVEL_DOOR_CYCLES: Array[String] = ["loop", "once"]
+const EXIT_ZONE_KEYS: Array[String] = ["delay_seconds"]
 const DOOR_KEYS: Array[String] = ["open_seconds", "hold_open_seconds", "close_seconds", "hold_closed_seconds"]
 const PLATFORM_KEYS: Array[String] = ["speed", "pause_seconds"]
 const WATER_KEYS: Array[String] = ["full_seconds", "float_draft_px"]
@@ -197,8 +199,31 @@ static func validate_levels(data: Variant, history_seconds: float) -> PackedStri
 			errors.append("%s: 'prelude_seconds' must be between 0 and the history length" % where)
 		if not entry["title"] is String:
 			errors.append("%s: 'title' must be a string" % where)
+		if entry.has("objects"):
+			errors.append_array(_object_settings_problems(entry["objects"], where))
 		if entry.has("prelude_events") and _is_number(entry["prelude_seconds"]):
 			errors.append_array(_prelude_event_problems(entry["prelude_events"], float(entry["prelude_seconds"]), where))
+	return errors
+
+
+## Per-level object settings: `object_id -> settings`. Every `*_seconds` must
+## be a number above 0 and `cycle` one of the door's cycles.
+static func _object_settings_problems(settings: Variant, where: String) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not settings is Dictionary:
+		errors.append("%s: 'objects' must be an object" % where)
+		return errors
+	for id: Variant in settings:
+		var one: Variant = settings[id]
+		if not one is Dictionary:
+			errors.append("%s: 'objects.%s' must be an object" % [where, id])
+			continue
+		for key: Variant in one:
+			var value: Variant = one[key]
+			if str(key).ends_with("_seconds") and (not _is_number(value) or float(value) <= 0.0):
+				errors.append("%s: 'objects.%s.%s' must be a number above 0" % [where, id, key])
+			elif str(key) == "cycle" and not value in LEVEL_DOOR_CYCLES:
+				errors.append("%s: 'objects.%s.cycle' must be one of %s" % [where, id, LEVEL_DOOR_CYCLES])
 	return errors
 
 
@@ -271,7 +296,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	# 10000 is Water.LEVEL_MAX (core/ does not refer to objects/).
 	if 10000.0 / (float(data["water"]["full_seconds"]) * ticks) > max_step:
 		errors.append("objects.json: 'water.full_seconds' is too short: the level would jump more than max_state_step per tick")
-	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS]]:
+	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["exit_zone", EXIT_ZONE_KEYS]]:
 		var isec := interact_section as Array
 		var isec_name: String = isec[0]
 		var ientry: Variant = data.get(isec_name)

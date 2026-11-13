@@ -12,12 +12,26 @@ extends AnimatableBody2D
 ##     used for the speed of opening/closing; hold times are ignored.
 ##     The door is registered in the room as the target of `linked_id`.
 ##
+## A level may change a door through `objects` of its entry in
+## `data/levels.json` (`apply_settings`): other cycle seconds, and
+## `"cycle": "once"` for a door that starts open, waits `hold_open_seconds`,
+## closes in `close_seconds` and then stays closed (level 01).
+##
+## The gauge beside the doorway shows how open the door is: a ring that fills
+## as the door opens and empties as it closes, so it reads by shape.
+##
 ## Temporal object contract: docs/architecture.md, section 4.1.
 
 const BODY_COLOR := Color("#6b717a")
 const ACCENT_COLOR := Color("#7FE8FF")
 ## `open` runs from 0 (closed) to this (fully open).
 const OPEN_MAX := 1000
+const CYCLE_LOOP := "loop"
+const CYCLE_ONCE := "once"
+const GAUGE_OFFSET := Vector2(-40.0, -28.0)
+const GAUGE_RADIUS := 12.0
+const GAUGE_WIDTH := 5.0
+const GAUGE_BACK_COLOR := Color("#23272d")
 
 @export var object_id := "door"
 @export var travel := 192.0
@@ -31,6 +45,8 @@ var locked := false
 var phase := 0
 ## True when the linked control is active. Only present in state when linked_id != "".
 var powered := false
+## True for a door that closes once and stays closed (`"cycle": "once"`).
+var once := false
 ## +1 or -1, from TimeManager through TimeWorld; for looks and sound later.
 var time_direction := 1
 ## The bottom of the player's body this deep inside the door is riding it, not
@@ -60,6 +76,20 @@ func configure(door_data: Dictionary, time_data: Dictionary) -> void:
 	_hold_open_ticks = maxi(int(round(float(door_data.get("hold_open_seconds", 4)) * ticks)), 1)
 	_close_ticks = maxi(int(round(float(door_data.get("close_seconds", 3)) * ticks)), 1)
 	_hold_closed_ticks = maxi(int(round(float(door_data.get("hold_closed_seconds", 4)) * ticks)), 1)
+
+
+## Settings of this door from the level's entry in `data/levels.json`: any of
+## the cycle seconds, and `cycle` ("loop" or "once"). A door that runs once
+## starts fully open at the beginning of its hold.
+func apply_settings(settings: Dictionary) -> void:
+	var door_data: Dictionary = (Content.objects().get("door", {}) as Dictionary).duplicate()
+	door_data.merge(settings, true)
+	configure(door_data, Content.time())
+	once = str(settings.get("cycle", CYCLE_LOOP)) == CYCLE_ONCE
+	if once:
+		phase = _open_ticks
+		open = OPEN_MAX
+		_apply()
 
 
 func _ready() -> void:
@@ -94,7 +124,10 @@ func simulate_tick(_tick: int) -> void:
 			open = maxi(open - step, 0)
 	else:
 		# Standalone cycle mode.
-		phase = (phase + 1) % cycle_ticks()
+		if once:
+			phase = mini(phase + 1, cycle_ticks() - 1)
+		else:
+			phase = (phase + 1) % cycle_ticks()
 		open = open_at(phase)
 	_apply()
 
@@ -140,6 +173,7 @@ func rect_at(amount: int) -> Rect2:
 
 func _apply() -> void:
 	position = _base() + Vector2(0.0, -travel * open / OPEN_MAX)
+	queue_redraw()
 
 
 func _base() -> Vector2:
@@ -160,3 +194,9 @@ func _draw() -> void:
 	var size := _size()
 	draw_rect(Rect2(-size / 2.0, size), BODY_COLOR)
 	draw_rect(Rect2(Vector2(-4.0, -size.y / 2.0 + 8.0), Vector2(8.0, size.y - 16.0)), ACCENT_COLOR)
+	# The gauge stays on the wall above the doorway while the door slides.
+	var ratio := float(open) / OPEN_MAX
+	var center := Vector2(GAUGE_OFFSET.x, -size.y / 2.0 + GAUGE_OFFSET.y + travel * ratio)
+	draw_arc(center, GAUGE_RADIUS, 0.0, TAU, 32, GAUGE_BACK_COLOR, GAUGE_WIDTH + 4.0)
+	if ratio > 0.0:
+		draw_arc(center, GAUGE_RADIUS, -PI / 2.0, -PI / 2.0 + TAU * ratio, 32, ACCENT_COLOR, GAUGE_WIDTH)
