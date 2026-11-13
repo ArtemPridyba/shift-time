@@ -80,6 +80,20 @@ func test_door_and_platform_rewind_without_jumps() -> void:
 	platform.free()
 
 
+## The physics server writes a synced body's transform back a step late. The
+## recorded state must come from the phase, or an interference captured between
+## ticks writes a stale position and the replay jumps.
+func test_platform_state_comes_from_its_phase_not_the_body() -> void:
+	var platform: MovingPlatform = (load(PLATFORM_PATH) as PackedScene).instantiate()
+	for i in 6:
+		platform.simulate_tick(i + 1)
+	var expected := platform.position_at(platform.phase)
+	platform.position = expected - Vector2(2, 0)
+	var state := platform.capture_state()
+	check(state["position"] == expected, "the platform must record the position of its phase, not the body's lagging one")
+	platform.free()
+
+
 func test_crush_rule_of_door_and_platform() -> void:
 	var door: Door = (load(DOOR_PATH) as PackedScene).instantiate()
 	door.position = Vector2(500, 500)
