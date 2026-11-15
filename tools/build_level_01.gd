@@ -1,8 +1,10 @@
 extends SceneTree
-## Builds level 01 `levels/level_01.tscn` (task 2.5, card docs/levels/01.md):
-## one screen, a flat floor, the spawn on the left, a wall with a doorway
-## 20 cells to the right, the door in it and the exit behind it. The door's
-## timing (open 1 s, closes in 5 s, once) and the prelude live in
+## Builds level 01 `levels/level_01.tscn` (task 2.5, merged with the platform
+## level 03 on 16.11.2026; card docs/levels/01.md): one screen. The hero starts
+## on the left ground in front of a doorway whose door is closing; behind it
+## the ground ends in a pit. A platform that has already left the edge rides
+## across the pit once, a second platform stands high beside the exit pillar
+## and sinks once. The timing (door, platforms, prelude) lives in
 ## data/levels.json.
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
@@ -17,23 +19,33 @@ const SCENE_PATH := "res://levels/level_01.tscn"
 
 const MAP := [
 	"##############################",
-	"#.....................#......#",
-	"#.....................#......#",
-	"#.....................#......#",
-	"#.....................#......#",
-	"#.....................#......#",
-	"#.....................#......#",
-	"#.....................#......#",
-	"#.....................#......#",
-	"#.....................#......#",
-	"#.....................#......#",
-	"#.....................#......#",
-	"#.....................D...EE.#",
-	"#.....................D...EE.#",
-	"#.S...................D...EE.#",
+	"#......#.....................#",
+	"#......#.....................#",
+	"#......#.................EE..#",
+	"#......#.................EE..#",
+	"#......#................######",
+	"#......#................######",
+	"#......D................######",
+	"#......D................######",
+	"#.S....D................######",
+	"############............######",
+	"#############...........######",
+	"##############..........######",
+	"###############.........######",
+	"################........######",
 	"##############################",
 	"##############################",
 ]
+
+## Platform 1 starts flush with the left ground (columns 12-14, top at row 10)
+## and rides 6 cells right. Platform 2 starts flush with the exit pillar
+## (columns 21-23, top at row 5) and sinks 5 cells, down to the level of
+## platform 1's end. Centres, in cells.
+const PLATFORM_HEIGHT := 32.0
+const PLATFORM_1_CENTRE := Vector2(13.5, 10.0)
+const PLATFORM_1_TRAVEL := Vector2(6.0, 0.0)
+const PLATFORM_2_CENTRE := Vector2(22.5, 5.0)
+const PLATFORM_2_TRAVEL := Vector2(0.0, 5.0)
 
 
 func _initialize() -> void:
@@ -71,6 +83,9 @@ func _initialize() -> void:
 	door.position = (Vector2(door_cells.position) + Vector2(door_cells.size) / 2.0) * CELL
 	_own(root, door)
 
+	_add_platform(root, "platform_1", PLATFORM_1_CENTRE, PLATFORM_1_TRAVEL)
+	_add_platform(root, "platform_2", PLATFORM_2_CENTRE, PLATFORM_2_TRAVEL)
+
 	var exit: ExitZone = (load("res://objects/exit_zone.tscn") as PackedScene).instantiate()
 	exit.size = Vector2(exit_cells.size * CELL)
 	exit.position = (Vector2(exit_cells.position) + Vector2(exit_cells.size) / 2.0) * CELL
@@ -89,6 +104,17 @@ func _initialize() -> void:
 	root.free()
 	print("wrote ", SCENE_PATH)
 	quit()
+
+
+## `centre` is where the platform's top edge meets the cell grid: the middle of
+## the platform in x and the top surface at the given row.
+func _add_platform(root: Node, id: String, centre: Vector2, travel_cells: Vector2) -> void:
+	var platform: MovingPlatform = (load("res://objects/platform.tscn") as PackedScene).instantiate()
+	platform.object_id = id
+	platform.name = id.to_pascal_case()
+	platform.travel = travel_cells * CELL
+	platform.position = Vector2(centre.x * CELL, centre.y * CELL + PLATFORM_HEIGHT / 2.0)
+	_own(root, platform)
 
 
 func _own(root: Node, child: Node) -> void:

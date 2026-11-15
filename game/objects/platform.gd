@@ -4,17 +4,26 @@ extends AnimatableBody2D
 ## and back, with a pause at each end. Speed and pause come from
 ## `data/objects.json`. With `sync_to_physics` the player rides it both ways.
 ##
+## A level may change a platform through `objects` of its entry in
+## `data/levels.json` (`apply_settings`): other `speed` and `pause_seconds`, and
+## `"cycle": "once"` for a platform that waits `delay_seconds` at its start,
+## rides to `start + travel` one time and then stays there (level 01).
+##
 ## Temporal object contract: docs/architecture.md, section 4.1.
 
 const BODY_COLOR := Color("#6b717a")
 const ACCENT_COLOR := Color("#7FE8FF")
+const CYCLE_LOOP := "loop"
+const CYCLE_ONCE := "once"
 
 @export var object_id := "platform"
 @export var travel := Vector2(480, 0)
 
-## Tick on the path: there, pause, back, pause.
+## Tick on the path: there, pause, back, pause. In `once` mode: wait, ride, stay.
 var phase := 0
 var time_direction := 1
+## True for a platform that rides one way one time (`"cycle": "once"`).
+var once := false
 ## The bottom of the player's body this deep inside the platform is riding it,
 ## not being crushed.
 var carry_margin := 8.0
@@ -24,6 +33,8 @@ var _has_base := false
 ## Pixels per tick along the path.
 var _step := 2.0
 var _pause_ticks := 1
+## Ticks a `once` platform waits at its start before it rides.
+var _delay_ticks := 0
 
 
 func _init() -> void:
@@ -37,6 +48,16 @@ func configure(platform_data: Dictionary, time_data: Dictionary) -> void:
 	var ticks := float(time_data.get("physics_ticks_per_second", 60))
 	_step = maxf(float(platform_data.get("speed", 120)), 1.0) / ticks
 	_pause_ticks = maxi(int(round(float(platform_data.get("pause_seconds", 4)) * ticks)), 1)
+	_delay_ticks = maxi(int(round(float(platform_data.get("delay_seconds", 0)) * ticks)), 0)
+
+
+## Settings of this platform from the level's entry in `data/levels.json`: any
+## of `speed`, `pause_seconds`, `delay_seconds`, and `cycle` ("loop" or "once").
+func apply_settings(settings: Dictionary) -> void:
+	var platform_data: Dictionary = (Content.objects().get("platform", {}) as Dictionary).duplicate()
+	platform_data.merge(settings, true)
+	configure(platform_data, Content.time())
+	once = str(settings.get("cycle", CYCLE_LOOP)) == CYCLE_ONCE
 
 
 func _ready() -> void:
@@ -56,7 +77,10 @@ func restore_state(state: Dictionary) -> void:
 
 
 func simulate_tick(_tick: int) -> void:
-	phase = (phase + 1) % cycle_ticks()
+	if once:
+		phase = mini(phase + 1, once_last_phase())
+	else:
+		phase = (phase + 1) % cycle_ticks()
 	position = position_at(phase)
 
 
@@ -82,9 +106,21 @@ func move_ticks() -> int:
 	return maxi(int(ceil(travel.length() / _step)), 1)
 
 
+## The tick on which a `once` platform has arrived and stays for good.
+func once_last_phase() -> int:
+	return _delay_ticks + move_ticks()
+
+
 func position_at(cycle_phase: int) -> Vector2:
 	var moving := move_ticks()
 	var p := cycle_phase
+	if once:
+		if p < _delay_ticks:
+			return _base()
+		p -= _delay_ticks
+		if p >= moving:
+			return _base() + travel
+		return _base() + travel * (float(p) / moving)
 	if p < moving:
 		return _base() + travel * (float(p) / moving)
 	p -= moving

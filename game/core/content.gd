@@ -206,8 +206,8 @@ static func validate_levels(data: Variant, history_seconds: float) -> PackedStri
 	return errors
 
 
-## Per-level object settings: `object_id -> settings`. Every `*_seconds` must
-## be a number above 0 and `cycle` one of the door's cycles.
+## Per-level object settings: `object_id -> settings`. Every `*_seconds` and a
+## `speed` must be a number above 0 and `cycle` one of the door's cycles.
 static func _object_settings_problems(settings: Variant, where: String) -> PackedStringArray:
 	var errors := PackedStringArray()
 	if not settings is Dictionary:
@@ -222,6 +222,8 @@ static func _object_settings_problems(settings: Variant, where: String) -> Packe
 			var value: Variant = one[key]
 			if str(key).ends_with("_seconds") and (not _is_number(value) or float(value) <= 0.0):
 				errors.append("%s: 'objects.%s.%s' must be a number above 0" % [where, id, key])
+			elif str(key) == "speed" and (not _is_number(value) or float(value) <= 0.0):
+				errors.append("%s: 'objects.%s.speed' must be a number above 0" % [where, id])
 			elif str(key) == "cycle" and not value in LEVEL_DOOR_CYCLES:
 				errors.append("%s: 'objects.%s.cycle' must be one of %s" % [where, id, LEVEL_DOOR_CYCLES])
 	return errors

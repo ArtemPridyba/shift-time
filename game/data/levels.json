@@ -4,7 +4,9 @@
 		"scene": "res://levels/level_01.tscn",
 		"prelude_seconds": 3.5,
 		"objects": {
-			"door": { "cycle": "once", "hold_open_seconds": 1, "close_seconds": 5 }
+			"door": { "cycle": "once", "hold_open_seconds": 1, "close_seconds": 4 },
+			"platform_1": { "cycle": "once", "speed": 64 },
+			"platform_2": { "cycle": "once", "speed": 80, "delay_seconds": 9 }
 		},
 		"title": "01 Effect"
 	},

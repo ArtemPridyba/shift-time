@@ -3,6 +3,7 @@ extends RefCounted
 ## object settings in levels.json, the room after its prelude and the exit.
 
 const DOOR_PATH := "res://objects/door.tscn"
+const PLATFORM_PATH := "res://objects/platform.tscn"
 const LEVEL_PATH := "res://levels/level_01.tscn"
 const ONCE := {"cycle": "once", "hold_open_seconds": 1, "close_seconds": 5}
 
@@ -52,10 +53,49 @@ func test_door_without_settings_still_loops() -> void:
 	door.free()
 
 
+func test_platform_rides_once_and_stays() -> void:
+	var platform: MovingPlatform = (load(PLATFORM_PATH) as PackedScene).instantiate()
+	platform.travel = Vector2(192, 0)
+	platform.apply_settings({"cycle": "once", "speed": 96, "delay_seconds": 2})
+	check(platform.once, "a platform with cycle 'once' must report it")
+	var base := platform.position_at(0)
+	var ticks := int(Content.time()["physics_ticks_per_second"])
+	for i in 2 * ticks - 1:
+		platform.simulate_tick(i)
+	check(platform.position == base, "the platform waits at its start for delay_seconds, is at %s" % [platform.position])
+	var last := platform.position
+	var worst := 0.0
+	for i in 2 * ticks + 1:
+		platform.simulate_tick(i)
+		worst = maxf(worst, platform.position.distance_to(last))
+		check(platform.position.x >= last.x, "a platform that runs once must only ride forward")
+		last = platform.position
+	check(is_equal_approx(platform.position.x, base.x + 192.0), "the platform arrives at the end of its path, is at %s" % [platform.position])
+	check(worst <= 96.0 / ticks + 0.01, "the platform moves %.2f px per tick, more than its speed" % worst)
+	for i in platform.cycle_ticks() * 2:
+		platform.simulate_tick(i)
+	check(is_equal_approx(platform.position.x, base.x + 192.0), "a platform that runs once never comes back by itself")
+	check(platform.position_at(platform.once_last_phase() - 1).x < base.x + 192.0, "the last tick before the arrival is still on the way")
+	platform.free()
+
+
+func test_platform_without_settings_still_loops() -> void:
+	var platform: MovingPlatform = (load(PLATFORM_PATH) as PackedScene).instantiate()
+	platform.travel = Vector2(96, 0)
+	var base := platform.position_at(0)
+	var went_far := false
+	for i in platform.cycle_ticks() + 1:
+		platform.simulate_tick(i)
+		went_far = went_far or is_equal_approx(platform.position.x, base.x + 96.0)
+	check(went_far and not platform.once, "a plain platform keeps its round trip")
+	check(platform.position.is_equal_approx(platform.position_at(1)), "after a whole cycle the platform is at the start again")
+	platform.free()
+
+
 func test_level_object_settings_are_checked() -> void:
 	var entry := {"id": "x", "scene": LEVEL_PATH, "prelude_seconds": 1, "title": "x", "objects": {"door": ONCE}}
 	check(Content.validate_levels([entry], 20.0).is_empty(), "good object settings must pass: %s" % [Content.validate_levels([entry], 20.0)])
-	for bad: Variant in [[], {"door": 3}, {"door": {"cycle": "twice"}}, {"door": {"close_seconds": 0}}, {"door": {"close_seconds": "fast"}}]:
+	for bad: Variant in [[], {"door": 3}, {"door": {"cycle": "twice"}}, {"door": {"close_seconds": 0}}, {"door": {"close_seconds": "fast"}}, {"platform_1": {"speed": 0}}, {"platform_1": {"speed": "fast"}}, {"platform_2": {"delay_seconds": -1}}]:
 		var broken := entry.duplicate(true)
 		broken["objects"] = bad
 		check(not Content.validate_levels([broken], 20.0).is_empty(), "object settings %s must be reported" % [bad])
@@ -100,6 +140,42 @@ func test_level_01_shift_opens_the_door_and_holds_it_open() -> void:
 	Input.action_release("rewind")
 	await _ticks(8 * 60)
 	check(door.open == 0, "released Shift replays the closing (rule A), door is %d" % door.open)
+	await _free(room)
+
+
+func test_level_01_platform_1_has_left_and_platform_2_waits_on_top() -> void:
+	var room := await _load()
+	var player: Player = room.get_node("Player")
+	var first: MovingPlatform = room.get_node("Platform1")
+	var second: MovingPlatform = room.get_node("Platform2")
+	# The state comes from the phase: the body's own position lags a physics step.
+	var start := first.position_at(0)
+	var gap := first.position_at(first.phase).x - start.x
+	check(gap > 100.0 and gap < first.travel.x, "after the prelude platform 1 is on its way, %.0f px from its start" % gap)
+	check(second.position_at(second.phase) == second.position_at(0), "platform 2 waits at the top after the prelude, phase %d" % second.phase)
+	var jump_reach := float(Content.player()["walk_speed"]) * 2.0 * float(Content.player()["jump_velocity"]) / float(Content.player()["gravity"])
+	check(player.global_position.x < start.x - 96.0, "the hero starts left of the pit, on the ground platform 1 has left")
+	check(first.travel.x + 192.0 > jump_reach, "the pit is wider than a jump (%.0f px), so the platform is needed" % jump_reach)
+	await _free(room)
+
+
+## Every window in which the player must act is at least 3 s (CLAUDE.md): after
+## platform 1 has parked, platform 2 stays on top for at least 3 s more, so
+## rewinding it up never drags platform 1 (and the hero on it) back.
+func test_level_01_platform_2_starts_three_seconds_after_platform_1_parks() -> void:
+	var settings := {}
+	for entry: Variant in Content.levels():
+		if entry is Dictionary and str(entry.get("id", "")) == "level_01":
+			settings = (entry as Dictionary).get("objects", {})
+	var room := await _load()
+	var first: MovingPlatform = room.get_node("Platform1")
+	var second: MovingPlatform = room.get_node("Platform2")
+	var one: Dictionary = settings.get("platform_1", {})
+	var two: Dictionary = settings.get("platform_2", {})
+	var first_parks := float(one.get("delay_seconds", 0.0)) + first.travel.length() / float(one.get("speed", 120))
+	var second_starts := float(two.get("delay_seconds", 0.0))
+	check(second_starts >= first_parks + 3.0, "platform 2 starts at %.1f s, platform 1 parks at %.1f s: less than 3 s apart" % [second_starts, first_parks])
+	check(second.once and first.once, "both platforms of level 01 ride once")
 	await _free(room)
 
 
