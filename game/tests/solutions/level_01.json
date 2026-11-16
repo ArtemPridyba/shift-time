@@ -2,7 +2,12 @@
 	"level": "level_01",
 	"expect": "exit",
 	"segments": [
-		{ "actions": ["move_right"], "ticks": 240 },
-		{ "actions": ["move_right", "rewind"], "ticks": 420 }
+		{ "actions": ["move_right", "rewind"], "ticks": 205 },
+		{ "actions": ["rewind"], "ticks": 15 },
+		{ "actions": [], "ticks": 365 },
+		{ "actions": ["move_right"], "ticks": 50 },
+		{ "actions": [], "ticks": 125 },
+		{ "actions": ["rewind"], "ticks": 380 },
+		{ "actions": ["move_right", "rewind"], "ticks": 140 }
 	]
 }
