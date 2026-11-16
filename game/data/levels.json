@@ -3,10 +3,11 @@
 		"id": "level_01",
 		"scene": "res://levels/level_01.tscn",
 		"prelude_seconds": 3.5,
+		"intro_seconds": 1.2,
 		"objects": {
 			"door": { "cycle": "once", "hold_open_seconds": 1, "close_seconds": 4 },
-			"platform_1": { "cycle": "once", "speed": 64 },
-			"platform_2": { "cycle": "once", "speed": 80, "delay_seconds": 9 }
+			"platform_1": { "cycle": "once", "speed": 128 },
+			"platform_2": { "cycle": "once", "speed": 96, "delay_seconds": 2.6667 }
 		},
 		"title": "01 Effect"
 	},

@@ -1,51 +1,57 @@
 extends SceneTree
 ## Builds level 01 `levels/level_01.tscn` (task 2.5, merged with the platform
-## level 03 on 16.11.2026; card docs/levels/01.md): one screen. The hero starts
-## on the left ground in front of a doorway whose door is closing; behind it
-## the ground ends in a pit. A platform that has already left the edge rides
-## across the pit once, a second platform stands high beside the exit pillar
-## and sinks once. The timing (door, platforms, prelude) lives in
-## data/levels.json.
+## level 03 on 16.11.2026, widened the same day; card docs/levels/01.md): a room
+## of 48x17 cells, about 1.6 screens wide, the camera follows the hero. He walks
+## out of a doorway on the left, then comes a door that is closing, a long pit,
+## platform 1 that has already left and rides across it once, and platform 2
+## that sinks beside the exit pillar. The timing (door, platforms, prelude, the
+## hero's walk-in) lives in data/levels.json.
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
 ##   godot --headless --path game --script $PWD/tools/build_level_01.gd
 ##
-## Map legend: '#' block, '.' empty, 'S' spawn point, 'D' the doorway (the
-## door stands in these cells), 'E' the exit zone (centred on its cells).
+## Map legend: '#' block, '.' empty, 'S' spawn point (inside the entrance),
+## 'D' the doorway (the door stands in these cells), 'E' the exit zone (centred
+## on its cells).
 
 const CELL := 64
 const TILESET_RES := "res://levels/blockout/blockout_tileset.tres"
 const SCENE_PATH := "res://levels/level_01.tscn"
 
 const MAP := [
-	"##############################",
-	"#......#.....................#",
-	"#......#.....................#",
-	"#......#.................EE..#",
-	"#......#.................EE..#",
-	"#......#................######",
-	"#......#................######",
-	"#......D................######",
-	"#......D................######",
-	"#.S....D................######",
-	"############............######",
-	"#############...........######",
-	"##############..........######",
-	"###############.........######",
-	"################........######",
-	"##############################",
-	"##############################",
+	"################################################",
+	"#..........#...................................#",
+	"#..........#...................................#",
+	"#..........#.............................EE....#",
+	"#..........#.............................EE....#",
+	"#..........#..........................##########",
+	"#..........#..........................##########",
+	"#..........D..........................##########",
+	"#..........D..........................##########",
+	"#S.........D..........................##########",
+	"####################..................##########",
+	"#####################.................##########",
+	"######################................##########",
+	"#######################...............##########",
+	"########################..............##########",
+	"################################################",
+	"################################################",
 ]
 
-## Platform 1 starts flush with the left ground (columns 12-14, top at row 10)
-## and rides 6 cells right. Platform 2 starts flush with the exit pillar
-## (columns 21-23, top at row 5) and sinks 5 cells, down to the level of
-## platform 1's end. Centres, in cells.
+## The doorway the hero walks out of (decoration only), in cells.
+const ENTRANCE_CELLS := Rect2i(1, 7, 1, 3)
+
+## Platform 1 starts flush with the left ground (columns 20-22, top at row 10)
+## and rides 12 cells right. Platform 2 starts flush with the exit pillar
+## (columns 35-37, top at row 5) and sinks 9 cells to just above the pit floor;
+## on its way it passes the level of platform 1's end (row 10) at the moment
+## platform 1 arrives there (the delays are in data/levels.json, checked by a
+## test). Centres, in cells.
 const PLATFORM_HEIGHT := 32.0
-const PLATFORM_1_CENTRE := Vector2(13.5, 10.0)
-const PLATFORM_1_TRAVEL := Vector2(6.0, 0.0)
-const PLATFORM_2_CENTRE := Vector2(22.5, 5.0)
-const PLATFORM_2_TRAVEL := Vector2(0.0, 5.0)
+const PLATFORM_1_CENTRE := Vector2(21.5, 10.0)
+const PLATFORM_1_TRAVEL := Vector2(12.0, 0.0)
+const PLATFORM_2_CENTRE := Vector2(36.5, 5.0)
+const PLATFORM_2_TRAVEL := Vector2(0.0, 9.0)
 
 
 func _initialize() -> void:
@@ -76,6 +82,13 @@ func _initialize() -> void:
 					door_cells = Rect2i(cell, Vector2i.ONE) if door_cells.size == Vector2i.ZERO else door_cells.expand(cell + Vector2i.ONE)
 				"E":
 					exit_cells = Rect2i(cell, Vector2i.ONE) if exit_cells.size == Vector2i.ZERO else exit_cells.expand(cell + Vector2i.ONE)
+
+	var entrance := Node2D.new()
+	entrance.set_script(load("res://objects/entrance_frame.gd"))
+	entrance.name = "Entrance"
+	entrance.set("size", Vector2(ENTRANCE_CELLS.size * CELL))
+	entrance.position = Vector2(ENTRANCE_CELLS.position * CELL)
+	_own(root, entrance)
 
 	var door: Door = (load("res://objects/door.tscn") as PackedScene).instantiate()
 	door.object_id = "door"

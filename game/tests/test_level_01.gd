@@ -143,7 +143,7 @@ func test_level_01_shift_opens_the_door_and_holds_it_open() -> void:
 	await _free(room)
 
 
-func test_level_01_platform_1_has_left_and_platform_2_waits_on_top() -> void:
+func test_level_01_platform_1_has_left_and_platform_2_has_started_to_sink() -> void:
 	var room := await _load()
 	var player: Player = room.get_node("Player")
 	var first: MovingPlatform = room.get_node("Platform1")
@@ -152,42 +152,95 @@ func test_level_01_platform_1_has_left_and_platform_2_waits_on_top() -> void:
 	var start := first.position_at(0)
 	var gap := first.position_at(first.phase).x - start.x
 	check(gap > 100.0 and gap < first.travel.x, "after the prelude platform 1 is on its way, %.0f px from its start" % gap)
-	check(second.position_at(second.phase) == second.position_at(0), "platform 2 waits at the top after the prelude, phase %d" % second.phase)
+	var sunk := second.position_at(second.phase).y - second.position_at(0).y
+	check(sunk > 0.0 and sunk < 5.0 * 64.0, "after the prelude platform 2 has started to sink but is still above platform 1's level, %.0f px down" % sunk)
 	var jump_reach := float(Content.player()["walk_speed"]) * 2.0 * float(Content.player()["jump_velocity"]) / float(Content.player()["gravity"])
 	check(player.global_position.x < start.x - 96.0, "the hero starts left of the pit, on the ground platform 1 has left")
 	check(first.travel.x + 192.0 > jump_reach, "the pit is wider than a jump (%.0f px), so the platform is needed" % jump_reach)
 	await _free(room)
 
 
-## Every window in which the player must act is at least 3 s (CLAUDE.md): after
-## platform 1 has parked, platform 2 stays on top for at least 3 s more, so
-## rewinding it up never drags platform 1 (and the hero on it) back.
-func test_level_01_platform_2_starts_three_seconds_after_platform_1_parks() -> void:
-	var settings := {}
-	for entry: Variant in Content.levels():
-		if entry is Dictionary and str(entry.get("id", "")) == "level_01":
-			settings = (entry as Dictionary).get("objects", {})
+## Platform 2 passes the level of platform 1's end at the very tick platform 1
+## arrives there, right beside it, and sinks on past it: the player has nothing
+## to wait for and sees the way up leave (task 3.2, 16.11.2026).
+func test_level_01_platform_2_is_level_with_platform_1_when_it_arrives() -> void:
 	var room := await _load()
 	var first: MovingPlatform = room.get_node("Platform1")
 	var second: MovingPlatform = room.get_node("Platform2")
-	var one: Dictionary = settings.get("platform_1", {})
-	var two: Dictionary = settings.get("platform_2", {})
-	var first_parks := float(one.get("delay_seconds", 0.0)) + first.travel.length() / float(one.get("speed", 120))
-	var second_starts := float(two.get("delay_seconds", 0.0))
-	check(second_starts >= first_parks + 3.0, "platform 2 starts at %.1f s, platform 1 parks at %.1f s: less than 3 s apart" % [second_starts, first_parks])
+	var arrival := first.once_last_phase()
+	var first_end := first.position_at(arrival)
+	var second_then := second.position_at(arrival)
+	check(absf(second_then.y - first_end.y) < 1.0, "platform 2 is at y %.1f when platform 1 arrives at y %.1f" % [second_then.y, first_end.y])
+	var width := float(((first.get_node("CollisionShape2D") as CollisionShape2D).shape as RectangleShape2D).size.x)
+	var between := (second_then.x - width / 2.0) - (first_end.x + width / 2.0)
+	check(absf(between) < 1.0, "platform 2 stands %.1f px from the end of platform 1, it must be beside it" % between)
+	var bottom := second.position_at(second.once_last_phase())
+	check(bottom.y >= first_end.y + 2.0 * 64.0, "platform 2 sinks at least two cells below platform 1's level, ends at y %.0f" % bottom.y)
+	check(second.position_at(arrival - 120).y < first_end.y - 64.0, "platform 2 is clearly above platform 1's level two seconds before")
 	check(second.once and first.once, "both platforms of level 01 ride once")
 	await _free(room)
 
 
-func test_level_01_fits_one_screen() -> void:
+## The level is wider than the screen and the camera may follow the hero over all
+## of it (task 3.2, 16.11.2026).
+func test_level_01_is_wider_than_one_screen_and_the_camera_follows() -> void:
 	var room := await _load()
 	var blocks: TileMapLayer = room.get_node("Blocks")
 	var size := blocks.get_used_rect().size * blocks.tile_set.tile_size
 	var width := int(ProjectSettings.get_setting("display/window/size/viewport_width"))
 	var height := int(ProjectSettings.get_setting("display/window/size/viewport_height"))
-	check(size.x == width, "the room is %d px wide, the screen %d" % [size.x, width])
+	check(size.x >= width + width / 2 and size.x <= 3 * width, "the room is %d px wide, the screen %d: it should be 1.5 to 3 screens" % [size.x, width])
 	check(size.y >= height and size.y < height + blocks.tile_set.tile_size.y, "the room is %d px tall, the screen %d" % [size.y, height])
+	var camera: Camera2D = room.get_node("Player/Camera2D")
+	check(camera.limit_right == size.x and camera.limit_left == 0, "the camera limits are %d..%d, the room is %d wide" % [camera.limit_left, camera.limit_right, size.x])
 	await _free(room)
+
+
+## The hero comes in from the doorway by himself: fades in, walks right, ignores
+## the keys, then the level is his (task 3.2, 16.11.2026).
+func test_level_01_hero_walks_in_and_then_is_free() -> void:
+	var room := await _load()
+	var player: Player = room.get_node("Player")
+	var spawn: Marker2D = room.get_node("SpawnPoint")
+	var entrance := room.get_node("Entrance") as Node2D
+	var frame := Rect2(entrance.position, entrance.get("size"))
+	check(frame.has_point(spawn.global_position - Vector2(0, 10)), "the hero appears inside the entrance doorway")
+	var entry := Content.level_for_scene(LEVEL_PATH)
+	var expected := int(round(float(entry["intro_seconds"]) * float(Content.time()["physics_ticks_per_second"])))
+	check(player.intro_ticks_left() > 0 and player.intro_ticks_left() <= expected, "the walk-in is running at the start, %d ticks left" % player.intro_ticks_left())
+	check(player.modulate.a < 1.0, "the hero fades in")
+	Input.action_press("move_left")
+	await _ticks(20)
+	check(player.global_position.x > spawn.global_position.x + 40.0, "during the walk-in the hero walks right whatever the keys say, x %.0f" % player.global_position.x)
+	await _ticks(expected)
+	Input.action_release("move_left")
+	check(player.intro_ticks_left() == 0 and is_equal_approx(player.modulate.a, 1.0), "after the walk-in the hero is fully there and free")
+	var after := player.global_position.x
+	Input.action_press("move_left")
+	await _ticks(20)
+	Input.action_release("move_left")
+	check(player.global_position.x < after - 40.0, "after the walk-in the keys steer the hero again")
+	await _free(room)
+
+
+func test_level_01_reset_brings_the_hero_in_again() -> void:
+	var room := await _load()
+	var player: Player = room.get_node("Player")
+	var spawn: Marker2D = room.get_node("SpawnPoint")
+	await _ticks(int(round(float(Content.level_for_scene(LEVEL_PATH)["intro_seconds"]) * 60.0)) + 30)
+	check(player.intro_ticks_left() == 0, "the first walk-in is over")
+	room.call("restart")
+	check(player.global_position.is_equal_approx(spawn.global_position) and player.intro_ticks_left() > 0, "a reset puts the hero back in the doorway and the walk-in starts again")
+	await _free(room)
+
+
+func test_intro_seconds_is_checked_in_levels_data() -> void:
+	var good := {"id": "x", "scene": LEVEL_PATH, "prelude_seconds": 1, "title": "x", "intro_seconds": 1.5}
+	check(Content.validate_levels([good], 20.0).is_empty(), "a valid intro_seconds must pass: %s" % [Content.validate_levels([good], 20.0)])
+	for bad: Variant in [-1, "long", 11]:
+		var entry := good.duplicate()
+		entry["intro_seconds"] = bad
+		check(not Content.validate_levels([entry], 20.0).is_empty(), "intro_seconds %s must be refused" % [bad])
 
 
 func test_finish_level_needs_a_running_level() -> void:

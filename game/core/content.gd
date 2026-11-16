@@ -199,6 +199,9 @@ static func validate_levels(data: Variant, history_seconds: float) -> PackedStri
 			errors.append("%s: 'prelude_seconds' must be between 0 and the history length" % where)
 		if not entry["title"] is String:
 			errors.append("%s: 'title' must be a string" % where)
+		if entry.has("intro_seconds") and (not _is_number(entry["intro_seconds"]) \
+				or float(entry["intro_seconds"]) < 0.0 or float(entry["intro_seconds"]) > 10.0):
+			errors.append("%s: 'intro_seconds' must be a number from 0 to 10" % where)
 		if entry.has("objects"):
 			errors.append_array(_object_settings_problems(entry["objects"], where))
 		if entry.has("prelude_events") and _is_number(entry["prelude_seconds"]):

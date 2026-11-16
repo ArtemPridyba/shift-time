@@ -24,6 +24,10 @@ var _size := Vector2(44, 92)
 var _head_px := 28.0
 var _head_under := false
 var _bubbles: CPUParticles2D
+## Ticks left of the walk-in at the start of a level (`begin_intro`): the hero
+## fades in and walks right on his own, the keys are ignored.
+var _intro_left := 0
+var _intro_total := 0
 
 @onready var _shape: CollisionShape2D = $CollisionShape2D
 @onready var _camera: Camera2D = $Camera2D
@@ -45,6 +49,11 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	var axis := Input.get_axis("move_left", "move_right")
 	var jump := Input.is_action_just_pressed("jump")
+	if _intro_left > 0:
+		axis = 1.0
+		jump = false
+		_intro_left -= 1
+		modulate.a = minf(1.0, 2.0 * (1.0 - float(_intro_left) / float(_intro_total)))
 	var water := water_contact()
 	velocity = _motion.step(velocity, axis, jump, is_on_floor(), delta, water)
 	move_and_slide()
@@ -134,12 +143,26 @@ func is_in_fire() -> bool:
 func respawn(at: Vector2) -> void:
 	global_position = at
 	velocity = Vector2.ZERO
+	_intro_left = 0
+	modulate.a = 1.0
 	_motion.reset()
 	if _breath != null:
 		_breath.reset()
 	if _scorch != null:
 		_scorch.reset()
 	_camera.reset_smoothing()
+
+
+## The hero comes in by himself for `ticks` physics ticks: fades in, walks right,
+## ignores the keys. Time keeps running, Shift works as usual.
+func begin_intro(ticks: int) -> void:
+	_intro_total = maxi(ticks, 1)
+	_intro_left = ticks
+	modulate.a = 0.0 if ticks > 0 else 1.0
+
+
+func intro_ticks_left() -> int:
+	return _intro_left
 
 
 ## Asks the parent RoomTime (if any) to handle an interact press.
