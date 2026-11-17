@@ -271,9 +271,12 @@ func _apply() -> void:
 func _draw() -> void:
 	if level <= 0:
 		return
+	var top := surface_local_y(level)
+	if top > -1.0:
+		# A film thinner than a pixel has no polygon to triangulate.
+		return
 	var points := _surface_points()
 	var uvs := PackedVector2Array()
-	var top := surface_local_y(level)
 	points.append(Vector2(size.x / 2.0, 0.0))
 	points.append(Vector2(-size.x / 2.0, 0.0))
 	for point in points:

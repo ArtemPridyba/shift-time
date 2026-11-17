@@ -166,14 +166,22 @@ func test_level_02_geometry_follows_the_sketch() -> void:
 	check(floor_y - spawn.global_position.y > jump_height + 64.0, "from the well floor the hero cannot climb back to the ledge without the water")
 	var button: PushButton = room.get_node("PushButton")
 	var reach := float(Content.objects()["button"]["interact_radius_px"])
-	# The button is not on the hero's way: it sits in a niche in the foot of the
-	# ledge, two cells tall and one deep, and only the sparks show it from afar.
-	var well_left := 5.0 * CELL
-	check(blocks.get_cell_source_id(Vector2i(4, 16)) == -1 and blocks.get_cell_source_id(Vector2i(4, 17)) == -1 and blocks.get_cell_source_id(Vector2i(4, 15)) != -1, "the niche for the button is two cells tall in the ledge's foot")
-	check(button.global_position.x > 4.0 * CELL and button.global_position.x < well_left, "the button is in the niche, not on the well floor: x %.0f" % button.global_position.x)
-	check(well_left + 22.0 - button.global_position.x < reach, "from the well floor at the niche the button is in reach (%.0f px)" % reach)
-	check(float_body.position.x + well.position.x - button.global_position.x > 5.0 * CELL, "the button is far from the float, the hero has to look for it")
+	# The button lies in a trench in the pool floor in front of the door, two
+	# steps down: below the tank, so the hero reaches it across the pool and has
+	# to wait for the water; the door is in sight when he presses it.
+	var pool_floor := pool.global_position.y
+	check(button.global_position.y > pool_floor + float(CELL), "the button lies below the pool floor, in the trench: y %.0f, the floor %.0f" % [button.global_position.y, pool_floor])
+	for column in range(29, 34):
+		check(blocks.get_cell_source_id(Vector2i(column, 13)) == -1, "the trench is open at column %d, row 13" % column)
+	check(blocks.get_cell_source_id(Vector2i(29, 14)) != -1 and blocks.get_cell_source_id(Vector2i(33, 14)) != -1 and blocks.get_cell_source_id(Vector2i(31, 14)) == -1, "the trench has a step at each end and a deeper middle")
+	check(blocks.get_cell_source_id(Vector2i(28, 13)) != -1, "the pool floor ends where the trench starts")
+	var door: Door = room.get_node("Door")
+	check(absf(door.global_position.x - button.global_position.x) < 4.0 * CELL, "the button is next to the door: %.0f px" % absf(door.global_position.x - button.global_position.x))
+	var deep_from := 30.0 * CELL + 22.0
+	var deep_to := 33.0 * CELL - 22.0
+	check(maxf(button.global_position.x - deep_from, deep_to - button.global_position.x) < reach, "from anywhere on the trench floor the button is in reach (%.0f px)" % reach)
 	check(blocks.get_cell_source_id(Vector2i(4, 11)) != -1 and blocks.get_cell_source_id(Vector2i(5, 11)) == -1, "the ledge is the doorway and three cells of ground (columns 1-4)")
+	check(blocks.get_cell_source_id(Vector2i(4, 16)) != -1, "the foot of the ledge is solid: nothing is hidden there any more")
 	var grate_x := well.position.x - well.size.x / 2.0 + well.look.outlet_inset_px
 	check(grate_x < well.position.x + float_body.position.x - float_body.body_size().x / 2.0 and grate_x > 5.0 * CELL, "the grate is on the well floor left of the float, x %.0f" % grate_x)
 	await _free(room)

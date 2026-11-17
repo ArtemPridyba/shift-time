@@ -5,16 +5,20 @@
 		{ "actions": [], "ticks": 24 },
 		{ "actions": ["move_right"], "ticks": 40 },
 		{ "actions": [], "ticks": 120 },
-		{ "actions": ["move_left"], "ticks": 70 },
-		{ "actions": ["interact"], "ticks": 3 },
-		{ "actions": ["move_right"], "ticks": 56 },
+		{ "actions": ["move_right"], "ticks": 30 },
 		{ "actions": ["move_right", "jump"], "ticks": 14 },
+		{ "actions": ["move_right"], "ticks": 8 },
 		{ "actions": [], "ticks": 40 },
 		{ "actions": ["rewind"], "ticks": 620 },
-		{ "actions": ["rewind", "move_right"], "ticks": 22 },
+		{ "actions": ["rewind", "move_right"], "ticks": 34 },
 		{ "actions": ["rewind", "move_right", "jump"], "ticks": 38 },
 		{ "actions": ["rewind"], "ticks": 30 },
-		{ "actions": [], "ticks": 600 },
-		{ "actions": ["move_right"], "ticks": 420 }
+		{ "actions": [], "ticks": 270 },
+		{ "actions": ["move_right"], "ticks": 170 },
+		{ "actions": ["interact"], "ticks": 3 },
+		{ "actions": [], "ticks": 200 },
+		{ "actions": ["move_right", "jump"], "ticks": 30 },
+		{ "actions": ["move_right", "jump"], "ticks": 30 },
+		{ "actions": ["move_right"], "ticks": 200 }
 	]
 }

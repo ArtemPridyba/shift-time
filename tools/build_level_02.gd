@@ -3,7 +3,7 @@ extends SceneTree
 ## docs/levels/02.md): a room of 41x20 cells, about 1.3 screens wide, the camera
 ## follows the hero. He walks out of a doorway onto a ledge at mid height.
 ## Right of it is a deep well with a float and a grate on its floor, the button
-## is hidden in a niche in the foot of the ledge,
+## lies in a trench in front of the pool door,
 ## beyond that a wall as high as the full water line, behind the wall a shallow
 ## pool with a door in front of the exit. Both waters are full at the start of
 ## the history and drain; the timing (prelude, walk-in, drain times) lives in
@@ -34,11 +34,11 @@ const MAP := [
 	"#S..............##................D.....#",
 	"#####...........##................D..EE.#",
 	"#####...........##................D..EE.#",
+	"#####...........#############.....#######",
+	"#####...........##############...########",
 	"#####...........#########################",
 	"#####...........#########################",
 	"#####...........#########################",
-	"####............#########################",
-	"####............#########################",
 	"#########################################",
 	"#########################################",
 ]
@@ -61,9 +61,11 @@ const POOL_FLOOR_ROW := 13
 ## The float lies on the well floor, centred on this column (cells, from the
 ## left): a jump from its edge to the wall is 3 cells, a hero's jump is 4.
 const FLOAT_CENTRE_COLUMN := 11.5
-## The button is hidden in a niche in the foot of the hero's ledge (column 4,
-## rows 16-17): the player has to look for it, the sparks give it away.
-const BUTTON_COLUMN := 4.5
+## The button lies at the bottom of a trench in the pool floor right in front of
+## the door (columns 29-33, two steps down), so the player sees the door when he
+## presses it; the sparks show it.
+const BUTTON_FLOOR_ROW := 15
+const BUTTON_COLUMN := 31.5
 const BUTTON_HEIGHT := 24.0
 
 
@@ -116,7 +118,7 @@ func _initialize() -> void:
 	var button: PushButton = (load("res://objects/push_button.tscn") as PackedScene).instantiate()
 	button.object_id = "button"
 	button.target_ids = PackedStringArray(["door"])
-	button.position = Vector2(BUTTON_COLUMN * CELL, WELL_FLOOR_ROW * CELL - BUTTON_HEIGHT / 2.0)
+	button.position = Vector2(BUTTON_COLUMN * CELL, BUTTON_FLOOR_ROW * CELL - BUTTON_HEIGHT / 2.0)
 	_own(root, button)
 	var sparks := ButtonSparks.new()
 	sparks.name = "ButtonSparks"
