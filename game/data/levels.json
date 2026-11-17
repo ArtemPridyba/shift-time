@@ -19,7 +19,7 @@
 		"objects": {
 			"well": { "full_seconds": 9, "outlet_inset_px": 416, "lifts_player": false },
 			"pool": { "full_seconds": 4.2, "lifts_player": false },
-			"tunnel": { "lifts_player": false }
+			"gate": { "open_level": 500, "open_seconds": 2 }
 		},
 		"title": "02 Flow"
 	},

@@ -167,9 +167,9 @@ func test_level_02_geometry_follows_the_sketch() -> void:
 	var button: PushButton = room.get_node("PushButton")
 	var reach := float(Content.objects()["button"]["interact_radius_px"])
 	# The button lies at the end of a tunnel that leaves the foot of the well wall
-	# to the right, under the pool: two cells high, on the level of the well floor,
-	# joined to the well (its own tank follows the well's surface), so the hero can
-	# walk in only once the water of the well is gone.
+	# to the right, under the pool: dry (outside both tanks), two cells high, on
+	# the level of the well floor, so the hero can walk in only once the water of
+	# the well is gone.
 	for column in range(16, 26):
 		for row in [16, 17]:
 			check(blocks.get_cell_source_id(Vector2i(column, row)) == -1, "the tunnel is open at column %d, row %d" % [column, row])
@@ -177,6 +177,9 @@ func test_level_02_geometry_follows_the_sketch() -> void:
 	check(blocks.get_cell_source_id(Vector2i(26, 16)) != -1 and blocks.get_cell_source_id(Vector2i(26, 17)) != -1, "the tunnel is a dead end at column 26")
 	check(blocks.get_cell_source_id(Vector2i(15, 16)) == -1 and blocks.get_cell_source_id(Vector2i(15, 17)) == -1, "the tunnel starts at the open well")
 	check(2.0 * CELL > 92.0 + 16.0, "the hero (92 px high) fits into the tunnel")
+	var gate: WaterGate = room.get_node("Gate")
+	check(gate.watch_id == "well" and gate.global_position.x < 17.0 * CELL and gate.global_position.x > 16.0 * CELL, "the gate stands in the mouth of the tunnel, x %.0f" % gate.global_position.x)
+	check(is_equal_approx(gate.global_position.y, 17.0 * CELL) and is_equal_approx(gate.travel, 2.0 * CELL), "the gate fills both rows of the tunnel and slides up into the rock")
 	for column in range(18, 34):
 		check(blocks.get_cell_source_id(Vector2i(column, 13)) != -1, "the pool floor is whole at column %d" % column)
 	check(absf(button.global_position.y - floor_y) < float(CELL) / 2.0, "the button lies on the level of the well floor: y %.0f, the floor %.0f" % [button.global_position.y, floor_y])
@@ -189,60 +192,66 @@ func test_level_02_geometry_follows_the_sketch() -> void:
 	await _free(room)
 
 
-## A tank joined to another one stands where the leader's surface puts it: full
-## below the surface, empty above it, a part of the way in between.
-func test_a_joined_tank_follows_the_surface_of_its_leader() -> void:
+## A gate opens when the tank it watches has run low and closes when it is
+## above that level again.
+func test_a_water_gate_follows_the_level_of_its_tank() -> void:
 	var room := Node2D.new()
 	_tree.root.add_child(room)
-	var leader := Water.new()
-	leader.object_id = "leader"
-	leader.size = Vector2(256, 768)
-	leader.position = Vector2(0, 768)
-	room.add_child(leader)
-	var joined := Water.new()
-	joined.object_id = "joined"
-	joined.size = Vector2(256, 128)
-	joined.position = Vector2(300, 768)
-	joined.follows_id = "leader"
-	room.add_child(joined)
-	for sample: Array in [[Water.LEVEL_MAX, Water.LEVEL_MAX], [8000, Water.LEVEL_MAX], [2000, Water.LEVEL_MAX], [1000, 6000], [500, 3000], [0, 0]]:
-		leader.level = int(sample[0])
-		joined.simulate_tick(0)
-		check(joined.level == int(sample[1]), "the leader at %d puts the joined tank at %d, it stands at %d" % [sample[0], sample[1], joined.level])
-	joined.follows_id = "nobody"
-	joined.level = 1234
-	joined.simulate_tick(0)
-	check(joined.level == 1234, "a tank that follows none stays as it is")
+	var tank := Water.new()
+	tank.object_id = "well"
+	tank.size = Vector2(256, 768)
+	tank.position = Vector2(0, 768)
+	room.add_child(tank)
+	var gate: WaterGate = (load("res://objects/water_gate.tscn") as PackedScene).instantiate()
+	gate.apply_settings({"open_level": 500, "open_seconds": 1})
+	gate.position = Vector2(400, 700)
+	room.add_child(gate)
+	tank.level = 501
+	for i in 90:
+		gate.simulate_tick(i)
+	check(gate.open == 0 and not gate.powered, "one unit over the level the gate stays shut, open %d" % gate.open)
+	tank.level = 500
+	for i in 90:
+		gate.simulate_tick(i)
+	check(gate.open == Door.OPEN_MAX, "at the level the gate opens fully, open %d" % gate.open)
+	tank.level = 4000
+	for i in 90:
+		gate.simulate_tick(i)
+	check(gate.open == 0, "with the tank high again the gate closes, open %d" % gate.open)
+	var state := gate.capture_state()
+	check(state.has("powered") and int(state["open"]) == 0, "the gate's state is recorded like a door's")
 	room.queue_free()
 	await _tree.process_frame
 
 
-## Level 02: the tunnel is flooded while the well stands over its ceiling and
-## dries with the well; under Shift it fills again with the well.
-func test_level_02_tunnel_is_flooded_with_the_well_and_dries_with_it() -> void:
+## Level 02: the gate at the mouth of the tunnel is shut while the well stands
+## high, keeps the hero out, opens once the well has run low and shuts again
+## when Shift lifts the water back.
+func test_level_02_gate_is_shut_while_the_well_is_high_and_opens_when_it_runs_low() -> void:
 	var room := await _load(LEVEL_PATH)
 	var well: Water = room.get_node("Well")
-	var tunnel: Water = room.get_node("Tunnel")
+	var gate: WaterGate = room.get_node("Gate")
 	var time: RoomTime = room.get_node("RoomTime")
 	var player: Player = room.get_node("Player")
-	check(tunnel.follows_id == "well", "the tunnel follows the well")
-	check(tunnel.tank_global_rect().position.y == float(16 * CELL) and tunnel.tank_global_rect().end.y == float(18 * CELL), "the tunnel tank is the tunnel: rows 16 and 17")
-	# Never more than one tick of the well's fall apart: that is how fast it goes.
-	var tolerance := int(ceil(float(well.step()) * well.size.y / tunnel.size.y)) + 2
-	var worst := 0
-	var was_full := false
-	var was_dry := false
-	for i in 700:
+	check(gate.open == 0 and well.level > gate.open_level, "after the prelude the well is high and the gate shut: well %d, open %d" % [well.level, gate.open])
+	player.respawn(Vector2(15.0 * CELL + 10.0, 18.0 * CELL))
+	Input.action_press("move_right")
+	await _ticks(40)
+	Input.action_release("move_right")
+	check(player.global_position.x < 16.0 * CELL - 10.0, "the shut gate keeps the hero in the well: he stands at x %.0f" % player.global_position.x)
+	var opened_early := false
+	var guard := 0
+	while well.level > gate.open_level and guard < 900:
 		await _ticks(1)
-		worst = maxi(worst, absi(tunnel.level - tunnel.level_for_surface(well.surface_global_y())))
-		was_full = was_full or (tunnel.level == Water.LEVEL_MAX and well.level > 3000)
-		was_dry = was_dry or (tunnel.level == 0 and well.level == 0)
-	check(worst <= tolerance, "the tunnel is where the well's surface puts it, off by %d at worst (allowed %d)" % [worst, tolerance])
-	check(was_full, "the tunnel was full while the well stood high")
-	check(was_dry, "the tunnel ran dry with the well")
+		guard += 1
+		opened_early = opened_early or (gate.open > 0 and well.level > gate.open_level)
+	check(not opened_early, "the gate stays shut until the well is down to level %d" % gate.open_level)
+	check(well.level <= gate.open_level, "the well ran low")
+	await _ticks(150)
+	check(gate.open == Door.OPEN_MAX, "the gate is open once the well has run low, open %d" % gate.open)
 	player.respawn(Vector2(1088, 6 * CELL))
 	await _rewind_to_start(time)
-	check(tunnel.level == Water.LEVEL_MAX and well.level == Water.LEVEL_MAX, "at the first frame the tunnel is full with the well: %d and %d" % [tunnel.level, well.level])
+	check(well.level == Water.LEVEL_MAX and gate.open == 0, "at the first frame the well is full and the gate shut: %d and %d" % [well.level, gate.open])
 	await _free(room)
 
 
@@ -444,9 +453,9 @@ func test_level_02_is_wider_than_one_screen_and_the_camera_follows() -> void:
 
 func test_water_settings_of_a_level_are_checked_in_levels_data() -> void:
 	var good := {"id": "x", "scene": LEVEL_PATH, "prelude_seconds": 1, "title": "x",
-		"objects": {"well": {"full_seconds": 9, "outlet_inset_px": 352, "lifts_player": false}}}
+		"objects": {"well": {"full_seconds": 9, "outlet_inset_px": 352, "lifts_player": false}, "gate": {"open_level": 500, "open_seconds": 2}}}
 	check(Content.validate_levels([good], 20.0).is_empty(), "valid water settings must pass: %s" % [Content.validate_levels([good], 20.0)])
-	for bad: Variant in [{"full_seconds": 0}, {"full_seconds": "fast"}, {"outlet_inset_px": -3}, {"outlet_inset_px": "left"}, {"lifts_player": "no"}, {"lifts_player": 0}]:
+	for bad: Variant in [{"full_seconds": 0}, {"full_seconds": "fast"}, {"outlet_inset_px": -3}, {"outlet_inset_px": "left"}, {"lifts_player": "no"}, {"lifts_player": 0}, {"open_level": -1}, {"open_level": "low"}, {"open_level": 10001}]:
 		var entry := good.duplicate(true)
 		entry["objects"] = {"well": bad}
 		check(not Content.validate_levels([entry], 20.0).is_empty(), "water settings %s must be refused" % [bad])

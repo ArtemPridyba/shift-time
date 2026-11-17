@@ -8,7 +8,7 @@
 		{ "actions": ["move_right"], "ticks": 30 },
 		{ "actions": ["move_right", "jump"], "ticks": 14 },
 		{ "actions": ["move_right"], "ticks": 8 },
-		{ "actions": ["move_right"], "ticks": 190 },
+		{ "actions": ["move_right"], "ticks": 260 },
 		{ "actions": [], "ticks": 3 },
 		{ "actions": ["move_left"], "ticks": 125 },
 		{ "actions": ["move_left", "jump"], "ticks": 14 },

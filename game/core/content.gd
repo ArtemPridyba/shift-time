@@ -231,6 +231,8 @@ static func _object_settings_problems(settings: Variant, where: String) -> Packe
 				errors.append("%s: 'objects.%s.lifts_player' must be true or false" % [where, id])
 			elif str(key) == "outlet_inset_px" and (not _is_number(value) or float(value) < 0.0):
 				errors.append("%s: 'objects.%s.outlet_inset_px' must be a number, 0 or more" % [where, id])
+			elif str(key) == "open_level" and (not _is_number(value) or float(value) < 0.0 or float(value) > 10000.0):
+				errors.append("%s: 'objects.%s.open_level' must be a number from 0 to 10000" % [where, id])
 			elif str(key) == "cycle" and not value in LEVEL_DOOR_CYCLES:
 				errors.append("%s: 'objects.%s.cycle' must be one of %s" % [where, id, LEVEL_DOOR_CYCLES])
 	return errors

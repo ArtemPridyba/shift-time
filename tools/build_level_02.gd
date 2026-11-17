@@ -62,10 +62,11 @@ const POOL_FLOOR_ROW := 13
 ## The float lies on the well floor, centred on this column (cells, from the
 ## left): a jump from its edge to the wall is 3 cells, a hero's jump is 4.
 const FLOAT_CENTRE_COLUMN := 11.5
-## The tunnel's tank: columns 16-25, rows 16-17 (to the dead end).
-const TUNNEL_COLUMNS := Vector2i(16, 26)
+## The tunnel from the well floor: columns 16-25, rows 16-17. The water gate
+## stands in its first column, flush with the well.
+const TUNNEL_COLUMNS_FROM := 16
 const TUNNEL_TOP_ROW := 16
-const TUNNEL_FLOOR_ROW := 18
+const GATE_WIDTH := 32.0
 ## The button lies at the end of a tunnel that leaves the foot of the well wall
 ## to the right, under the pool (rows 16-17, columns 16-25). The hero has to wait
 ## until the well is empty, walk in, press it and come back to the float.
@@ -119,11 +120,13 @@ func _initialize() -> void:
 	well.add_child(float_body)
 	float_body.owner = root
 	_add_water(root, "pool", POOL_COLUMNS, POOL_FLOOR_ROW)
-	# The tunnel is joined to the well under the wall: it is flooded while the
-	# well stands above its ceiling and runs dry with it.
-	var tunnel := _add_water(root, "tunnel", TUNNEL_COLUMNS, TUNNEL_FLOOR_ROW, TUNNEL_TOP_ROW)
-	tunnel.follows_id = "well"
-	tunnel.powered = false
+
+	# The gate at the mouth of the tunnel: shut while the well stands high, it
+	# opens by itself once the well has run low.
+	var gate: WaterGate = (load("res://objects/water_gate.tscn") as PackedScene).instantiate()
+	gate.name = "Gate"
+	gate.position = Vector2(TUNNEL_COLUMNS_FROM * CELL + GATE_WIDTH / 2.0, (TUNNEL_TOP_ROW + 1) * CELL)
+	_own(root, gate)
 
 	var button: PushButton = (load("res://objects/push_button.tscn") as PackedScene).instantiate()
 	button.object_id = "button"
@@ -163,15 +166,15 @@ func _initialize() -> void:
 	quit()
 
 
-## A tank from `top_row` (the full water line by default) down to `floor_row`, over the columns
+## A tank from the full water line down to `floor_row`, over the columns
 ## `[from, to)`: full, draining, its node at the bottom centre.
-func _add_water(root: Node, id: String, columns: Vector2i, floor_row: int, top_row := LINE_ROW) -> Water:
+func _add_water(root: Node, id: String, columns: Vector2i, floor_row: int) -> Water:
 	var water: Water = (load("res://objects/water.tscn") as PackedScene).instantiate()
 	water.name = id.to_pascal_case()
 	water.object_id = id
 	var left := float(columns.x * CELL)
 	var right := float(columns.y * CELL)
-	var top := float(top_row * CELL)
+	var top := float(LINE_ROW * CELL)
 	var bottom := float(floor_row * CELL)
 	water.position = Vector2((left + right) / 2.0, bottom)
 	water.size = Vector2(right - left, bottom - top)
