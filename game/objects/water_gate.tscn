@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://objects/water_gate.gd" id="1_gate"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_gate"]
+size = Vector2(32, 128)
+
+[node name="WaterGate" type="AnimatableBody2D" groups=["temporal"]]
+collision_layer = 1
+collision_mask = 0
+script = ExtResource("1_gate")
+linked_id = "well"
+object_id = "gate"
+travel = 128.0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_gate")

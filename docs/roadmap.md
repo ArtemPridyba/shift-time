@@ -271,9 +271,10 @@
 
 ### 3.1 Уровень 02 «Поток»
 
+- **Статус:** сделано 17.11.2026 по новой идее Артёма (без вентиля; колодец с поплавком и кнопкой, стена на линии воды, бассейн с дверью), шире экрана, с выходом героя из проёма. Карточка — [levels/02.md](levels/02.md).
 - **Модель:** А — по образцу уровня 01.
 - **Зависит от:** 2.3, 2.5.
-- **Файлы:** `game/levels/level_02.tscn`, `game/tests/solutions/level_02.json`.
+- **Файлы:** `game/levels/level_02.tscn` (собирает `tools/build_level_02.gd`), `game/tests/solutions/level_02.json`, `level_02_no_shift.json`, `level_02_no_button.json`, `game/tests/test_level_02.gd`, `game/objects/button_sparks.gd`.
 - **Готово:** тест решения зелёный.
 
 ### 3.2 Уровень 03 «Платформа»

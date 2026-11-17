@@ -12,6 +12,18 @@
 		"title": "01 Effect"
 	},
 	{
+		"id": "level_02",
+		"scene": "res://levels/level_02.tscn",
+		"prelude_seconds": 4.5,
+		"intro_seconds": 0.3,
+		"objects": {
+			"well": { "full_seconds": 9, "outlet_inset_px": 416, "lifts_player": false },
+			"pool": { "full_seconds": 4.2, "lifts_player": false },
+			"gate": { "open_level": 500, "open_seconds": 2 }
+		},
+		"title": "02 Flow"
+	},
+	{
 		"id": "test_room",
 		"scene": "res://levels/test_room.tscn",
 		"prelude_seconds": 0,
