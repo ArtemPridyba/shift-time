@@ -39,7 +39,7 @@ Week 1 of 4 ends on 9 November with task 1.4. Week 2: 10–16 Nov, week 3: 17–
 
 ## Who does what
 
-Every task card has a label (`**Модель:**`). Claude Code limits are short: on Opus it takes only О and О+, on Sonnet also А (D46). Everything else goes to Antigravity or the Gemini app. A regular Claude chat sees no repository and runs nothing: it only helps next to Antigravity (template in `docs/how-we-work.md`).
+Every task card has a label (`**Модель:**`). Claude Code limits are short: on Opus it takes only О and О+, on Sonnet also А (D46). Both people have Claude Code: Artem on the Claude Pro plan since 17 November 2026 (D58), so either of them takes О and О+. Everything else goes to Antigravity or the Gemini app. A regular Claude chat sees no repository and runs nothing: it only helps next to Antigravity (template in `docs/how-we-work.md`).
 
 | Label | Who | Where |
 | --- | --- | --- |
