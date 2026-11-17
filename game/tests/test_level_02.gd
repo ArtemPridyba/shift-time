@@ -167,9 +167,9 @@ func test_level_02_geometry_follows_the_sketch() -> void:
 	var button: PushButton = room.get_node("PushButton")
 	var reach := float(Content.objects()["button"]["interact_radius_px"])
 	# The button lies at the end of a tunnel that leaves the foot of the well wall
-	# to the right, under the pool: dry (outside both tanks), two cells high, on
-	# the level of the well floor, so the hero can walk in only once the water of
-	# the well is gone.
+	# to the right, under the pool: two cells high, on the level of the well floor,
+	# joined to the well (its own tank follows the well's surface), so the hero can
+	# walk in only once the water of the well is gone.
 	for column in range(16, 26):
 		for row in [16, 17]:
 			check(blocks.get_cell_source_id(Vector2i(column, row)) == -1, "the tunnel is open at column %d, row %d" % [column, row])
@@ -186,6 +186,63 @@ func test_level_02_geometry_follows_the_sketch() -> void:
 	check(blocks.get_cell_source_id(Vector2i(4, 16)) != -1, "the foot of the ledge is solid")
 	var grate_x := well.position.x - well.size.x / 2.0 + well.look.outlet_inset_px
 	check(grate_x < well.position.x + float_body.position.x - float_body.body_size().x / 2.0 and grate_x > 5.0 * CELL, "the grate is on the well floor left of the float, x %.0f" % grate_x)
+	await _free(room)
+
+
+## A tank joined to another one stands where the leader's surface puts it: full
+## below the surface, empty above it, a part of the way in between.
+func test_a_joined_tank_follows_the_surface_of_its_leader() -> void:
+	var room := Node2D.new()
+	_tree.root.add_child(room)
+	var leader := Water.new()
+	leader.object_id = "leader"
+	leader.size = Vector2(256, 768)
+	leader.position = Vector2(0, 768)
+	room.add_child(leader)
+	var joined := Water.new()
+	joined.object_id = "joined"
+	joined.size = Vector2(256, 128)
+	joined.position = Vector2(300, 768)
+	joined.follows_id = "leader"
+	room.add_child(joined)
+	for sample: Array in [[Water.LEVEL_MAX, Water.LEVEL_MAX], [8000, Water.LEVEL_MAX], [2000, Water.LEVEL_MAX], [1000, 6000], [500, 3000], [0, 0]]:
+		leader.level = int(sample[0])
+		joined.simulate_tick(0)
+		check(joined.level == int(sample[1]), "the leader at %d puts the joined tank at %d, it stands at %d" % [sample[0], sample[1], joined.level])
+	joined.follows_id = "nobody"
+	joined.level = 1234
+	joined.simulate_tick(0)
+	check(joined.level == 1234, "a tank that follows none stays as it is")
+	room.queue_free()
+	await _tree.process_frame
+
+
+## Level 02: the tunnel is flooded while the well stands over its ceiling and
+## dries with the well; under Shift it fills again with the well.
+func test_level_02_tunnel_is_flooded_with_the_well_and_dries_with_it() -> void:
+	var room := await _load(LEVEL_PATH)
+	var well: Water = room.get_node("Well")
+	var tunnel: Water = room.get_node("Tunnel")
+	var time: RoomTime = room.get_node("RoomTime")
+	var player: Player = room.get_node("Player")
+	check(tunnel.follows_id == "well", "the tunnel follows the well")
+	check(tunnel.tank_global_rect().position.y == float(16 * CELL) and tunnel.tank_global_rect().end.y == float(18 * CELL), "the tunnel tank is the tunnel: rows 16 and 17")
+	# Never more than one tick of the well's fall apart: that is how fast it goes.
+	var tolerance := int(ceil(float(well.step()) * well.size.y / tunnel.size.y)) + 2
+	var worst := 0
+	var was_full := false
+	var was_dry := false
+	for i in 700:
+		await _ticks(1)
+		worst = maxi(worst, absi(tunnel.level - tunnel.level_for_surface(well.surface_global_y())))
+		was_full = was_full or (tunnel.level == Water.LEVEL_MAX and well.level > 3000)
+		was_dry = was_dry or (tunnel.level == 0 and well.level == 0)
+	check(worst <= tolerance, "the tunnel is where the well's surface puts it, off by %d at worst (allowed %d)" % [worst, tolerance])
+	check(was_full, "the tunnel was full while the well stood high")
+	check(was_dry, "the tunnel ran dry with the well")
+	player.respawn(Vector2(1088, 6 * CELL))
+	await _rewind_to_start(time)
+	check(tunnel.level == Water.LEVEL_MAX and well.level == Water.LEVEL_MAX, "at the first frame the tunnel is full with the well: %d and %d" % [tunnel.level, well.level])
 	await _free(room)
 
 

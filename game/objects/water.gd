@@ -46,6 +46,11 @@ const LEVEL_MAX := 10000
 @export_enum("Drain:-1", "Fill:1") var open_flow := -1
 ## The wall with the pipe (filling) or the grate (draining).
 @export_enum("Left:-1", "Right:1") var outlet_side := 1
+## The `object_id` of another tank of the room that this one is joined to, like
+## a pipe under a wall: its surface is the leader's surface, as far as this
+## tank reaches (level 02: the tunnel off the well). It has no source, grate or
+## jet of its own and does not run by `powered`.
+@export var follows_id := ""
 
 ## -1, 0 or +1: how the level moved on the last simulated tick.
 var flow := 0
@@ -191,6 +196,14 @@ func restore_state(state: Dictionary) -> void:
 
 func simulate_tick(_tick: int) -> void:
 	flow = 0
+	if follows_id != "":
+		var leader := _leader()
+		if leader != null:
+			var next := level_for_surface(leader.surface_global_y())
+			flow = signi(next - level)
+			level = next
+		_apply()
+		return
 	if powered:
 		var next := clampi(level + open_flow * _step, 0, LEVEL_MAX)
 		flow = signi(next - level)
@@ -212,6 +225,25 @@ func blocks_player_at(state: Dictionary, player_rect: Rect2) -> bool:
 		if float_rect_at(float_body, int(state["level"])).intersects(body):
 			return true
 	return false
+
+
+## The level of this tank when its surface stands at `surface_y` (global): full
+## below the surface, empty above it, as water in a joined tank.
+func level_for_surface(surface_y: float) -> int:
+	return clampi(int(round((global_position.y - surface_y) / size.y * LEVEL_MAX)), 0, LEVEL_MAX)
+
+
+## The tank this one follows, found among the room's tanks by id; null when it
+## follows none or the leader is not there.
+func _leader() -> Water:
+	var room := get_parent()
+	if room == null:
+		return null
+	for child in room.get_children():
+		var tank := child as Water
+		if tank != null and tank != self and tank.object_id == follows_id:
+			return tank
+	return null
 
 
 ## Level units per simulated tick.
@@ -291,6 +323,11 @@ func _draw_spray() -> void:
 	var tick := float(_world_tick)
 	var top := surface_local_y(level)
 	var outlet_x := outlet_side * (size.x / 2.0 - look.outlet_inset_px)
+	if follows_id != "":
+		# A joined tank has no grate, no jet; its full part has no surface.
+		if level > 0 and level < LEVEL_MAX:
+			_spray.draw_polyline(_surface_points(), SURFACE_COLOR, 2.0, true)
+		return
 	if open_flow > 0:
 		_spray.draw_rect(Rect2(Vector2(outlet_x - 14.0, -size.y - 18.0), Vector2(28.0, 18.0)), PIPE_COLOR)
 	else:
