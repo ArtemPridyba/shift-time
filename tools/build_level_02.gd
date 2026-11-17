@@ -1,8 +1,9 @@
 extends SceneTree
 ## Builds level 02 `levels/level_02.tscn` (task 3.1, 17.11.2026; card
-## docs/levels/02.md): a room of 39x20 cells, about 1.3 screens wide, the camera
-## follows the hero. He walks out of a doorway onto a small ledge at mid height.
-## Right of it is a deep well with a float, a grate and a button on its floor,
+## docs/levels/02.md): a room of 41x20 cells, about 1.3 screens wide, the camera
+## follows the hero. He walks out of a doorway onto a ledge at mid height.
+## Right of it is a deep well with a float and a grate on its floor, the button
+## is hidden in a niche in the foot of the ledge,
 ## beyond that a wall as high as the full water line, behind the wall a shallow
 ## pool with a door in front of the exit. Both waters are full at the start of
 ## the history and drain; the timing (prelude, walk-in, drain times) lives in
@@ -20,26 +21,26 @@ const TILESET_RES := "res://levels/blockout/blockout_tileset.tres"
 const SCENE_PATH := "res://levels/level_02.tscn"
 
 const MAP := [
-	"#######################################",
-	"#................................######",
-	"#................................######",
-	"#................................######",
-	"#................................######",
-	"#................................######",
-	"#..............##................######",
-	"#..............##................######",
-	"#..............##................######",
-	"#..............##................######",
-	"#S.............##................D....#",
-	"####...........##................D..EE#",
-	"####...........##................D..EE#",
-	"####...........########################",
-	"####...........########################",
-	"####...........########################",
-	"####...........########################",
-	"####...........########################",
-	"#######################################",
-	"#######################################",
+	"#########################################",
+	"#.................................#######",
+	"#.................................#######",
+	"#.................................#######",
+	"#.................................#######",
+	"#.................................#######",
+	"#...............##................#######",
+	"#...............##................#######",
+	"#...............##................#######",
+	"#...............##................#######",
+	"#S..............##................D.....#",
+	"#####...........##................D..EE.#",
+	"#####...........##................D..EE.#",
+	"#####...........#########################",
+	"#####...........#########################",
+	"#####...........#########################",
+	"####............#########################",
+	"####............#########################",
+	"#########################################",
+	"#########################################",
 ]
 
 ## The doorway the hero walks out of (decoration only), in cells.
@@ -49,19 +50,20 @@ const ENTRANCE_CELLS := Rect2i(1, 8, 1, 3)
 ## from it: the hero's ledge is 5 cells under it (row 11), the well floor 12
 ## (row 18), the pool floor 7 (row 13).
 const LINE_ROW := 6
-## The well tank covers the ledge too (columns 1-14, so the ledge is under water
+## The well tank covers the ledge too (columns 1-15, so the ledge is under water
 ## when the water is full) down to the well floor.
-const WELL_COLUMNS := Vector2i(1, 15)
+const WELL_COLUMNS := Vector2i(1, 16)
 const WELL_FLOOR_ROW := 18
-## The pool tank: columns 17-32 down to the pool floor.
-const POOL_COLUMNS := Vector2i(17, 33)
+## The pool tank: columns 18-33 down to the pool floor.
+const POOL_COLUMNS := Vector2i(18, 34)
 const POOL_FLOOR_ROW := 13
 
 ## The float lies on the well floor, centred on this column (cells, from the
 ## left): a jump from its edge to the wall is 3 cells, a hero's jump is 4.
-const FLOAT_CENTRE_COLUMN := 10.5
-## The button on the well floor between the float and the wall, and its sparks.
-const BUTTON_COLUMN := 13.5
+const FLOAT_CENTRE_COLUMN := 11.5
+## The button is hidden in a niche in the foot of the hero's ledge (column 4,
+## rows 16-17): the player has to look for it, the sparks give it away.
+const BUTTON_COLUMN := 4.5
 const BUTTON_HEIGHT := 24.0
 
 

@@ -17,8 +17,8 @@
 		"prelude_seconds": 4.5,
 		"intro_seconds": 0.3,
 		"objects": {
-			"well": { "full_seconds": 9, "outlet_inset_px": 352 },
-			"pool": { "full_seconds": 4.2 }
+			"well": { "full_seconds": 9, "outlet_inset_px": 416, "lifts_player": false },
+			"pool": { "full_seconds": 4.2, "lifts_player": false }
 		},
 		"title": "02 Flow"
 	},

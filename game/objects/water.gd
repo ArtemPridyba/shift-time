@@ -53,6 +53,9 @@ var time_direction := 1
 ## The rise of the surface on the last physics tick, pixels per second; above
 ## zero while the water lifts what is in it (forward filling or rewinding a drain).
 var rise_px_per_second := 0.0
+## False in a level whose water must not carry the player: `rise_px_per_second`
+## then stays 0, so the player sinks in rising water and needs the float.
+var lifts_player := true
 
 var _step := 1
 var _draft := 8.0
@@ -86,13 +89,15 @@ func configure(water_data: Dictionary, time_data: Dictionary) -> void:
 ## Settings of this tank from the level's entry in `data/levels.json`:
 ## `full_seconds` (how long the whole tank takes to run empty or full, instead
 ## of the project's value) and `outlet_inset_px` (how far the grate or the pipe
-## stands from its wall, for the look only).
+## stands from its wall, for the look only) and `lifts_player` (false: rising
+## water does not carry the player, only a float does; true by default).
 func apply_settings(settings: Dictionary) -> void:
 	var water_data: Dictionary = (Content.objects().get("water", {}) as Dictionary).duplicate()
 	water_data.merge(settings, true)
 	configure(water_data, Content.time())
 	if settings.has("outlet_inset_px"):
 		look.outlet_inset_px = float(settings["outlet_inset_px"])
+	lifts_player = bool(settings.get("lifts_player", true))
 
 
 func _ready() -> void:
@@ -113,7 +118,7 @@ func _ready() -> void:
 
 func _physics_process(_delta: float) -> void:
 	if _seen_level >= 0:
-		rise_px_per_second = (level - _seen_level) * size.y / LEVEL_MAX * _ticks
+		rise_px_per_second = (level - _seen_level) * size.y / LEVEL_MAX * _ticks if lifts_player else 0.0
 	_seen_level = level
 	_live_tick += 1
 	var half := size.x / 2.0
