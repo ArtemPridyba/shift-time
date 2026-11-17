@@ -30,7 +30,7 @@ Documents are in Russian. Read only what the task needs:
 - Rooms fit one screen (16:9).
 - Three kinds of objects: recorded (door, platform, water, wood zones, lamp, gear, lever, crate), live (the player, and the fire or bounce of reverse items: never recorded; the body of a reverse item lying in the room is recorded like a crate), decoration (puddles, splashes, sparks: inverted animations, no effect on anything).
 - The core is not a general physics rewinder: objects are controlled and recorded, fixed step, interpolation, short history.
-- Art: AI draws the look of everything after an approved style sheet; motion and states are code (shaders, particles, cutout rigs), so everything plays backwards without jumps. The style is being chosen (`docs/style.md`).
+- Art: Claude draws the look of everything in code and vector (SVG, procedural textures, shaders, particles, cutout rigs) after an approved style sheet; no Gemini and no other image models (D58). Motion and states are code, so everything plays backwards without jumps. The style is chosen again by a test in the game, the plan is `docs/art-direction.md` (written in the design chat, D58).
 - Two people with equal say. Open questions go to `docs/decisions.md`; either person answers; the answer becomes a decision with its reason in `docs/history.md`; a wrong decision is undone by a new one, never erased.
 
 ## Current stage
@@ -39,18 +39,18 @@ Week 1 of 4 ends on 9 November with task 1.4. Week 2: 10–16 Nov, week 3: 17–
 
 ## Who does what
 
-Every task card has a label (`**Модель:**`). Claude Code limits are short: on Opus it takes only О and О+, on Sonnet also А (D46). Everything else goes to Antigravity or the Gemini app. A regular Claude chat sees no repository and runs nothing: it only helps next to Antigravity (template in `docs/how-we-work.md`).
+Every task card has a label (`**Модель:**`). Since 18.11.2026 (D58) the user is on a paid Claude plan and **Gemini is not used**: Claude Code does all the work, design and art included, and no other image-model vendor is used either. Labels in old cards map as in the table. A regular Claude chat sees no repository and runs nothing.
 
 | Label | Who | Where |
 | --- | --- | --- |
-| О | Opus, effort high | Claude Code, or Opus in Antigravity |
+| О | Opus, effort high | Claude Code |
 | О+ | Opus, effort xhigh | Claude Code |
-| А | Gemini 4 Argon; without it (Google AI Plus) Claude Sonnet 4.6 for code, Gemini 3.8 Flash for short tasks; Sonnet in Claude Code | Antigravity or Claude Code |
-| А− | Gemini: documents, cards, data | Antigravity or the Gemini app |
-| Г | Gemini app: images, video, music, second opinion, playtest videos | the Gemini app |
+| А | Sonnet, or Opus for code across many files | Claude Code |
+| А− | Sonnet or Haiku: documents, cards, data | Claude Code |
+| Г (old) | Claude: images are SVG, procedural textures, shaders, particles, cutout rigs made in code; sound is code too; no Gemini (D58) | Claude Code |
 | Л | people | — |
 
-Antigravity and other agents follow `AGENTS.md`, which points back to this file.
+Antigravity and other agents follow `AGENTS.md`, which points back to this file (kept for a person who still uses it; the team's flow is Claude Code).
 
 ## How every session works
 
@@ -74,7 +74,7 @@ Everything a step reads stays in the conversation and is read again by every lat
 - Make independent calls in one step.
 - Several different jobs in one message: sort them with the `razbor` skill first. Long output (a CI log, many screenshots) goes to the `reader` subagent, big mechanical work to `helper`. Subagents start from nothing: never hand them small things.
 - Effort: high by default, xhigh only for code across many files, never max.
-- Long reading that the session doesn't need word for word (videos, long documents, a second opinion) goes to Gemini; the user brings back the answer.
+- Long reading that the session doesn't need word for word (long documents, a CI log) goes to the `reader` subagent; there is no Gemini in the flow (D58).
 - More than about 40 steps means the task is too big: write a handoff and end.
 - «Запиши цену прошлых чатов»: fill the price column of the journal in `docs/history.md` as `$18 · 527 тыс.`.
 
