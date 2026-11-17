@@ -16,7 +16,7 @@ Task cards in `docs/roadmap.md` carry a label (`**Модель:**`):
 
 - **А** — yours: objects and levels by an existing pattern, build, menu, sound and art in the game.
 - **А−** — yours: documents, level cards, data.
-- **О** — the time core and the hardest levels: only if you run Opus in Antigravity; otherwise tell the user it belongs to Claude Code.
+- **О** — the time core and the hardest levels: only if you run Opus in Antigravity; otherwise tell the user it belongs to Claude Code (both people have it, D58).
 - **О+, Г, Л** — not yours (Claude Code with xhigh effort, the Gemini app, people).
 
 Labels don't depend on your plan. Without Gemini 4 Argon (Google AI Plus), take А on the model you have: Claude Sonnet for code, Gemini Flash for documents and short tasks, Claude Opus only after Sonnet failed in one chat (D46). A task not done in one chat goes to О; add the model, the task and what went wrong to D45 in `docs/decisions.md`.
