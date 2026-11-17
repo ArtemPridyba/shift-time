@@ -1,0 +1,17 @@
+{
+	"level": "level_02",
+	"expect": "no_exit",
+	"segments": [
+		{ "actions": [], "ticks": 24 },
+		{ "actions": ["move_right"], "ticks": 40 },
+		{ "actions": [], "ticks": 120 },
+		{ "actions": ["move_right", "jump"], "ticks": 70 },
+		{ "actions": ["move_right"], "ticks": 8 },
+		{ "actions": ["interact"], "ticks": 3 },
+		{ "actions": ["move_left", "jump"], "ticks": 22 },
+		{ "actions": [], "ticks": 50 },
+		{ "actions": ["move_right", "jump"], "ticks": 200 },
+		{ "actions": ["move_left", "jump"], "ticks": 200 },
+		{ "actions": ["move_right", "jump"], "ticks": 300 }
+	]
+}

@@ -83,6 +83,18 @@ func configure(water_data: Dictionary, time_data: Dictionary) -> void:
 	_draft = float(water_data.get("float_draft_px", 8))
 
 
+## Settings of this tank from the level's entry in `data/levels.json`:
+## `full_seconds` (how long the whole tank takes to run empty or full, instead
+## of the project's value) and `outlet_inset_px` (how far the grate or the pipe
+## stands from its wall, for the look only).
+func apply_settings(settings: Dictionary) -> void:
+	var water_data: Dictionary = (Content.objects().get("water", {}) as Dictionary).duplicate()
+	water_data.merge(settings, true)
+	configure(water_data, Content.time())
+	if settings.has("outlet_inset_px"):
+		look.outlet_inset_px = float(settings["outlet_inset_px"])
+
+
 func _ready() -> void:
 	add_to_group("temporal")
 	add_to_group("water")
