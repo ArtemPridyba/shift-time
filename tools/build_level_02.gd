@@ -3,7 +3,8 @@ extends SceneTree
 ## docs/levels/02.md): a room of 41x20 cells, about 1.3 screens wide, the camera
 ## follows the hero. He walks out of a doorway onto a ledge at mid height.
 ## Right of it is a deep well with a float and a grate on its floor, the button
-## lies in a trench in front of the pool door,
+## lies at the end of a tunnel that leaves the well floor to the right, under
+## the pool,
 ## beyond that a wall as high as the full water line, behind the wall a shallow
 ## pool with a door in front of the exit. Both waters are full at the start of
 ## the history and drain; the timing (prelude, walk-in, drain times) lives in
@@ -34,11 +35,11 @@ const MAP := [
 	"#S..............##................D.....#",
 	"#####...........##................D..EE.#",
 	"#####...........##................D..EE.#",
-	"#####...........#############.....#######",
-	"#####...........##############...########",
 	"#####...........#########################",
 	"#####...........#########################",
 	"#####...........#########################",
+	"#####.....................###############",
+	"#####.....................###############",
 	"#########################################",
 	"#########################################",
 ]
@@ -61,11 +62,11 @@ const POOL_FLOOR_ROW := 13
 ## The float lies on the well floor, centred on this column (cells, from the
 ## left): a jump from its edge to the wall is 3 cells, a hero's jump is 4.
 const FLOAT_CENTRE_COLUMN := 11.5
-## The button lies at the bottom of a trench in the pool floor right in front of
-## the door (columns 29-33, two steps down), so the player sees the door when he
-## presses it; the sparks show it.
-const BUTTON_FLOOR_ROW := 15
-const BUTTON_COLUMN := 31.5
+## The button lies at the end of a tunnel that leaves the foot of the well wall
+## to the right, under the pool (rows 16-17, columns 16-25). The hero has to wait
+## until the well is empty, walk in, press it and come back to the float.
+const BUTTON_FLOOR_ROW := 18
+const BUTTON_COLUMN := 24.5
 const BUTTON_HEIGHT := 24.0
 
 
