@@ -39,23 +39,23 @@
 				"lamp_light": ["#2a2222", "#8d6142", "#ffa860", "#ffcb9f", "#ffedd9"]
 			}
 		},
-		"chocolate_neon": {
-			"title": "Chocolate and neon",
+		"black_red_vanilla": {
+			"title": "Black, red and vanilla",
 			"status": "reserve",
-			"skin": "#e6b48e",
+			"skin": "#e8c8a8",
 			"ramps": {
-				"background": ["#110906", "#1a0e0a", "#24140e", "#5a493f", "#958578"],
-				"steel": ["#1b120e", "#564439", "#9a7e6a", "#c2ac99", "#ecddca"],
-				"mechanism": ["#1b0e08", "#56321b", "#9a5a2e", "#c49776", "#edd6bf"],
-				"suit": ["#1d0d08", "#622a15", "#b04a1e", "#d49070", "#f3d4bd"],
-				"helmet": ["#453a2f", "#97866e", "#f2dcb4", "#f8e6c6", "#fdefd8"],
-				"rust": ["#180807", "#461214", "#7a1a22", "#b4746b", "#e9cbbb"],
-				"time": ["#181e1e", "#357f85", "#3ff0ff", "#a6f3f3", "#e6f3e6"],
-				"fire": ["#250f08", "#8a3313", "#ff5a12", "#ff9f76", "#ffdac0"],
-				"interact": ["#260c11", "#8b2048", "#ff2e88", "#ff8fab", "#ffd5d0"],
-				"water": ["#111010", "#223a40", "#2e6a78", "#85a0a2", "#d9d9cd"],
-				"wood": ["#21140c", "#764e2a", "#d8904a", "#e9b98a", "#f9e1c6"],
-				"lamp_light": ["#251a13", "#8a6f51", "#ffd29a", "#ffe0b7", "#ffedd4"]
+				"background": ["#0b090b", "#131113", "#1c1a1c", "#484442", "#79726b"],
+				"steel": ["#100e10", "#2b282b", "#4a4548", "#8e8580", "#d8ccbc"],
+				"mechanism": ["#181515", "#46403d", "#7a706a", "#ada296", "#e3d6c4"],
+				"suit": ["#0c0a0c", "#1c1a1c", "#2e2b2e", "#7a736e", "#d1c5b6"],
+				"helmet": ["#34302c", "#8d8373", "#f2e2c4", "#f5e5ca", "#f8e9d0"],
+				"rust": ["#160909", "#3e1414", "#6a1e1e", "#a77064", "#e2c5b2"],
+				"time": ["#2a0d0d", "#83181d", "#e8102a", "#f98373", "#ffcdb9"],
+				"fire": ["#2d100d", "#8f2719", "#ff3a1a", "#ff9172", "#ffd2b9"],
+				"interact": ["#34302c", "#8d8373", "#f2e2c4", "#f5e5ca", "#f8e9d0"],
+				"water": ["#0e0d10", "#23252b", "#3a4048", "#838280", "#d4cbbc"],
+				"wood": ["#130e0e", "#352923", "#5a463a", "#998676", "#dcccb9"],
+				"lamp_light": ["#423b34", "#9b8c76", "#ffe8c0", "#ffeac6", "#ffeccb"]
 			}
 		}
 	}

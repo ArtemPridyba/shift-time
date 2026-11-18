@@ -21,6 +21,11 @@ else:
     N = f('24140e', .7, .55); ST, BR, RU, TM, WM = f('9a7e6a'), f('b0643a'), f('7a1a22'), f('3ff0ff'), f('ff5a12'); INT = f('ff2e88')
     WATER = f('2e6a78'); WOOD = f('d8904a'); TITLE = 'Шоколад и неон'
     SUIT, HAT, GEAR, LIGHT = f('b04a1e'), f('f2dcb4', .7), f('9a5a2e'), f('ffd29a'); SKIN_ = h('e6b48e')
+if NAME == 'X':
+    DK, LT = '050405', 'fff1dc'; f = lambda k, d=.8, l=.8: F_(k, DK, LT, d, l)
+    N = f('1c1a1c', .7, .45); ST, BR, RU, TM, WM = f('4a4548'), f('7a706a'), f('6a1e1e'), f('e8102a'), f('ff3a1a'); INT = f('f2e2c4', .75, .5)
+    WATER = f('3a4048'); WOOD = f('5a463a'); TITLE = 'Чёрный, красный, ваниль'
+    SUIT, HAT, GEAR, LIGHT = f('2e2b2e'), f('f2e2c4', .75, .5), f('7a706a'), f('ffe8c0', .7, .4); SKIN_ = h('e8c8a8')
 OL = N[0]; SKIN = SKIN_; CHAR = F_('2a2226', DK, LT)
 def box(d, x0, y0, x1, y1, rp, o=2, top=4, bot=4):
     d.rectangle([x0 - o, y0 - o, x1 + o, y1 + o], fill=OL); d.rectangle([x0, y0, x1, y1], fill=rp[2])
