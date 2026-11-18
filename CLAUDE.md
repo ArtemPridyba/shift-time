@@ -30,7 +30,7 @@ Documents are in Russian. Read only what the task needs:
 - Rooms fit one screen (16:9).
 - Three kinds of objects: recorded (door, platform, water, wood zones, lamp, gear, lever, crate), live (the player, and the fire or bounce of reverse items: never recorded; the body of a reverse item lying in the room is recorded like a crate), decoration (puddles, splashes, sparks: inverted animations, no effect on anything).
 - The core is not a general physics rewinder: objects are controlled and recorded, fixed step, interpolation, short history.
-- Art: AI draws the look of everything after an approved style sheet; motion and states are code (shaders, particles, cutout rigs), so everything plays backwards without jumps. The style is being chosen (`docs/style.md`).
+- Art: AI draws the look of everything after an approved style sheet; motion and states are code (shaders, particles, cutout rigs), so everything plays backwards without jumps. The style is chosen (D44, 17.11): a factory or warehouse-lab with visible mechanisms; the design of levels 01–02 (tasks Д0–Д9 in `docs/roadmap.md`) comes first and is the pattern for every later level (D59).
 - Two people with equal say. Open questions go to `docs/decisions.md`; either person answers; the answer becomes a decision with its reason in `docs/history.md`; a wrong decision is undone by a new one, never erased.
 
 ## Current stage
@@ -104,6 +104,7 @@ Run from the repository root (`godot` = the Godot 4.7.2 binary):
 - UI smoke test: `godot --headless --path game --script res://tests/ui_smoke_test.gd`
 - Both tests with short output, the usual check in a session: `godot --headless --path game --script res://tests/test_runner.gd 2>&1 | grep -E 'FAIL|SCRIPT ERROR|tests,'; godot --headless --path game --script res://tests/ui_smoke_test.gd 2>&1 | grep -E 'FAIL|SCRIPT ERROR|failed'`. Green is `N tests, 0 failed` and `UI smoke test: 0 failed`.
 - Web export (preset `Web` in `game/export_presets.cfg`, single-threaded Compatibility build into `build/web/index.html`): `mkdir -p build/web && godot --headless --path game --export-release "Web" ../build/web/index.html && (cd build/web && zip -r ../shift-time-web.zip .)`
+- Screenshots of a level in the real renderer, for design work (task Д0): `tools/shots.sh level_01 --every 60 --scale 0.5` plays the level's solution on a virtual screen and writes a labelled contact sheet `build/shots/level_01/sheet.png`; `--video` adds a clip, all keys are at the top of `tools/shots.gd`. Look at the sheet, not at every frame.
 - Play: open `game/project.godot` in the Godot editor and press F5. On Windows `run_tests.bat` imports the project and runs both tests; an agent runs `.\run_tests.bat nopause`, because `pause` would wait for a key.
 
 Both test commands exit with code 0 on success. A script error fails the test it happens in; `push_error` only prints.
@@ -150,8 +151,8 @@ In a cloud session the hook puts Godot on PATH and imports the project. Without 
 
 Details: `docs/style.md` (the style test), `docs/setting.md`, `docs/art-pipeline.md`, `docs/ai-tools.md`.
 
-- The style is chosen on 11 November among three options: cardboard diorama, rotoscope, rusty silhouette. Until then levels stay grey blockout.
-- Setting: a worn future in the spirit of Portal and Half-Life — rust, metal, tired spaces and working new technology among them. Take the mood, never recognisable parts (no orange portals, no Aperture panels). Earlier picture decisions (torn ceiling, rust streaks, the scarf, one cyan accent) carry over where the chosen style allows.
+- Style (D44, 17.11): our own, from the setting — not one of the three test options. Mechanisms are visible and move the world: gears, toothed racks, chains on drums, belts between sprockets drive doors and platforms (sketches in `docs/art/reference/`); a mechanism keeps no history, its angle follows the recorded value of the object it drives. Materials: tin, rusty metal, wood, rubber, soft glow; no paper cut-outs or tape. Side view with a slight look from above: floors and platforms show their top face, collision stays as in the blockout. Background: a warehouse-lab, its own per level. The hero is a factory worker in overalls and a hard hat with the wrist device. The style sheet is task Д1 (`docs/art/style-sheet.md`).
+- Setting: a near future between old mechanics and new technology — rust, metal, tired warehouse and lab spaces and working new technology among them. Take the mood of Portal and Half-Life, never recognisable parts (no orange portals, no Aperture panels). Earlier picture decisions (torn ceiling, rust streaks, the scarf, one cyan accent) carry over where the style sheet allows.
 - One accent: the cold cyan (start value `#7FE8FF`) belongs only to mechanisms and objects tied to time and to the wrist device with its indicator.
 - The player wears a device on the wrist; the time-direction indicator lives on it.
 - Time reads in the picture by motion: particles, light pulses and the wrist device run the other way in reverse mode.
