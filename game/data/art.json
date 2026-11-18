@@ -20,23 +20,23 @@
 				"lamp_light": ["#341b29", "#763535", "#c0503c", "#d88b82", "#eac4c7"]
 			}
 		},
-		"mint_day": {
-			"title": "Mint day",
+		"green_purple": {
+			"title": "Cold green and purple",
 			"status": "reserve",
-			"skin": "#f2c6a0",
+			"skin": "#e8c4cc",
 			"ramps": {
-				"background": ["#161a28", "#bfeadb", "#6fa894", "#e2f6ee", "#ffffff"],
-				"steel": ["#0e1223", "#19234c", "#24357a", "#7382ad", "#ced3de"],
-				"mechanism": ["#101d21", "#185046", "#0e8a6e", "#81b8a2", "#d5e6d9"],
-				"suit": ["#2b1b1c", "#8e4028", "#ff6420", "#ffa782", "#ffe1cf"],
-				"helmet": ["#5c5e62", "#a6a6a5", "#f6f4ee", "#f9f7f1", "#fdfbf4"],
-				"rust": ["#20121c", "#5d1a32", "#a0144a", "#cd7b8b", "#f1d1d1"],
-				"time": ["#191633", "#462b92", "#7a3cff", "#a795ff", "#e0dbfd"],
-				"fire": ["#2a151b", "#872129", "#f0102e", "#fe8a80", "#ffd8ce"],
-				"interact": ["#291523", "#83234d", "#e8207a", "#fa8baa", "#ffd8dc"],
-				"water": ["#101b2f", "#1b4782", "#1f78e0", "#80afed", "#d4e3f4"],
-				"wood": ["#1d1318", "#51221f", "#8a2e22", "#bd8073", "#ead2c9"],
-				"lamp_light": ["#2a2222", "#8d6142", "#ffa860", "#ffcb9f", "#ffedd9"]
+				"background": ["#0d0b1b", "#150f28", "#1e1236", "#463d5f", "#746c8b"],
+				"steel": ["#0b151c", "#16363a", "#1e5a5a", "#749298", "#c7cddc"],
+				"mechanism": ["#0d191f", "#1c4746", "#2a7a70", "#7fa7a7", "#cbd5e1"],
+				"suit": ["#150f26", "#3d1e60", "#6a2aa0", "#9e7bc8", "#d5c6ed"],
+				"helmet": ["#343342", "#89819b", "#ead8ff", "#ecddff", "#eee2ff"],
+				"rust": ["#110c1c", "#2c143a", "#4a1a5a", "#8b6a9a", "#cfbfdd"],
+				"time": ["#23132e", "#6e287e", "#c43ad8", "#da8aea", "#ebccf9"],
+				"fire": ["#2c141f", "#8f2643", "#ff2a6a", "#ff8aa4", "#fccde0"],
+				"interact": ["#343342", "#89819b", "#ead8ff", "#ecddff", "#eee2ff"],
+				"water": ["#0b1023", "#1a2454", "#2a3a8a", "#7380ba", "#c6c7e8"],
+				"wood": ["#13101c", "#35243a", "#5a3a5a", "#947d99", "#d2c6dc"],
+				"lamp_light": ["#3c394d", "#887ea1", "#dccaff", "#e0d1ff", "#e5d8ff"]
 			}
 		},
 		"black_red_vanilla": {

@@ -26,6 +26,16 @@ if NAME == 'X':
     N = f('1c1a1c', .7, .45); ST, BR, RU, TM, WM = f('4a4548'), f('7a706a'), f('6a1e1e'), f('e8102a'), f('ff3a1a'); INT = f('f2e2c4', .75, .5)
     WATER = f('3a4048'); WOOD = f('5a463a'); TITLE = 'Чёрный, красный, ваниль'
     SUIT, HAT, GEAR, LIGHT = f('2e2b2e'), f('f2e2c4', .75, .5), f('7a706a'), f('ffe8c0', .7, .4); SKIN_ = h('e8c8a8')
+if NAME == 'P1':
+    DK, LT = '07040e', 'f4ecff'; f = lambda k, d=.82, l=.8: F_(k, DK, LT, d, l)
+    N = f('221238', .7, .45); ST, BR, RU, TM, WM = f('4c3a7a'), f('7a4a9a'), f('5a1a4a'), f('14907c'), f('e0287e'); INT = f('e6dcff', .75, .5)
+    WATER = f('2e3a8a'); WOOD = f('6a3a5a'); TITLE = 'Фиолет и холодный зелёный (P1)'
+    SUIT, HAT, GEAR, LIGHT = f('3a1e66'), f('e6dcff', .75, .5), f('7a4a9a'), f('d8c8ff', .7, .4); SKIN_ = h('e8c4cc')
+if NAME == 'P2':
+    DK, LT = '060810', 'f2ecff'; f = lambda k, d=.82, l=.8: F_(k, DK, LT, d, l)
+    N = f('1e1236', .7, .45); ST, BR, RU, TM, WM = f('1e5a5a'), f('2a7a70'), f('4a1a5a'), f('c43ad8'), f('ff2a6a'); INT = f('ead8ff', .75, .5)
+    WATER = f('2a3a8a'); WOOD = f('5a3a5a'); TITLE = 'Холодный зелёный и пурпур (P2)'
+    SUIT, HAT, GEAR, LIGHT = f('6a2aa0'), f('ead8ff', .75, .5), f('2a7a70'), f('dccaff', .7, .4); SKIN_ = h('e8c4cc')
 OL = N[0]; SKIN = SKIN_; CHAR = F_('2a2226', DK, LT)
 def box(d, x0, y0, x1, y1, rp, o=2, top=4, bot=4):
     d.rectangle([x0 - o, y0 - o, x1 + o, y1 + o], fill=OL); d.rectangle([x0, y0, x1, y1], fill=rp[2])
