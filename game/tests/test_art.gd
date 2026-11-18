@@ -97,6 +97,49 @@ func test_material_shader_has_every_number() -> void:
 	check(code.contains("MAX_STEPS = %d" % Content.ART_MATERIAL_MAX_PX), "the shader's reach must match ART_MATERIAL_MAX_PX")
 
 
+# --- slabs ------------------------------------------------------------------
+
+func test_perspective_numbers_are_checked() -> void:
+	var art := Content.art()
+	check(Content.art_perspective().size() == Content.ART_PERSPECTIVE_KEYS.size(), "art.json must give every perspective number")
+	var cases := {
+		"a missing perspective": func(a: Dictionary) -> void: a.erase("perspective"),
+		"a missing number": func(a: Dictionary) -> void: a["perspective"].erase("top_face_px"),
+		"a number as text": func(a: Dictionary) -> void: a["perspective"]["tile_px"] = "64",
+		"a face over half a tile": func(a: Dictionary) -> void: a["perspective"]["top_face_px"] = 40,
+		"a fractional face": func(a: Dictionary) -> void: a["perspective"]["top_face_px"] = 15.5,
+		"feet past the face": func(a: Dictionary) -> void: a["perspective"]["feet_on_face"] = 1.2,
+		"an unknown key": func(a: Dictionary) -> void: a["perspective"]["tilt"] = 1,
+	}
+	for name: String in cases:
+		var broken: Dictionary = art.duplicate(true)
+		(cases[name] as Callable).call(broken)
+		check(not Content.validate_art(broken).is_empty(), "%s must be reported" % name)
+
+
+func test_slab_draws_the_top_face_around_the_collision_line() -> void:
+	var face := StyleSlab.face_px()
+	var above := StyleSlab.face_above_px()
+	check(face == int(Content.art_perspective()["top_face_px"]), "the top face must come from art.json")
+	check(above == int(round(face * float(Content.art_perspective()["feet_on_face"]))), "the feet must stand where art.json says")
+	for kind in StyleSlab.KINDS:
+		var slab := StyleSlab.new()
+		slab.kind = kind
+		slab.size = Vector2(192, 48)
+		slab.open_left = true
+		slab.position = Vector2(100, 500)
+		var drawn := slab.drawn_rect()
+		check(slab.texture != null, "a %s slab must have a mask" % kind)
+		if slab.texture != null:
+			check(Vector2(slab.texture.get_size()) == drawn.size, "the %s mask must be the drawn size" % kind)
+		check(is_equal_approx(drawn.position.y, 500.0 - above), "a %s must draw its top face above the collision line" % kind)
+		check(drawn.position.x == 100.0 and drawn.size.x == 192.0, "a %s must keep the collision width" % kind)
+		var below := face - above if kind == "wall" else 0
+		check(is_equal_approx(drawn.end.y, 548.0 + below), "a %s must end at its collision bottom%s" % [kind, " and the floor's front edge" if below else ""])
+		check(slab.position == Vector2(100, 500) and slab.size == Vector2(192, 48), "a slab must not change its collision rectangle")
+		slab.free()
+
+
 # --- the showcase -----------------------------------------------------------
 
 func test_showcase_switches_palettes_and_rewinds() -> void:

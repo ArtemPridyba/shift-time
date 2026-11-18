@@ -19,6 +19,10 @@ const ART_MATERIAL_KEYS: Array[String] = [
 	"outline_px", "rim_px", "shadow_px", "chip_reach_px", "chip_density", "chip_scale_px",
 	"dust_px", "dust_strength", "dirt_px", "dirt_strength", "rust_scale_px",
 ]
+## The slight look from above (`art.json`, `perspective`): the tile, how many
+## pixels of a slab's top face show, and where on the face (0 back edge,
+## 1 front edge) the collision line and the feet are.
+const ART_PERSPECTIVE_KEYS: Array[String] = ["tile_px", "top_face_px", "feet_on_face"]
 ## The shader looks at most this many pixels from an edge: the outline and
 ## the bands behind it (rim and dust, shadow and dirt, chips) must fit.
 const ART_MATERIAL_MAX_PX := 24
@@ -101,6 +105,12 @@ static func art() -> Dictionary:
 static func art_material() -> Dictionary:
 	var material: Variant = art().get("material")
 	return material if material is Dictionary else {}
+
+
+## The numbers of the look from above, `perspective` of `art.json`.
+static func art_perspective() -> Dictionary:
+	var perspective: Variant = art().get("perspective")
+	return perspective if perspective is Dictionary else {}
 
 
 ## The ramps of the active palette: role -> five colours, dark to light.
@@ -425,6 +435,7 @@ static func validate_art(data: Variant) -> PackedStringArray:
 	if mains != 1:
 		errors.append("art.json: exactly one palette must have status 'main'")
 	errors.append_array(_validate_art_material(data.get("material")))
+	errors.append_array(_validate_art_perspective(data.get("perspective")))
 	return errors
 
 
@@ -454,6 +465,31 @@ static func _validate_art_material(material: Variant) -> PackedStringArray:
 				total += material[key]
 			if total > ART_MATERIAL_MAX_PX:
 				errors.append("art.json: material outline_px + %s must be at most %d pixels" % [" + ".join(band), ART_MATERIAL_MAX_PX])
+	return errors
+
+
+static func _validate_art_perspective(perspective: Variant) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not perspective is Dictionary:
+		errors.append("art.json: 'perspective' must be an object")
+		return errors
+	for key in ART_PERSPECTIVE_KEYS:
+		if not (perspective.get(key) is float or perspective.get(key) is int):
+			errors.append("art.json: perspective '%s' must be a number" % key)
+	for key: Variant in perspective:
+		if not str(key) in ART_PERSPECTIVE_KEYS:
+			errors.append("art.json: unknown perspective key '%s'" % key)
+	if not errors.is_empty():
+		return errors
+	var tile: float = perspective["tile_px"]
+	if tile < 16 or tile != int(tile):
+		errors.append("art.json: perspective 'tile_px' must be a whole number of at least 16")
+	var face: float = perspective["top_face_px"]
+	if face < 0 or face > tile * 0.5 or face != int(face):
+		errors.append("art.json: perspective 'top_face_px' must be whole pixels, 0..half a tile")
+	var feet: float = perspective["feet_on_face"]
+	if feet < 0 or feet > 1:
+		errors.append("art.json: perspective 'feet_on_face' must be 0..1")
 	return errors
 
 

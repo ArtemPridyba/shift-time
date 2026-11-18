@@ -1,5 +1,10 @@
 {
 	"active_palette": "plum_cobalt",
+	"perspective": {
+		"tile_px": 64,
+		"top_face_px": 16,
+		"feet_on_face": 0.5
+	},
 	"material": {
 		"outline_px": 2,
 		"rim_px": 3,
