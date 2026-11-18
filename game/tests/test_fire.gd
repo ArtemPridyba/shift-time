@@ -394,7 +394,8 @@ func test_fire_look_is_the_same_forward_and_back() -> void:
 		if forward.has(tick):
 			compared += 1
 			same = same and shot == forward[tick]
-	check(compared > 200, "the rewind must pass the recorded ticks (%d)" % compared)
+	# The sped-up rewind (D62) steps over frames; each one shown is compared.
+	check(compared > 100, "the rewind must pass the recorded ticks (%d)" % compared)
 	check(same, "the look of fire on a world tick must be the same forward and rewinding")
 	check(wall.burn.phase == BURNING or wall.burn.phase == WHOLE, "rewound, the wall is back")
 	await _free_room(room)

@@ -244,7 +244,9 @@ func test_look_of_water_is_the_same_forward_and_back() -> void:
 			compared += 1
 			same = same and shot == forward[tick]
 			same_wheel = same_wheel and is_equal_approx(valve.wheel_angle(), float(angles[tick]))
-	check(compared > 150, "the rewind must pass the ticks seen going forward, compared %d" % compared)
+	# A long hold speeds the rewind up (D62) and steps over frames: it still
+	# shows most of the ticks seen going forward, each one the same.
+	check(compared > 100, "the rewind must pass the ticks seen going forward, compared %d" % compared)
 	check(same, "the look at a world tick must be the same going forward and rewinding")
 	check(same_wheel, "under Shift the valve wheel must turn back through the same angles")
 	await _free_room(room)

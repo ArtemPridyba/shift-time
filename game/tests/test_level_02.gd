@@ -276,9 +276,11 @@ func test_level_02_water_and_float_are_continuous() -> void:
 	for i in 200:
 		await _ticks(1)
 		_track(well, pool, float_body, last, worst)
-	check(worst[0] <= well.step() + 1, "the well level jumps %d per tick, its step is %d" % [worst[0], well.step()])
-	check(worst[1] <= pool.step() + 1, "the pool level jumps %d per tick, its step is %d" % [worst[1], pool.step()])
-	check(worst[2] <= 2.5, "the float jumps %.1f px in one tick" % worst[2])
+	# The fastest rewind (D62) goes back `rewind_speed_max` frames a tick.
+	var fast := int(Content.time()["rewind_speed_max"])
+	check(worst[0] <= (well.step() + 1) * fast, "the well level jumps %d per tick, its step is %d" % [worst[0], well.step()])
+	check(worst[1] <= (pool.step() + 1) * fast, "the pool level jumps %d per tick, its step is %d" % [worst[1], pool.step()])
+	check(worst[2] <= 2.5 * fast, "the float jumps %.1f px in one tick" % worst[2])
 	await _free(room)
 
 
