@@ -1,19 +1,16 @@
 class_name StyleSlab
-extends StyleShape
-## A slab of level geometry in the slight look from above (task Д1, step 3):
-## a floor, a ledge or a wall, painted by the shared material. The node's
-## position and `size` are the collision rectangle, which this never changes:
-## the top face (`top_face_px` of `art.json`, `perspective`) is drawn around
-## the collision line so that the feet stand at `feet_on_face` of it, the
-## front face below. Things that stand on a floor in its front plane (walls)
-## reach down to the floor's front edge. Decoration only.
+extends StyleBlock
+## A slab of level geometry (task Д1, step 3): a floor, a ledge or a wall, a
+## StyleBlock `slab_depth_px` deep (`art.json`, `perspective`) whose front face
+## shows what it is made of. The node's position and `size` are the
+## collision rectangle, which this never changes. Decoration only.
 ##
 ## Kinds:
 ##   floor  steel plates with rivets on the first row, darker rows below
 ##   ledge  a girder: flanges and a web with round holes
 ##   wall   concrete blocks in a running bond
 ## An open end (`open_left`, `open_right`: the slab ends in the air, not at a
-## wall or the screen edge) bevels the top face and gets an end cap.
+## wall or the screen edge) gets an end cap.
 
 const KINDS: Array[String] = ["floor", "ledge", "wall"]
 ## Shades of the mask (see StyleMask): darkest, darker, main, lighter, lightest.
@@ -22,85 +19,58 @@ const S1 := StyleMask.DARKER
 const S2 := StyleMask.MAIN
 const S3 := StyleMask.LIGHTER
 const S4 := StyleMask.LIGHTEST
-## Width of the end cap on an open end and the lit lip at the front of the top face.
+## Width of the end cap on an open end and the lit lip along the top.
 const CAP_PX := 6
-const LIP_PX := 2
+const LIP_PX := 3
 
 @export_enum("floor", "ledge", "wall") var kind := "floor":
 	set(value):
 		kind = value
-		_rebuild()
-## The collision rectangle's size; its top left is the node's position.
-@export var size := Vector2(256, 64):
-	set(value):
-		size = value
-		_rebuild()
+		_refresh()
 @export var open_left := false:
 	set(value):
 		open_left = value
-		_rebuild()
+		_refresh()
 @export var open_right := false:
 	set(value):
 		open_right = value
-		_rebuild()
+		_refresh()
 
 
 func _init() -> void:
 	super()
-	centered = false
-	_rebuild()
+	depth = float(Content.art_perspective().get("slab_depth_px", 128))
+	seams_px = int(Content.art_perspective().get("tile_px", 64))
 
 
-## Pixels of the top face that show (`art.json`, `perspective`).
-static func face_px() -> int:
-	return int(Content.art_perspective().get("top_face_px", 16))
+func _refresh() -> void:
+	if front != null:
+		front.texture = null
+		_rebuild()
 
 
-## Pixels of the top face above the collision line.
-static func face_above_px() -> int:
-	return int(round(face_px() * float(Content.art_perspective().get("feet_on_face", 0.5))))
+func _front_svg(pixels: Vector2i) -> String:
+	return mask(kind, pixels, int(Content.art_perspective().get("tile_px", 64)), open_left, open_right)
 
 
-## The drawn rectangle in the parent's space: the collision rectangle plus
-## the top face above it (and, for a wall, down to the floor's front edge).
-func drawn_rect() -> Rect2:
-	var below := face_px() - face_above_px() if kind == "wall" else 0
-	return Rect2(position + Vector2(0, -face_above_px()), size + Vector2(0, face_above_px() + below))
-
-
-func _rebuild() -> void:
-	var tile := int(Content.art_perspective().get("tile_px", 64))
-	var drawn := drawn_rect().size
-	offset = Vector2(0, -face_above_px())
-	set_svg(mask(kind, Vector2i(drawn.round()), face_px(), tile, open_left, open_right))
-
-
-## The SVG mask of a slab drawn `drawn` pixels big, its top face `face` pixels.
-static func mask(slab_kind: String, drawn: Vector2i, face: int, tile: int, left: bool, right: bool) -> String:
+## The SVG mask of a slab's front face, `drawn` pixels big.
+static func mask(slab_kind: String, drawn: Vector2i, tile: int, left: bool, right: bool) -> String:
 	var w := drawn.x
 	var h := drawn.y
 	var body := ""
-	# Front face, by kind.
 	match slab_kind:
 		"ledge":
-			body += _ledge_front(w, h, face, tile)
+			body += _ledge_front(w, h, 0, tile)
 		"wall":
-			body += _wall_front(w, h, face, tile)
+			body += _wall_front(w, h, 0, tile)
 		_:
-			body += _floor_front(w, h, face, tile)
-	# Top face: bevelled at an open end, seams between tiles slant back.
-	var bl := face if left else 0
-	var br := face if right else 0
-	body += _poly([Vector2(bl, 0), Vector2(w - br, 0), Vector2(w, face), Vector2(0, face)], S3)
-	for x in range(tile, w, tile):
-		body += _poly([Vector2(x + 2, 0), Vector2(x + 4, 0), Vector2(x + 1, face), Vector2(x - 1, face)], S2)
-	body += _rect(0, face - LIP_PX, w, LIP_PX, S4)
-	body += _rect(0, face, w, 3, S1)
-	# End caps on open ends: an angle of steel down the front face.
+			body += _floor_front(w, h, 0, tile)
+	# The lit lip along the top edge, where the front meets the top face.
+	body += _rect(0, 0, w, LIP_PX, S3)
 	if left:
-		body += _rect(0, face, CAP_PX, h - face, S2) + _rect(CAP_PX, face, 2, h - face, S1)
+		body += _rect(0, 0, CAP_PX, h, S2) + _rect(CAP_PX, 0, 2, h, S1)
 	if right:
-		body += _rect(w - CAP_PX, face, CAP_PX, h - face, S2) + _rect(w - CAP_PX - 2, face, 2, h - face, S1)
+		body += _rect(w - CAP_PX, 0, CAP_PX, h, S2) + _rect(w - CAP_PX - 2, 0, 2, h, S1)
 	return StyleMask.svg(drawn, body)
 
 

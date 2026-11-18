@@ -19,10 +19,10 @@ const ART_MATERIAL_KEYS: Array[String] = [
 	"outline_px", "rim_px", "shadow_px", "chip_reach_px", "chip_density", "chip_scale_px",
 	"dust_px", "dust_strength", "dirt_px", "dirt_strength", "rust_scale_px",
 ]
-## The slight look from above (`art.json`, `perspective`): the tile, how many
-## pixels of a slab's top face show, and where on the face (0 back edge,
-## 1 front edge) the collision line and the feet are.
-const ART_PERSPECTIVE_KEYS: Array[String] = ["tile_px", "top_face_px", "feet_on_face"]
+## The one-point perspective of a room (`art.json`, `perspective`): the tile,
+## the eye (a point of the screen everything recedes to), how far the eye is
+## from the middle plane and how deep slabs are, all in pixels.
+const ART_PERSPECTIVE_KEYS: Array[String] = ["tile_px", "eye_x", "eye_y", "distance_px", "slab_depth_px"]
 ## The shader looks at most this many pixels from an edge: the outline and
 ## the bands behind it (rim and dust, shadow and dirt, chips) must fit.
 const ART_MATERIAL_MAX_PX := 24
@@ -484,12 +484,14 @@ static func _validate_art_perspective(perspective: Variant) -> PackedStringArray
 	var tile: float = perspective["tile_px"]
 	if tile < 16 or tile != int(tile):
 		errors.append("art.json: perspective 'tile_px' must be a whole number of at least 16")
-	var face: float = perspective["top_face_px"]
-	if face < 0 or face > tile * 0.5 or face != int(face):
-		errors.append("art.json: perspective 'top_face_px' must be whole pixels, 0..half a tile")
-	var feet: float = perspective["feet_on_face"]
-	if feet < 0 or feet > 1:
-		errors.append("art.json: perspective 'feet_on_face' must be 0..1")
+	for key: String in ["eye_x", "eye_y"]:
+		if perspective[key] < 0 or perspective[key] > 1920:
+			errors.append("art.json: perspective '%s' must be a point of the screen, 0..1920" % key)
+	var distance: float = perspective["distance_px"]
+	if distance < 400:
+		errors.append("art.json: perspective 'distance_px' must be at least 400")
+	elif perspective["slab_depth_px"] <= 0 or perspective["slab_depth_px"] > distance * 0.5:
+		errors.append("art.json: perspective 'slab_depth_px' must be above 0 and at most half of 'distance_px'")
 	return errors
 
 

@@ -30,6 +30,7 @@ var _front: Node2D
 var _gear: StyleShape
 var _rack: StyleShape
 var _rack_top := 0.0
+var _tank: StyleBlock
 
 
 func _ready() -> void:
@@ -145,13 +146,19 @@ func _build_samples() -> void:
 	# Gear: turns around its centre.
 	_gear = add.call("Gear", StyleMask.gear(GEAR_TEETH, GEAR_RADIUS, GEAR_RADIUS - 16.0, 4, 11.0, 26.0), GEAR_CENTER, "mechanism")
 	_gear.centered = true
-	# Pipe along the top and the rusty column on the left.
-	add.call("Pipe", StyleMask.rect(Vector2i(1180, 30)), Vector2(720, 250), "steel")
-	add.call("Column", StyleMask.rect(Vector2i(56, int(FLOOR_Y) - 290)), Vector2(740, 290), "rust", 0.6)
-	# Slabs (step 3): positions and sizes are collision rectangles; the top
-	# face is drawn around the collision line. A floor with a pit, a ledge over
-	# it and a wall standing on the floor; the wall comes after the floor, so
-	# that it covers the floor's top face where it stands.
+	# Solid things are boxes in the room's perspective (StyleBlock): position and
+	# size are the collision rectangle, the middle plane of the box.
+	var box := func(box_name: String, rect: Rect2, depth: float, role: String, rust: float = 0.0) -> StyleBlock:
+		var shape := StyleBlock.new()
+		shape.name = box_name
+		shape.size = rect.size
+		shape.depth = depth
+		shape.role = role
+		shape.position = rect.position
+		shape.front.rust = rust
+		shape.front.wear_seed = float(samples.get_child_count()) * 3.7
+		samples.add_child(shape)
+		return shape
 	var slab := func(slab_name: String, kind: String, rect: Rect2, left: bool = false, right: bool = false) -> StyleSlab:
 		var shape := StyleSlab.new()
 		shape.name = slab_name
@@ -161,18 +168,22 @@ func _build_samples() -> void:
 		shape.open_right = right
 		shape.position = rect.position
 		shape.role = "steel"
-		shape.wear_seed = float(samples.get_child_count()) * 3.7
+		shape.front.wear_seed = float(samples.get_child_count()) * 3.7
 		samples.add_child(shape)
 		return shape
+	box.call("Pipe", Rect2(720, 250, 1180, 30), 30.0, "steel")
+	box.call("Column", Rect2(740, 290, 56, FLOOR_Y - 290), 56.0, "rust", 0.6)
+	# A floor with a pit, a ledge over it and a wall standing on the floor.
 	slab.call("FloorLeft", "floor", Rect2(0, FLOOR_Y, 576, 1080 - FLOOR_Y), false, true)
 	slab.call("Floor", "floor", Rect2(704, FLOOR_Y, 1216, 1080 - FLOOR_Y), true, false)
 	slab.call("Ledge", "ledge", Rect2(256, 760, 192, 48), true, true)
 	slab.call("Wall", "wall", Rect2(0, 644, 128, FLOOR_Y - 644))
-	add.call("Crate", StyleMask.rect(Vector2i(96, 96)), Vector2(1180, FLOOR_Y - 96), "wood")
-	add.call("Pedestal", StyleMask.rect(Vector2i(40, 70)), Vector2(1440, FLOOR_Y - 70), "steel")
-	add.call("Button", StyleMask.rect(Vector2i(24, 16)), Vector2(1448, FLOOR_Y - 86), "interact")
-	add.call("Lamp", StyleMask.rect(Vector2i(48, 22)), Vector2(1316, 300), "steel")
-	add.call("Wood", StyleMask.rect(Vector2i(160, 60)), Vector2(1720, FLOOR_Y - 60), "wood")
+	box.call("Crate", Rect2(1180, FLOOR_Y - 96, 96, 96), 96.0, "wood")
+	box.call("Pedestal", Rect2(1440, FLOOR_Y - 70, 40, 70), 40.0, "steel")
+	box.call("Button", Rect2(1448, FLOOR_Y - 86, 24, 16), 16.0, "interact")
+	box.call("Lamp", Rect2(1316, 300, 48, 22), 22.0, "steel")
+	box.call("Wood", Rect2(1720, FLOOR_Y - 60, 160, 60), 64.0, "wood")
+	_tank = box.call("Tank", Rect2(1530, FLOOR_Y - 150, 150, 150), 120.0, "steel")
 
 
 func _pitch() -> float:
@@ -215,9 +226,10 @@ func _draw_hero(p: ArtPalette) -> void:
 
 
 func _draw_water(p: ArtPalette) -> void:
-	var tank := Rect2(1530, FLOOR_Y - 150, 150, 150)
+	# The water fills the front face of the tank box.
+	var tank: Rect2 = _tank.front_rect()
 	_c.draw_rect(tank, p.shade("steel", 1))
-	var level := 100.0 + 10.0 * sin(tau * 1.5)
+	var level: float = tank.size.y * 0.66 + 10.0 * sin(tau * 1.5)
 	var water := Rect2(tank.position.x + 8, tank.end.y - level, tank.size.x - 16, level)
 	_c.draw_rect(water, p.shade("water"))
 	_c.draw_rect(Rect2(water.position, Vector2(water.size.x, 6)), p.shade("water", 4))

@@ -40,7 +40,7 @@ func _init() -> void:
 	_material = ShaderMaterial.new()
 	_material.shader = MATERIAL
 	material = _material
-	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	for key: String in Content.ART_MATERIAL_KEYS:
 		_material.set_shader_parameter(key, float(Content.art_material()[key]))
 	_set_param("wear", wear)

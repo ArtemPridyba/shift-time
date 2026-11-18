@@ -1,9 +1,11 @@
 {
-	"active_palette": "plum_cobalt",
+	"active_palette": "plum_wine",
 	"perspective": {
 		"tile_px": 64,
-		"top_face_px": 16,
-		"feet_on_face": 0.5
+		"eye_x": 960,
+		"eye_y": 360,
+		"distance_px": 1600,
+		"slab_depth_px": 128
 	},
 	"material": {
 		"outline_px": 2,
@@ -11,7 +13,7 @@
 		"shadow_px": 3,
 		"chip_reach_px": 5,
 		"chip_density": 0.35,
-		"chip_scale_px": 5,
+		"chip_scale_px": 9,
 		"dust_px": 4,
 		"dust_strength": 0.4,
 		"dirt_px": 14,
@@ -19,21 +21,40 @@
 		"rust_scale_px": 14
 	},
 	"palettes": {
-		"plum_cobalt": {
-			"title": "Plum and cobalt",
+		"plum_wine": {
+			"title": "Plum and wine",
 			"status": "main",
 			"skin": "#eac4c7",
 			"ramps": {
 				"background": ["#0c0725", "#150b37", "#1e0f4a", "#605b89", "#b0accb"],
-				"steel": ["#171a4c", "#2b3b93", "#3f5fe0", "#7c96ef", "#bec9fa"],
+				"steel": ["#1f0c16", "#4a1527", "#7a2338", "#a8566a", "#d6a3ae"],
 				"mechanism": ["#341b29", "#763535", "#c0503c", "#d88b82", "#eac4c7"],
-				"suit": ["#171a4c", "#2b3b93", "#3f5fe0", "#7c96ef", "#bec9fa"],
+				"suit": ["#2a0f1c", "#5c1a30", "#93304a", "#c26a7e", "#e6b5c0"],
+				"helmet": ["#341b29", "#763535", "#c0503c", "#d88b82", "#eac4c7"],
+				"rust": ["#291034", "#591e56", "#8e2a7a", "#b674a9", "#dab9d9"],
+				"time": ["#1c3a54", "#308ba6", "#3fe6ff", "#96ebff", "#ceeeff"],
+				"fire": ["#40180f", "#9c3a14", "#ff7a1a", "#ffb070", "#ffe0c0"],
+				"interact": ["#40180f", "#9c3a14", "#ff7a1a", "#ffb070", "#ffe0c0"],
+				"water": ["#0f2a2e", "#1c4c52", "#2f7a7c", "#6fa8a6", "#b8d8d4"],
+				"wood": ["#2c1927", "#623330", "#9d4e33", "#bf887b", "#dec2c4"],
+				"lamp_light": ["#341b29", "#763535", "#c0503c", "#d88b82", "#eac4c7"]
+			}
+		},
+		"plum_graphite": {
+			"title": "Plum and graphite",
+			"status": "reserve",
+			"skin": "#eac4c7",
+			"ramps": {
+				"background": ["#0c0725", "#150b37", "#1e0f4a", "#605b89", "#b0accb"],
+				"steel": ["#1b1719", "#363033", "#5a5054", "#8a7f82", "#c4bbbc"],
+				"mechanism": ["#341b29", "#763535", "#c0503c", "#d88b82", "#eac4c7"],
+				"suit": ["#2a0f1c", "#5c1a30", "#93304a", "#c26a7e", "#e6b5c0"],
 				"helmet": ["#341b29", "#763535", "#c0503c", "#d88b82", "#eac4c7"],
 				"rust": ["#291034", "#591e56", "#8e2a7a", "#b674a9", "#dab9d9"],
 				"time": ["#1c3a54", "#308ba6", "#3fe6ff", "#96ebff", "#ceeeff"],
 				"fire": ["#431727", "#9c242b", "#ff2418", "#ff8478", "#ffc3c4"],
 				"interact": ["#431727", "#9c242b", "#ff2418", "#ff8478", "#ffc3c4"],
-				"water": ["#17244a", "#28538d", "#3786d7", "#7fade7", "#c1d3f5"],
+				"water": ["#0f2a2e", "#1c4c52", "#2f7a7c", "#6fa8a6", "#b8d8d4"],
 				"wood": ["#2c1927", "#623330", "#9d4e33", "#bf887b", "#dec2c4"],
 				"lamp_light": ["#341b29", "#763535", "#c0503c", "#d88b82", "#eac4c7"]
 			}

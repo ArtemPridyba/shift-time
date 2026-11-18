@@ -7,7 +7,7 @@ extends RefCounted
 
 const BASE := 2
 
-## The key of the palette in `art.json` (`plum_cobalt`, ...).
+## The key of the palette in `art.json` (`plum_wine`, ...).
 var id: String
 var title: String
 var skin: Color
