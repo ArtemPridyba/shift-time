@@ -3,7 +3,7 @@ from pal_lib import *
 def lab_mix(a, b, t):
     A, B = to_lab(h(a)), to_lab(h(b)); return '%02x%02x%02x' % to_rgb(tuple(A[i] + (B[i] - A[i]) * t for i in range(3)))
 def fam(key, dark, light, dk=.72, lt=.72): return (lab_mix(key, dark, dk), key, lab_mix(key, light, lt))
-def F_(k, dk, lt, d=.72): return ramp(*fam(k, dk, lt, d))
+def F_(k, dk, lt, d=.72, l=.72): return ramp(*fam(k, dk, lt, d, l))
 NAME = sys.argv[3]
 if NAME == 'B':
     DK, LT = '08051c', 'f4f0ff'; f = lambda k, d=.72: F_(k, DK, LT, d)
@@ -11,16 +11,16 @@ if NAME == 'B':
     WATER = f(lab_mix('3f5fe0', '2fb0c8', .45)); WOOD = f(lab_mix('c0503c', '7a4a2a', .5)); TITLE = 'Слива и кобальт'
     SUIT, HAT, GEAR, LIGHT = ST, BR, BR, BR; SKIN_ = BR[4]
 elif NAME == 'M':
-    DK, LT = '0e1018', 'fffcf2'; f = lambda k, d=.72: F_(k, DK, LT, d)
-    N = [h(x) for x in ('1c1f2e', 'c9ecdf', '7fb3a2', 'e6f6ef', 'ffffff')]
-    ST, BR, RU, TM, WM = f('2c3e7a'), f('c07a48'), f('9a1e4c'), f('7a3cff'), f('e8102a'); INT = f('e0287a')
-    WATER = f('2a7fd0'); WOOD = f('c08040'); TITLE = 'Мятный день'
-    SUIT, HAT, GEAR, LIGHT = f('ff6a2e'), f('f4f2ea', .55), f('128a72'), f('ffb070'); SKIN_ = h('f2c6a0')
+    DK, LT = '0a0c14', 'fffdf6'; f = lambda k, d=.84, l=.8: F_(k, DK, LT, d, l)
+    N = [h(x) for x in ('161a28', 'bfeadb', '6fa894', 'e2f6ee', 'ffffff')]
+    ST, BR, RU, TM, WM = f('24357a'), f('c07a48'), f('a0144a'), f('7a3cff'), f('f0102e'); INT = f('e8207a')
+    WATER = f('1f78e0'); WOOD = f('8a2e22'); TITLE = 'Мятный день'
+    SUIT, HAT, GEAR, LIGHT = f('ff6420'), f('f6f4ee', .6), f('0e8a6e'), f('ffa860'); SKIN_ = h('f2c6a0')
 else:
-    DK, LT = '0e0806', 'fff0dc'; f = lambda k, d=.72: F_(k, DK, LT, d)
-    N = f('2a1e18', .75); ST, BR, RU, TM, WM = f('5a4a40'), f('8a6a48'), f('5a2a20'), f('3fe6ff'), f('ff5a1a'); INT = f('ff3d8a')
-    WATER = f('34555e'); WOOD = f('7a5030'); TITLE = 'Сепия и неон'
-    SUIT, HAT, GEAR, LIGHT = f('6a5a40'), f('b8a080'), f('6a4a30'), f('ffd0a0'); SKIN_ = h('d8b090')
+    DK, LT = '0a0504', 'fff3e0'; f = lambda k, d=.86, l=.82: F_(k, DK, LT, d, l)
+    N = f('24140e', .7, .55); ST, BR, RU, TM, WM = f('9a7e6a'), f('b0643a'), f('7a1a22'), f('3ff0ff'), f('ff5a12'); INT = f('ff2e88')
+    WATER = f('2e6a78'); WOOD = f('d8904a'); TITLE = 'Шоколад и неон'
+    SUIT, HAT, GEAR, LIGHT = f('b04a1e'), f('f2dcb4', .7), f('9a5a2e'), f('ffd29a'); SKIN_ = h('e6b48e')
 OL = N[0]; SKIN = SKIN_; CHAR = F_('2a2226', DK, LT)
 def box(d, x0, y0, x1, y1, rp, o=2, top=4, bot=4):
     d.rectangle([x0 - o, y0 - o, x1 + o, y1 + o], fill=OL); d.rectangle([x0, y0, x1, y1], fill=rp[2])

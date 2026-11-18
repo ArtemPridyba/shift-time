@@ -25,37 +25,37 @@
 			"status": "reserve",
 			"skin": "#f2c6a0",
 			"ramps": {
-				"background": ["#1c1f2e", "#c9ecdf", "#7fb3a2", "#e6f6ef", "#ffffff"],
-				"steel": ["#161c31", "#212d54", "#2c3e7a", "#7180a6", "#bec4d1"],
-				"mechanism": ["#172f2f", "#1b5b4f", "#128a72", "#79b39e", "#c5dccc"],
-				"suit": ["#492a25", "#9f4a2f", "#ff6a2e", "#ffa37d", "#ffd6bf"],
-				"helmet": ["#6a6b6e", "#acacaa", "#f4f2ea", "#f8f5ed", "#fcf9f0"],
-				"rust": ["#331926", "#651f39", "#9a1e4c", "#c47384", "#e8bfc0"],
-				"time": ["#282051", "#4f30a4", "#7a3cff", "#a28eff", "#d4cdfc"],
-				"fire": ["#451d22", "#93232a", "#e8102a", "#f98074", "#ffc7ba"],
-				"interact": ["#431e31", "#8e2854", "#e0287a", "#f383a3", "#fec8cf"],
-				"water": ["#192c45", "#245487", "#2a7fd0", "#7daddf", "#c6daeb"],
-				"wood": ["#3a2d27", "#7a5536", "#c08040", "#d8ac82", "#efd9c1"],
-				"lamp_light": ["#483831", "#9f7151", "#ffb070", "#ffcca1", "#ffe7cf"]
+				"background": ["#161a28", "#bfeadb", "#6fa894", "#e2f6ee", "#ffffff"],
+				"steel": ["#0e1223", "#19234c", "#24357a", "#7382ad", "#ced3de"],
+				"mechanism": ["#101d21", "#185046", "#0e8a6e", "#81b8a2", "#d5e6d9"],
+				"suit": ["#2b1b1c", "#8e4028", "#ff6420", "#ffa782", "#ffe1cf"],
+				"helmet": ["#5c5e62", "#a6a6a5", "#f6f4ee", "#f9f7f1", "#fdfbf4"],
+				"rust": ["#20121c", "#5d1a32", "#a0144a", "#cd7b8b", "#f1d1d1"],
+				"time": ["#191633", "#462b92", "#7a3cff", "#a795ff", "#e0dbfd"],
+				"fire": ["#2a151b", "#872129", "#f0102e", "#fe8a80", "#ffd8ce"],
+				"interact": ["#291523", "#83234d", "#e8207a", "#fa8baa", "#ffd8dc"],
+				"water": ["#101b2f", "#1b4782", "#1f78e0", "#80afed", "#d4e3f4"],
+				"wood": ["#1d1318", "#51221f", "#8a2e22", "#bd8073", "#ead2c9"],
+				"lamp_light": ["#2a2222", "#8d6142", "#ffa860", "#ffcb9f", "#ffedd9"]
 			}
 		},
-		"sepia_neon": {
-			"title": "Sepia and neon",
+		"chocolate_neon": {
+			"title": "Chocolate and neon",
 			"status": "reserve",
-			"skin": "#d8b090",
+			"skin": "#e6b48e",
 			"ramps": {
-				"background": ["#150d0a", "#1f1511", "#2a1e18", "#706257", "#beaf9f"],
-				"steel": ["#211914", "#3c3129", "#5a4a40", "#928274", "#cebead"],
-				"mechanism": ["#251911", "#463120", "#6a4a30", "#9e826a", "#d4bfa9"],
-				"suit": ["#251c14", "#463a29", "#6a5a40", "#9d8d75", "#d3c4ae"],
-				"helmet": ["#372c23", "#74634f", "#b8a080", "#d1bca1", "#ebd9c2"],
-				"rust": ["#21110d", "#3c1d16", "#5a2a20", "#946c5e", "#d0b4a3"],
-				"time": ["#263d40", "#398d9a", "#3fe6ff", "#9bebf4", "#d7efe7"],
-				"fire": ["#481e10", "#9f3b18", "#ff5a1a", "#ff976d", "#ffcaac"],
-				"interact": ["#481925", "#9f2c55", "#ff3d8a", "#ff8aa7", "#ffc5c4"],
-				"water": ["#1a1b1b", "#28373b", "#34555e", "#7a8a8a", "#c3c2b7"],
-				"wood": ["#291a11", "#503420", "#7a5030", "#a9876b", "#d9c1a9"],
-				"lamp_light": ["#47372a", "#9e7f62", "#ffd0a0", "#ffdcb6", "#ffe7cb"]
+				"background": ["#110906", "#1a0e0a", "#24140e", "#5a493f", "#958578"],
+				"steel": ["#1b120e", "#564439", "#9a7e6a", "#c2ac99", "#ecddca"],
+				"mechanism": ["#1b0e08", "#56321b", "#9a5a2e", "#c49776", "#edd6bf"],
+				"suit": ["#1d0d08", "#622a15", "#b04a1e", "#d49070", "#f3d4bd"],
+				"helmet": ["#453a2f", "#97866e", "#f2dcb4", "#f8e6c6", "#fdefd8"],
+				"rust": ["#180807", "#461214", "#7a1a22", "#b4746b", "#e9cbbb"],
+				"time": ["#181e1e", "#357f85", "#3ff0ff", "#a6f3f3", "#e6f3e6"],
+				"fire": ["#250f08", "#8a3313", "#ff5a12", "#ff9f76", "#ffdac0"],
+				"interact": ["#260c11", "#8b2048", "#ff2e88", "#ff8fab", "#ffd5d0"],
+				"water": ["#111010", "#223a40", "#2e6a78", "#85a0a2", "#d9d9cd"],
+				"wood": ["#21140c", "#764e2a", "#d8904a", "#e9b98a", "#f9e1c6"],
+				"lamp_light": ["#251a13", "#8a6f51", "#ffd29a", "#ffe0b7", "#ffedd4"]
 			}
 		}
 	}
