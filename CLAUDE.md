@@ -100,9 +100,11 @@ Everything a step reads stays in the conversation and is read again by every lat
 Run from the repository root (`godot` = the Godot 4.7.2 binary):
 
 - After a fresh clone, and after adding a script with a new `class_name`: `godot --headless --path game --import`
-- Rule tests: `godot --headless --path game --script res://tests/test_runner.gd`
-- UI smoke test: `godot --headless --path game --script res://tests/ui_smoke_test.gd`
-- Both tests with short output, the usual check in a session: `godot --headless --path game --script res://tests/test_runner.gd 2>&1 | grep -E 'FAIL|SCRIPT ERROR|tests,'; godot --headless --path game --script res://tests/ui_smoke_test.gd 2>&1 | grep -E 'FAIL|SCRIPT ERROR|failed'`. Green is `N tests, 0 failed` and `UI smoke test: 0 failed`.
+- Rule tests: `godot --headless --fixed-fps 60 --path game --script res://tests/test_runner.gd`
+- UI smoke test: `godot --headless --fixed-fps 60 --path game --script res://tests/ui_smoke_test.gd`
+- Both tests with short output, the usual check in a session: `godot --headless --fixed-fps 60 --path game --script res://tests/test_runner.gd 2>&1 | grep -E 'FAIL|SCRIPT ERROR|tests,'; godot --headless --fixed-fps 60 --path game --script res://tests/ui_smoke_test.gd 2>&1 | grep -E 'FAIL|SCRIPT ERROR|failed'`. Green is `N tests, 0 failed` and `UI smoke test: 0 failed`.
+- `--fixed-fps 60` is required for speed: every frame counts as exactly 1/60 s without waiting for the wall clock, so the tests get the same ticks in about 20 s instead of 7 min. Without it the runner prints a warning. The runner prints `SUITE name: N tests, S s` per suite and the slowest tests.
+- One suite or one test while working: names after `--`, the file name without `test_` and `.gd`, a test after a colon: `... --script res://tests/test_runner.gd -- fire water` or `-- fire:test_wood_burns_through_burning_to_burnt`. Before a commit run everything.
 - Web export (preset `Web` in `game/export_presets.cfg`, single-threaded Compatibility build into `build/web/index.html`): `mkdir -p build/web && godot --headless --path game --export-release "Web" ../build/web/index.html && (cd build/web && zip -r ../shift-time-web.zip .)`
 - Screenshots of a level in the real renderer, for design work (task Д0): `tools/shots.sh level_01 --every 60 --scale 0.5` plays the level's solution on a virtual screen and writes a labelled contact sheet `build/shots/level_01/sheet.png`; `--video` adds a clip, all keys are at the top of `tools/shots.gd`. Look at the sheet, not at every frame.
 - Play: open `game/project.godot` in the Godot editor and press F5. On Windows `run_tests.bat` imports the project and runs both tests; an agent runs `.\run_tests.bat nopause`, because `pause` would wait for a key.

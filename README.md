@@ -111,9 +111,11 @@
 
 ```
 godot --headless --path game --import
-godot --headless --path game --script res://tests/test_runner.gd
-godot --headless --path game --script res://tests/ui_smoke_test.gd
+godot --headless --fixed-fps 60 --path game --script res://tests/test_runner.gd
+godot --headless --fixed-fps 60 --path game --script res://tests/ui_smoke_test.gd
 ```
+
+Флаг `--fixed-fps 60` обязателен для скорости: Godot считает каждый кадр ровно 1/60 секунды и не ждёт настоящих часов, поэтому те же тики проходят примерно за 20 секунд вместо 7 минут. Один набор тестов: `... test_runner.gd -- fire` (имя файла без `test_` и `.gd`), один тест: `-- fire:test_wood_burns_through_burning_to_burnt`.
 
 Первая команда нужна после клонирования и когда в проекте появились новые скрипты. Вторая проверяет правила времени: направление, запись и воспроизведение, ветвление, детерминизм и решения уровней. Третья — экран. На Windows обе проверки запускает `run_tests.bat` (двойной щелчок): он берёт `godot` из PATH или `C:\Godot\Godot_v4.7.2-stable_win64_console.exe`, другой путь задаёт переменная `GODOT`.
 
