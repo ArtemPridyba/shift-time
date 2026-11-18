@@ -1,5 +1,18 @@
 {
 	"active_palette": "plum_cobalt",
+	"material": {
+		"outline_px": 2,
+		"rim_px": 3,
+		"shadow_px": 3,
+		"chip_reach_px": 5,
+		"chip_density": 0.35,
+		"chip_scale_px": 5,
+		"dust_px": 4,
+		"dust_strength": 0.4,
+		"dirt_px": 14,
+		"dirt_strength": 0.5,
+		"rust_scale_px": 14
+	},
 	"palettes": {
 		"plum_cobalt": {
 			"title": "Plum and cobalt",

@@ -13,6 +13,15 @@ const ART_PATH := "res://data/art.json"
 const ART_ROLES: Array[String] = ["background", "steel", "mechanism", "suit", "helmet", "rust", "time", "fire", "interact", "water", "wood", "lamp_light"]
 const ART_RAMP_SIZE := 5
 const ART_STATUSES: Array[String] = ["main", "reserve"]
+## Numbers of the shared material (`art.json`, `material`), each a shader
+## uniform of `art/style/material.gdshader`: sizes in pixels, the rest 0..1.
+const ART_MATERIAL_KEYS: Array[String] = [
+	"outline_px", "rim_px", "shadow_px", "chip_reach_px", "chip_density", "chip_scale_px",
+	"dust_px", "dust_strength", "dirt_px", "dirt_strength", "rust_scale_px",
+]
+## The shader looks at most this many pixels from an edge: the outline and
+## the bands behind it (rim and dust, shadow and dirt, chips) must fit.
+const ART_MATERIAL_MAX_PX := 24
 
 const PLAYER_KEYS: Array[String] = [
 	"walk_speed", "acceleration", "friction", "gravity",
@@ -86,6 +95,12 @@ static func time_hud() -> Dictionary:
 static func art() -> Dictionary:
 	var data: Variant = load_json(ART_PATH)
 	return data if data is Dictionary else {}
+
+
+## The numbers of the shared material, `material` of `art.json`.
+static func art_material() -> Dictionary:
+	var material: Variant = art().get("material")
+	return material if material is Dictionary else {}
 
 
 ## The ramps of the active palette: role -> five colours, dark to light.
@@ -409,6 +424,36 @@ static func validate_art(data: Variant) -> PackedStringArray:
 					errors.append("%s: ramp '%s' has a bad color '%s'" % [where, role, color])
 	if mains != 1:
 		errors.append("art.json: exactly one palette must have status 'main'")
+	errors.append_array(_validate_art_material(data.get("material")))
+	return errors
+
+
+static func _validate_art_material(material: Variant) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not material is Dictionary:
+		errors.append("art.json: 'material' must be an object")
+		return errors
+	for key in ART_MATERIAL_KEYS:
+		var value: Variant = material.get(key)
+		if not (value is float or value is int):
+			errors.append("art.json: material '%s' must be a number" % key)
+		elif key.ends_with("_px") and (value < 0 or value > ART_MATERIAL_MAX_PX):
+			errors.append("art.json: material '%s' must be 0..%d pixels" % [key, ART_MATERIAL_MAX_PX])
+		elif key.ends_with("_scale_px") and value < 1:
+			errors.append("art.json: material '%s' must be at least 1 pixel" % key)
+		elif not key.ends_with("_px") and (value < 0.0 or value > 1.0):
+			errors.append("art.json: material '%s' must be 0..1" % key)
+	for key: Variant in material:
+		if not str(key) in ART_MATERIAL_KEYS:
+			errors.append("art.json: unknown material key '%s'" % key)
+	if errors.is_empty():
+		# The shader looks for an edge across the outline and the band behind it.
+		for band: Array in [["rim_px", "dust_px"], ["shadow_px", "dirt_px"], ["chip_reach_px"]]:
+			var total: float = material["outline_px"]
+			for key: String in band:
+				total += material[key]
+			if total > ART_MATERIAL_MAX_PX:
+				errors.append("art.json: material outline_px + %s must be at most %d pixels" % [" + ".join(band), ART_MATERIAL_MAX_PX])
 	return errors
 
 

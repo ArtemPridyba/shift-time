@@ -119,6 +119,8 @@ game/
 | `Player` (`CharacterBody2D`) | `objects/player.tscn` | управление не зависит от направления времени; ездит на платформах |
 | `LevelController` | `levels/` | загрузка, сброс по `reset_level`, переход к следующему уровню, выход |
 | `LevelLoader` (автозагрузка) | `autoload/level_loader.gd` | `load_level(id)` по `levels.json`, `go_to_list()`, `current_id`; действие `back_to_list` (Backspace) возвращает из уровня в список `ui/level_select.tscn` — главную сцену; новая сцена стартует в прямом времени |
+| `Art` (автозагрузка) | `autoload/art.gd` | текущая палитра из `data/art.json` (`ArtPalette` из `core/art_palette.gd`: оттенок по роли); `use_palette(id)`, `cycle()`, `reset()`, сигнал `palette_changed`; только вид, ничего не записывает |
+| `StyleShape` (`Sprite2D`) | `art/style/style_shape.gd` | общий материал Д1 (`art/style/material.gdshader`): форма — SVG-маска (`StyleMask`), цвет — роль палитры; контур, светлая кромка, тень, сколы, пыль, грязь, ржавчина; числа — `material` в `art.json` |
 | живой объект (обратные предметы) | `objects/*` | группа `live`, не `temporal`: нет `capture_state`; в каждый тик либо действует на игрока, либо зовёт `TimeWorld.live_action(...)` (раздел 2.5) |
 
 Временные объекты узнаются по группе `temporal` и по набору методов (утиная типизация), потому что платформа и дверь наследуют `AnimatableBody2D`, а кнопка — `Area2D`, и общий базовый класс невозможен. Тест проверяет, что каждый узел группы имеет все нужные методы.

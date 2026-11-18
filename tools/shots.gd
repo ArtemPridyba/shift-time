@@ -17,8 +17,13 @@ extends SceneTree
 ## Arguments after `--`:
 ##   --solution NAME   a file in tests/solutions (`level_01` or `level_01.json`)
 ##   --level ID        instead of a solution: this level from levels.json ...
-##   --ticks N         ... played for N ticks ...
+##   --scene NAME      ... or this scene of `game/levels/` that is no level
+##                     (`style_test`), played without a solution ...
+##   --ticks N         ... for N ticks ...
 ##   --hold A,B        ... holding these input actions (for example `rewind`)
+##   --plan P          ... or by segments instead of --ticks/--hold:
+##                     `60:;1:next_palette;60:;120:rewind` — ticks, a colon,
+##                     the actions held (comma-separated), segments by `;`
 ##   --every N         save a frame every N ticks (default 60; 1 for a video)
 ##   --at T1,T2        also save these ticks
 ##   --from T --to T   only save frames in this range of ticks
@@ -63,7 +68,7 @@ func _run() -> void:
 	var manager := root.get_node_or_null("TimeManager")
 	if manager != null:
 		manager.call("reset")
-	var scene_path := Solutions._level_scene(str(data["level"]))
+	var scene_path := str(data.get("scene", Solutions._level_scene(str(data.get("level", "")))))
 	var room: Node = (load(scene_path) as PackedScene).instantiate()
 	root.add_child(room)
 	for i in SETTLE_TICKS:
@@ -85,7 +90,7 @@ func _run() -> void:
 				await RenderingServer.frame_post_draw
 				_save(out_dir, tick, manager, scale)
 				saved += 1
-			if exit_tick < 0 and bool(room.get("is_completed")):
+			if exit_tick < 0 and room.get("is_completed") == true:
 				exit_tick = tick
 			if exit_tick >= 0 and tick - exit_tick >= past:
 				break
@@ -117,23 +122,43 @@ func _load_input() -> Dictionary:
 			printerr("shots: %s: %s" % [file, ", ".join(problems)])
 			return {}
 		return data
-	if _args.has("level"):
-		var data := {
-			"level": str(_args["level"]),
-			"expect": Solutions.EXPECT_EXIT,
-			"segments": [{"actions": Array(str(_args.get("hold", "")).split(",", false)), "ticks": int(_args.get("ticks", "300"))}],
-		}
+	if _args.has("level") or _args.has("scene"):
+		var segments := _segments()
+		if segments.is_empty():
+			printerr("shots: --plan must look like 60:;30:rewind (ticks:actions;...)")
+			return {}
+		if _args.has("scene"):
+			var path := "res://levels/%s.tscn" % str(_args["scene"]).trim_suffix(".tscn")
+			if not ResourceLoader.exists(path):
+				printerr("shots: no scene %s" % path)
+				return {}
+			return {"scene": path, "segments": segments}
+		var data := {"level": str(_args["level"]), "expect": Solutions.EXPECT_EXIT, "segments": segments}
 		var problems := Solutions.solution_problems(data)
 		if not problems.is_empty():
 			printerr("shots: %s" % ", ".join(problems))
 			return {}
 		return data
-	printerr("shots: give --solution NAME or --level ID (see tools/shots.gd)")
+	printerr("shots: give --solution NAME, --level ID or --scene NAME (see tools/shots.gd)")
 	return {}
 
 
+## The segments of --plan, or one segment of --ticks with --hold; empty when
+## --plan is malformed.
+func _segments() -> Array:
+	if not _args.has("plan"):
+		return [{"actions": Array(str(_args.get("hold", "")).split(",", false)), "ticks": int(_args.get("ticks", "300"))}]
+	var segments := []
+	for part in str(_args["plan"]).split(";", false):
+		var fields := part.split(":")
+		if fields.size() != 2 or not fields[0].is_valid_int() or int(fields[0]) <= 0:
+			return []
+		segments.append({"actions": Array(fields[1].split(",", false)), "ticks": int(fields[0])})
+	return segments
+
+
 func _default_out(data: Dictionary) -> String:
-	var name := str(_args.get("solution", data["level"])).trim_suffix(".json")
+	var name := str(_args.get("solution", _args.get("scene", data.get("level", "")))).trim_suffix(".json")
 	return ProjectSettings.globalize_path("res://").path_join("../build/shots").path_join(name).simplify_path()
 
 

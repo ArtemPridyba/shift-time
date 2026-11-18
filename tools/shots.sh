@@ -7,6 +7,7 @@
 #   tools/shots.sh level_01 --every 30 --scale 0.5
 #   tools/shots.sh level_02 --every 2 --from 600 --to 900 --video
 #   tools/shots.sh --level level_01 --ticks 240 --hold rewind
+#   tools/shots.sh --scene style_test --plan '60:;1:next_palette;60:;1:next_palette;60:;120:rewind' --every 30
 #
 # Output: build/shots/NAME/ — frames t00120_fwd.png / t00120_rev.png,
 # sheet.png (labelled tick and direction), and with --video also video.mp4.
@@ -26,7 +27,7 @@ fi
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 		--video) video=1; shift ;;
-		--level) name="${name:-$2}"; args+=("$1" "$2"); shift 2 ;;
+		--level|--scene) name="${name:-$2}"; args+=("$1" "$2"); shift 2 ;;
 		--out) out="$2"; args+=("$1" "$2"); shift 2 ;;
 		*) args+=("$1"); shift ;;
 	esac
