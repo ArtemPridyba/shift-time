@@ -90,6 +90,28 @@ func test_reset_returns_to_forward_and_waits_for_a_new_press() -> void:
 	manager.direction_changed.disconnect(listener)
 
 
+func test_a_long_hold_speeds_the_rewind_up() -> void:
+	var manager := _manager()
+	await _settle()
+	var top := maxi(int(Content.time()["rewind_speed_max"]), 1)
+	check(manager.rewind_frames == 0, "forward time rewinds no frames, got %d" % manager.rewind_frames)
+	Input.action_press("rewind")
+	await _ticks(3)
+	check(manager.rewind_frames == 1, "a fresh hold rewinds one frame a tick, got %d" % manager.rewind_frames)
+	await _ticks(180)
+	check(manager.rewind_frames == top, "a 3 s hold rewinds at the top speed, got %d" % manager.rewind_frames)
+	check(is_equal_approx(manager.rewind_speed, float(top)), "the speed reads as the top, got %f" % manager.rewind_speed)
+	manager.reset()
+	check(manager.rewind_frames == 0 and is_equal_approx(manager.rewind_speed, 1.0), "a reset forgets the hold")
+	Input.action_release("rewind")
+	await _ticks(3)
+	Input.action_press("rewind")
+	await _ticks(3)
+	check(manager.rewind_frames == 1, "a new hold starts at one frame a tick again, got %d" % manager.rewind_frames)
+	Input.action_release("rewind")
+	await _ticks(3)
+
+
 func test_player_is_not_subscribed_to_time() -> void:
 	var manager := _manager()
 	await _settle()

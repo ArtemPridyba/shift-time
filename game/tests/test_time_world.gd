@@ -186,3 +186,68 @@ func _history(world: TimeWorld) -> Array:
 	while world.timeline.cursor() > cursor:
 		world.timeline.step_back()
 	return frames
+
+
+func _speed() -> RewindSpeed:
+	return RewindSpeed.from_config({
+		"physics_ticks_per_second": 60, "rewind_speed_max": 3,
+		"rewind_ramp_delay_seconds": 0.5, "rewind_ramp_seconds": 1.5,
+	})
+
+
+func test_rewind_speed_grows_with_the_hold_and_resets_on_release() -> void:
+	var speed := _speed()
+	check(speed.frames_for(FWD) == 0, "forward time rewinds no frames")
+	var first_half_second := 0
+	for i in 30:
+		first_half_second += speed.frames_for(BACK)
+	check(first_half_second == 30, "the first 0.5 s rewind at 1x, got %d frames" % first_half_second)
+	for i in 90:
+		speed.frames_for(BACK)
+	check(is_equal_approx(speed.speed, 3.0), "after 2 s the rewind is at its top speed, got %f" % speed.speed)
+	var top := 0
+	for i in 60:
+		top += speed.frames_for(BACK)
+	check(top == 180, "a second at the top speed goes back 3 s, got %d frames" % top)
+	speed.frames_for(FWD)
+	check(speed.frames_for(BACK) == 1, "a new hold starts at 1x again")
+
+
+func test_rewind_speed_is_never_below_one_frame() -> void:
+	var speed := _speed()
+	var last := 0
+	for i in 200:
+		var frames := speed.frames_for(BACK)
+		check(frames >= 1 and frames <= 3, "a rewinding tick goes back 1 to 3 frames, got %d" % frames)
+		check(frames >= last - 1, "the speed never drops while Shift is held")
+		last = frames
+
+
+func test_fast_rewind_goes_back_several_frames_and_pins_at_start() -> void:
+	var world := _world()
+	var counter := Counter.new()
+	var objects := [counter]
+	_run(world, objects, FWD, 11)
+	check(counter.value == 10, "ten ticks recorded, got %d" % counter.value)
+	check(world.tick(BACK, objects, Rect2(), 3) == TimeWorld.Step.REWOUND, "a fast tick rewinds")
+	check(counter.value == 7 and world.timeline.cursor() == 7, "three frames back in one tick, got %d" % counter.value)
+	for i in 3:
+		world.tick(BACK, objects, Rect2(), 3)
+	check(counter.value == 0, "a fast rewind stops at frame 0, got %d" % counter.value)
+	check(world.tick(BACK, objects, Rect2(), 3) == TimeWorld.Step.PINNED, "at frame 0 the world is pinned")
+	_run(world, objects, FWD, 10)
+	check(counter.value == 10 and counter.simulated == 10, "release replays the same future without simulating")
+
+
+func test_fast_rewind_stops_before_a_frame_that_would_crush() -> void:
+	var world := _world()
+	var counter := Counter.new()
+	var objects := [counter]
+	_run(world, objects, FWD, 11)
+	counter.crush_at = 6
+	world.tick(BACK, objects, PLAYER, 3)
+	check(counter.value == 7, "the fast rewind stops on the frame before the crush, got %d" % counter.value)
+	check(world.tick(BACK, objects, PLAYER, 3) == TimeWorld.Step.WAITED, "the next tick waits for the player")
+	check(counter.value == 7, "waiting keeps the frame, got %d" % counter.value)
+	check(world.tick(BACK, objects, Rect2(), 3) == TimeWorld.Step.REWOUND, "once the player moves away the rewind goes on")
+	check(counter.value == 4, "three more frames back, got %d" % counter.value)

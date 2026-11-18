@@ -47,6 +47,11 @@ func _init(config: Dictionary = {}) -> void:
 	_flicker_depth = clampf(float(rewind.get("flicker_depth", _flicker_depth)), 0.0, 1.0)
 
 
+## How fast the world rewinds (TimeManager.rewind_speed): the streaks, the
+## sweep and the flicker run this many times faster.
+var speed := 1.0
+
+
 func set_direction(new_direction: int) -> void:
 	direction = BACKWARD if new_direction < 0 else FORWARD
 
@@ -62,9 +67,10 @@ func glyph() -> String:
 
 func step(delta: float) -> void:
 	if direction == BACKWARD:
-		particle_phase -= delta / _cycle_seconds
-		sweep_phase += delta * _sweep_hz
-		flicker_phase += delta * _flicker_hz
+		var fast := delta * maxf(speed, 1.0)
+		particle_phase -= fast / _cycle_seconds
+		sweep_phase += fast * _sweep_hz
+		flicker_phase += fast * _flicker_hz
 	edge_amount = move_toward(edge_amount, 1.0 if direction == BACKWARD else 0.0, delta / _fade_seconds)
 
 

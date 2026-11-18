@@ -3,7 +3,8 @@ extends RefCounted
 ## The rules of world time for one room (docs/architecture.md, section 2).
 ##
 ## Every physics tick `tick()` moves the cursor of the room's `Timeline`:
-## - rewinding and the cursor above the start: one frame back, objects restore it;
+## - rewinding and the cursor above the start: `frames` frames back (one, or
+##   more once a long hold has sped up, `RewindSpeed`), objects restore the last;
 ## - rewinding at the start: the world stands still (pinned at frame 0);
 ## - forward left of the head: one frame forward, the recorded future replays (rule «A»);
 ## - forward at the head: objects simulate one tick and a new frame is recorded.
@@ -42,15 +43,15 @@ func start(objects: Array) -> void:
 
 ## One physics tick. `direction` is +1 or -1 (TimeManager). `player_rect` is
 ## the player's body in world pixels; an empty rect means there is no player
-## (prelude, tests), and nothing can be crushed.
-func tick(direction: int, objects: Array, player_rect: Rect2 = Rect2()) -> Step:
+## (prelude, tests), and nothing can be crushed. `frames` is how many frames a
+## rewinding tick goes back; each of them is checked for crushing, and the
+## rewind stops before the first that would crush the player.
+func tick(direction: int, objects: Array, player_rect: Rect2 = Rect2(), frames: int = 1) -> Step:
 	if timeline.is_empty():
 		start(objects)
 		return Step.STARTED
 	if direction < 0:
-		if not timeline.step_back():
-			return Step.PINNED
-		return _show_or_wait(objects, player_rect, Step.REWOUND, timeline.step_forward)
+		return _rewind(objects, player_rect, maxi(frames, 1))
 	if not timeline.at_head():
 		timeline.step_forward()
 		return _show_or_wait(objects, player_rect, Step.REPLAYED, timeline.step_back)
@@ -174,6 +175,23 @@ func crushes(frame: Dictionary, objects: Array, player_rect: Rect2) -> bool:
 		if frame.has(id) and object.call("blocks_player_at", frame[id], player_rect):
 			return true
 	return false
+
+
+func _rewind(objects: Array, player_rect: Rect2, frames: int) -> Step:
+	var moved := 0
+	for i in frames:
+		if not timeline.step_back():
+			break
+		if crushes(timeline.current(), objects, player_rect):
+			timeline.step_forward()
+			if moved == 0:
+				return Step.WAITED
+			break
+		moved += 1
+	if moved == 0:
+		return Step.PINNED
+	_recorder.restore(timeline.current(), objects)
+	return Step.REWOUND
 
 
 func _show_or_wait(objects: Array, player_rect: Rect2, done: Step, undo: Callable) -> Step:

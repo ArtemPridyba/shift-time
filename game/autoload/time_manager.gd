@@ -18,7 +18,22 @@ var direction: int:
 	get:
 		return _direction
 
+## Frames of history the world goes back on this tick: 0 in forward time,
+## 1 at the start of a hold and up to `rewind_speed_max` of `data/time.json`
+## once Shift has been held long enough (D62).
+var rewind_frames: int:
+	get:
+		return _rewind_frames
+
+## How fast the world rewinds now, 1.0 in forward time: the wrist device runs
+## its light faster with it.
+var rewind_speed: float:
+	get:
+		return _rewind.speed
+
 var _direction := FORWARD
+var _rewind := RewindSpeed.from_config(Content.time())
+var _rewind_frames := 0
 ## Set by `reset()` while Shift is still held: rewinding stays off until the
 ## key is released and pressed again.
 var _needs_release := false
@@ -38,6 +53,7 @@ func _physics_process(_delta: float) -> void:
 	if not pressed:
 		_needs_release = false
 	_set_direction(BACKWARD if pressed and not _needs_release else FORWARD)
+	_rewind_frames = _rewind.frames_for(_direction)
 
 
 func is_rewinding() -> bool:
@@ -48,6 +64,8 @@ func is_rewinding() -> bool:
 ## rewinding back until it is released.
 func reset() -> void:
 	_needs_release = Input.is_action_pressed(ACTION)
+	_rewind.reset()
+	_rewind_frames = 0
 	_set_direction(FORWARD)
 
 
