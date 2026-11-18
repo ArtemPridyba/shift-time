@@ -3,5 +3,8 @@
   "snapshot_every_ticks": 1,
   "history_seconds": 20,
   "default_prelude_seconds": 0,
-  "max_state_step": 40
+  "max_state_step": 40,
+  "rewind_speed_max": 3,
+  "rewind_ramp_delay_seconds": 0.5,
+  "rewind_ramp_seconds": 1.5
 }

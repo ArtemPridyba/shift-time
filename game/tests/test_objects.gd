@@ -194,9 +194,31 @@ func test_player_rides_the_platform_both_ways() -> void:
 	Input.action_press("rewind")
 	await _ticks(40)
 	Input.action_release("rewind")
-	offset = player.position.x - platform.position.x
 	check(player.position.x < x - 50.0, "the player must ride back with the rewound platform")
+	# The player follows the platform one tick late; a sped-up rewind (D62)
+	# moves it further a tick, so the offset is read once time runs at 1x.
+	await _ticks(2)
+	offset = player.position.x - platform.position.x
 	check(absf(offset) < 4.0, "the player must stay on the platform in rewind, %.1f px off" % offset)
+	await _free_room(room)
+
+
+func test_player_stays_on_the_platform_at_the_fastest_rewind() -> void:
+	var room := await _load_room()
+	var platform: MovingPlatform = room.get_node("Platform")
+	var player: Player = room.get_node("Player")
+	player.respawn(platform.position + Vector2(0, -16))
+	await _ticks(240)
+	var worst := 0.0
+	Input.action_press("rewind")
+	for i in 120:
+		await _ticks(1)
+		worst = maxf(worst, absf(player.position.x - platform.position.x))
+	var speed := float(_tree.root.get_node("TimeManager").rewind_speed)
+	Input.action_release("rewind")
+	check(is_equal_approx(speed, float(Content.time()["rewind_speed_max"])), "a 2 s hold must reach the top speed, got %f" % speed)
+	check(worst < platform.carry_margin, "the player must ride the fast rewind within the carry margin, worst %.1f px off" % worst)
+	check(player.is_on_floor(), "the player must still stand on the platform")
 	await _free_room(room)
 
 

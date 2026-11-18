@@ -53,6 +53,9 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	var manager := get_node_or_null("/root/TimeManager")
+	if manager != null:
+		state.speed = float(manager.rewind_speed)
 	state.step(delta)
 	var facing := 1.0
 	var parent := get_parent()

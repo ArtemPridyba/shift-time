@@ -55,7 +55,9 @@ func _ready() -> void:
 func _physics_process(_delta: float) -> void:
 	var manager := get_node_or_null("/root/TimeManager")
 	var direction: int = manager.direction if manager != null else TimeWorld.FORWARD
-	last_step = world.tick(direction, temporal_objects(), _player_rect())
+	# A long hold of Shift rewinds several frames a tick (D62).
+	var frames: int = manager.rewind_frames if manager != null else 1
+	last_step = world.tick(direction, temporal_objects(), _player_rect(), frames)
 	_tell_live_sources(direction)
 	_tell_world_clock()
 

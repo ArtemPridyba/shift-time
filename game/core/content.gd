@@ -38,6 +38,7 @@ const PLAYER_KEYS: Array[String] = [
 const TIME_KEYS: Array[String] = [
 	"physics_ticks_per_second", "snapshot_every_ticks", "history_seconds",
 	"default_prelude_seconds", "max_state_step",
+	"rewind_speed_max", "rewind_ramp_delay_seconds", "rewind_ramp_seconds",
 ]
 const LEVEL_KEYS: Array[String] = ["id", "scene", "prelude_seconds", "title"]
 const LEVEL_DOOR_CYCLES: Array[String] = ["loop", "once"]
@@ -203,6 +204,12 @@ static func validate_time(data: Variant) -> PackedStringArray:
 			/ maxf(float(data["snapshot_every_ticks"]), 1.0)
 	if frames < float(Timeline.MIN_CAPACITY):
 		errors.append("time.json: the history must hold at least %d frames" % Timeline.MIN_CAPACITY)
+	if float(data["rewind_speed_max"]) < 1.0:
+		errors.append("time.json: 'rewind_speed_max' must be at least 1")
+	if float(data["rewind_ramp_delay_seconds"]) < 0.0:
+		errors.append("time.json: 'rewind_ramp_delay_seconds' must be 0 or above")
+	if float(data["rewind_ramp_seconds"]) <= 0.0:
+		errors.append("time.json: 'rewind_ramp_seconds' must be above 0")
 	var prelude := float(data["default_prelude_seconds"])
 	if prelude < 0.0 or prelude > float(data["history_seconds"]):
 		errors.append("time.json: 'default_prelude_seconds' must be between 0 and 'history_seconds'")
@@ -347,8 +354,9 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	var step := float(platform["speed"]) / ticks
 	if step > max_step:
 		errors.append("objects.json: 'platform.speed' moves more than max_state_step per tick")
-	if step >= float(data["carry_margin_px"]):
-		errors.append("objects.json: 'platform.speed' per tick must stay below 'carry_margin_px', or a rider reads as crushed")
+	# The fastest rewind (D62) moves the platform `rewind_speed_max` steps a tick.
+	if step * float(time_data["rewind_speed_max"]) >= float(data["carry_margin_px"]):
+		errors.append("objects.json: 'platform.speed' per tick at the fastest rewind must stay below 'carry_margin_px', or a rider reads as crushed")
 	# 10000 is Water.LEVEL_MAX (core/ does not refer to objects/).
 	if 10000.0 / (float(data["water"]["full_seconds"]) * ticks) > max_step:
 		errors.append("objects.json: 'water.full_seconds' is too short: the level would jump more than max_state_step per tick")
