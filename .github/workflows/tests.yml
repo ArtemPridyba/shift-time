@@ -19,9 +19,9 @@ jobs:
         run: godot --headless --path game --import
 
       - name: Rule tests
-        run: godot --headless --path game --script res://tests/test_runner.gd
+        run: godot --headless --fixed-fps 60 --path game --script res://tests/test_runner.gd
 
       # Runs even if the rule tests failed, so one run shows both results.
       - name: UI smoke test
         if: ${{ !cancelled() }}
-        run: godot --headless --path game --script res://tests/ui_smoke_test.gd
+        run: godot --headless --fixed-fps 60 --path game --script res://tests/ui_smoke_test.gd

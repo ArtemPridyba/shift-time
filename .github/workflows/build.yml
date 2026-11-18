@@ -38,10 +38,10 @@ jobs:
         run: godot --headless --path game --import
 
       - name: Rule tests
-        run: godot --headless --path game --script res://tests/test_runner.gd
+        run: godot --headless --fixed-fps 60 --path game --script res://tests/test_runner.gd
 
       - name: UI smoke test
-        run: godot --headless --path game --script res://tests/ui_smoke_test.gd
+        run: godot --headless --fixed-fps 60 --path game --script res://tests/ui_smoke_test.gd
 
       - name: Export Web build
         run: |
