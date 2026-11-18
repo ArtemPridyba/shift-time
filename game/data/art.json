@@ -40,6 +40,63 @@
 				"lamp_light": ["#3a2e22", "#8a6f4c", "#e8c48a", "#f2dcb4", "#fbf0dc"]
 			}
 		},
+		"apollo_steel": {
+			"title": "Apollo: steel and brass",
+			"status": "reserve",
+			"skin": "#d7b594",
+			"ramps": {
+				"background": ["#090a14", "#10141f", "#151d28", "#394a50", "#819796"],
+				"steel": ["#151d28", "#202e37", "#394a50", "#577277", "#819796"],
+				"mechanism": ["#341c27", "#884b2b", "#be772b", "#de9e41", "#e8c170"],
+				"suit": ["#241527", "#411d31", "#752438", "#a53030", "#cf573c"],
+				"helmet": ["#602c2c", "#be772b", "#de9e41", "#e8c170", "#e7d5b3"],
+				"rust": ["#341c27", "#602c2c", "#884b2b", "#ad7757", "#c09473"],
+				"time": ["#1c3a54", "#308ba6", "#3fe6ff", "#96ebff", "#ceeeff"],
+				"fire": ["#411d31", "#a53030", "#cf573c", "#da863e", "#e8c170"],
+				"interact": ["#411d31", "#a53030", "#cf573c", "#da863e", "#e8c170"],
+				"water": ["#151d28", "#253a5e", "#3c5e8b", "#73bed3", "#a4dddb"],
+				"wood": ["#4d2b32", "#7a4841", "#ad7757", "#c09473", "#d7b594"],
+				"lamp_light": ["#602c2c", "#be772b", "#e8c170", "#e7d5b3", "#ebede9"]
+			}
+		},
+		"apollo_rust": {
+			"title": "Apollo: rust and olive",
+			"status": "reserve",
+			"skin": "#d7b594",
+			"ramps": {
+				"background": ["#090a14", "#1a1018", "#241527", "#4d2b32", "#7a4841"],
+				"steel": ["#241527", "#4d2b32", "#7a4841", "#ad7757", "#c09473"],
+				"mechanism": ["#341c27", "#884b2b", "#be772b", "#de9e41", "#e8c170"],
+				"suit": ["#10141f", "#19332d", "#25562e", "#468232", "#75a743"],
+				"helmet": ["#602c2c", "#be772b", "#de9e41", "#e8c170", "#e7d5b3"],
+				"rust": ["#241527", "#411d31", "#602c2c", "#884b2b", "#ad7757"],
+				"time": ["#1c3a54", "#308ba6", "#3fe6ff", "#96ebff", "#ceeeff"],
+				"fire": ["#411d31", "#a53030", "#cf573c", "#da863e", "#e8c170"],
+				"interact": ["#411d31", "#a53030", "#cf573c", "#da863e", "#e8c170"],
+				"water": ["#10141f", "#202e37", "#394a50", "#577277", "#a8b5b2"],
+				"wood": ["#341c27", "#602c2c", "#884b2b", "#c09473", "#d7b594"],
+				"lamp_light": ["#602c2c", "#be772b", "#e8c170", "#e7d5b3", "#ebede9"]
+			}
+		},
+		"foundry": {
+			"title": "Foundry: loft grey, brass and rust",
+			"status": "reserve",
+			"skin": "#e0b89a",
+			"ramps": {
+				"background": ["#141110", "#1e1a18", "#2e2b29", "#4a4642", "#6b6762"],
+				"steel": ["#2e2b29", "#4a4642", "#6b6762", "#a89b8c", "#d2c6b8"],
+				"mechanism": ["#3a2b21", "#5c4033", "#b08d57", "#d2b48c", "#f3efdc"],
+				"suit": ["#2a1010", "#6e2424", "#a53b3b", "#c96a5a", "#e8b0a0"],
+				"helmet": ["#5c3a14", "#a8701f", "#f6b565", "#f8cf98", "#fbe8cc"],
+				"rust": ["#3b2317", "#8a4b2b", "#c97a4a", "#f2c392", "#fff2e2"],
+				"time": ["#1c3a54", "#308ba6", "#3fe6ff", "#96ebff", "#ceeeff"],
+				"fire": ["#3b1410", "#8a2a1a", "#e0552a", "#f6b565", "#fbe2b8"],
+				"interact": ["#3b1410", "#8a2a1a", "#e0552a", "#f6b565", "#fbe2b8"],
+				"water": ["#0f2224", "#163638", "#214e51", "#4f7f7f", "#9dbdb9"],
+				"wood": ["#3b2317", "#5c4033", "#8b4513", "#c97a4a", "#d2b48c"],
+				"lamp_light": ["#3a2b21", "#7a4b21", "#c58b3a", "#e0c489", "#f3efdc"]
+			}
+		},
 		"graphite_bronze": {
 			"title": "Graphite and bronze",
 			"status": "reserve",
