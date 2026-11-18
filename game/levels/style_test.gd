@@ -11,10 +11,9 @@ extends Node2D
 ## flames and the hero are still flat drawing on the front layer.
 
 const ACTION_NEXT := "next_palette"
-const SWATCH := Vector2(80, 34)
-const ROW := 42.0
+const SWATCH := Vector2(60, 26)
+const ROW := 32.0
 const FLOOR_Y := 900.0
-const TOP_FACE := 16.0
 const GEAR_CENTER := Vector2(980, 600)
 const GEAR_RADIUS := 90.0
 const GEAR_TEETH := 12
@@ -31,6 +30,7 @@ var _front: Node2D
 var _gear: StyleShape
 var _rack: StyleShape
 var _rack_top := 0.0
+var _tank: StyleBlock
 
 
 func _ready() -> void:
@@ -88,18 +88,18 @@ func _draw_front() -> void:
 # --- the swatch column ------------------------------------------------------
 
 func _draw_swatches(p: ArtPalette) -> void:
-	var panel := Rect2(24, 96, 664, ROW * (Content.ART_ROLES.size() + 1) + 24)
+	var panel := Rect2(24, 96, 540, ROW * (Content.ART_ROLES.size() + 1) + 24)
 	_c.draw_rect(panel, p.shade("background", 1))
 	var y := panel.position.y + 16
 	for role in Content.ART_ROLES:
-		_text(role, Vector2(40, y + 24), p.shade("background", 4), 20)
+		_text(role, Vector2(40, y + 20), p.shade("background", 4), 18)
 		for i in Content.ART_RAMP_SIZE:
 			var rect := Rect2(Vector2(190 + i * (SWATCH.x + 6), y), SWATCH)
 			_c.draw_rect(rect, p.shade(role, i))
 			if i == ArtPalette.BASE:
 				_c.draw_rect(rect, p.shade("background", 4), false, 2.0)
 		y += ROW
-	_text("skin", Vector2(40, y + 24), p.shade("background", 4), 20)
+	_text("skin", Vector2(40, y + 20), p.shade("background", 4), 18)
 	_c.draw_rect(Rect2(Vector2(190, y), SWATCH), p.skin)
 
 
@@ -146,19 +146,44 @@ func _build_samples() -> void:
 	# Gear: turns around its centre.
 	_gear = add.call("Gear", StyleMask.gear(GEAR_TEETH, GEAR_RADIUS, GEAR_RADIUS - 16.0, 4, 11.0, 26.0), GEAR_CENTER, "mechanism")
 	_gear.centered = true
-	# Pipe along the top and the rusty column on the left.
-	add.call("Pipe", StyleMask.rect(Vector2i(1180, 30)), Vector2(720, 250), "steel")
-	add.call("Column", StyleMask.rect(Vector2i(56, int(FLOOR_Y) - 290)), Vector2(740, 290), "rust", 0.6)
-	# Floor slab: the top face is a lighter band with a dark line under it.
-	var slab := Vector2i(1220, 180)
-	var face := int(TOP_FACE)
-	add.call("Floor", StyleMask.svg(slab, '<rect width="%d" height="%d" fill="%s"/><rect width="%d" height="%d" fill="%s"/><rect y="%d" width="%d" height="2" fill="%s"/>' % [
-		slab.x, slab.y, StyleMask.MAIN, slab.x, face, StyleMask.LIGHTER, face, slab.x, StyleMask.DARKER]), Vector2(700, FLOOR_Y), "steel")
-	add.call("Crate", StyleMask.rect(Vector2i(96, 96)), Vector2(1180, FLOOR_Y - 96), "wood")
-	add.call("Pedestal", StyleMask.rect(Vector2i(40, 70)), Vector2(1440, FLOOR_Y - 70), "steel")
-	add.call("Button", StyleMask.rect(Vector2i(24, 16)), Vector2(1448, FLOOR_Y - 86), "interact")
-	add.call("Lamp", StyleMask.rect(Vector2i(48, 22)), Vector2(1316, 300), "steel")
-	add.call("Wood", StyleMask.rect(Vector2i(160, 60)), Vector2(1720, FLOOR_Y - 60), "wood")
+	# Solid things are boxes in the room's perspective (StyleBlock): position and
+	# size are the collision rectangle, the middle plane of the box.
+	var box := func(box_name: String, rect: Rect2, depth: float, role: String, rust: float = 0.0) -> StyleBlock:
+		var shape := StyleBlock.new()
+		shape.name = box_name
+		shape.size = rect.size
+		shape.depth = depth
+		shape.role = role
+		shape.position = rect.position
+		shape.front.rust = rust
+		shape.front.wear_seed = float(samples.get_child_count()) * 3.7
+		samples.add_child(shape)
+		return shape
+	var slab := func(slab_name: String, kind: String, rect: Rect2, left: bool = false, right: bool = false) -> StyleSlab:
+		var shape := StyleSlab.new()
+		shape.name = slab_name
+		shape.kind = kind
+		shape.size = rect.size
+		shape.open_left = left
+		shape.open_right = right
+		shape.position = rect.position
+		shape.role = "steel"
+		shape.front.wear_seed = float(samples.get_child_count()) * 3.7
+		samples.add_child(shape)
+		return shape
+	box.call("Pipe", Rect2(720, 250, 1180, 30), 30.0, "steel")
+	box.call("Column", Rect2(740, 290, 56, FLOOR_Y - 290), 56.0, "rust", 0.6)
+	# A floor with a pit, a ledge over it and a wall standing on the floor.
+	slab.call("FloorLeft", "floor", Rect2(0, FLOOR_Y, 576, 1080 - FLOOR_Y), false, true)
+	slab.call("Floor", "floor", Rect2(704, FLOOR_Y, 1216, 1080 - FLOOR_Y), true, false)
+	slab.call("Ledge", "ledge", Rect2(256, 760, 192, 48), true, true)
+	slab.call("Wall", "wall", Rect2(0, 644, 128, FLOOR_Y - 644))
+	box.call("Crate", Rect2(1180, FLOOR_Y - 96, 96, 96), 96.0, "wood")
+	box.call("Pedestal", Rect2(1440, FLOOR_Y - 70, 40, 70), 40.0, "steel")
+	box.call("Button", Rect2(1448, FLOOR_Y - 86, 24, 16), 16.0, "interact")
+	box.call("Lamp", Rect2(1316, 300, 48, 22), 22.0, "steel")
+	box.call("Wood", Rect2(1720, FLOOR_Y - 60, 160, 60), 64.0, "wood")
+	_tank = box.call("Tank", Rect2(1530, FLOOR_Y - 150, 150, 150), 120.0, "steel")
 
 
 func _pitch() -> float:
@@ -175,7 +200,7 @@ func _draw_lamp(p: ArtPalette) -> void:
 
 
 func _draw_hero(p: ArtPalette) -> void:
-	var feet := Vector2(1340, FLOOR_Y + TOP_FACE * 0.5)
+	var feet := Vector2(1340, FLOOR_Y)
 	_box(Rect2(feet.x - 16, feet.y - 30, 14, 30), "suit", p, 1)
 	_box(Rect2(feet.x + 2, feet.y - 30, 14, 30), "suit", p, 1)
 	_box(Rect2(feet.x - 22, feet.y - 82, 44, 54), "suit", p)
@@ -201,9 +226,10 @@ func _draw_hero(p: ArtPalette) -> void:
 
 
 func _draw_water(p: ArtPalette) -> void:
-	var tank := Rect2(1530, FLOOR_Y - 150, 150, 150)
+	# The water fills the front face of the tank box.
+	var tank: Rect2 = _tank.front_rect()
 	_c.draw_rect(tank, p.shade("steel", 1))
-	var level := 100.0 + 10.0 * sin(tau * 1.5)
+	var level: float = tank.size.y * 0.66 + 10.0 * sin(tau * 1.5)
 	var water := Rect2(tank.position.x + 8, tank.end.y - level, tank.size.x - 16, level)
 	_c.draw_rect(water, p.shade("water"))
 	_c.draw_rect(Rect2(water.position, Vector2(water.size.x, 6)), p.shade("water", 4))

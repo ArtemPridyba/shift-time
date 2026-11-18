@@ -1,36 +1,119 @@
 {
-	"active_palette": "plum_cobalt",
+	"active_palette": "wine_brass",
+	"perspective": {
+		"tile_px": 64,
+		"eye_x": 960,
+		"eye_y": 360,
+		"distance_px": 1600,
+		"slab_depth_px": 128
+	},
 	"material": {
 		"outline_px": 2,
 		"rim_px": 3,
 		"shadow_px": 3,
 		"chip_reach_px": 5,
-		"chip_density": 0.35,
-		"chip_scale_px": 5,
+		"chip_density": 0.0,
+		"chip_scale_px": 9,
 		"dust_px": 4,
-		"dust_strength": 0.4,
+		"dust_strength": 0.0,
 		"dirt_px": 14,
-		"dirt_strength": 0.5,
+		"dirt_strength": 0.3,
 		"rust_scale_px": 14
 	},
 	"palettes": {
-		"plum_cobalt": {
-			"title": "Plum and cobalt",
+		"wine_brass": {
+			"title": "Wine and brass",
 			"status": "main",
 			"skin": "#eac4c7",
 			"ramps": {
-				"background": ["#0c0725", "#150b37", "#1e0f4a", "#605b89", "#b0accb"],
-				"steel": ["#171a4c", "#2b3b93", "#3f5fe0", "#7c96ef", "#bec9fa"],
-				"mechanism": ["#341b29", "#763535", "#c0503c", "#d88b82", "#eac4c7"],
-				"suit": ["#171a4c", "#2b3b93", "#3f5fe0", "#7c96ef", "#bec9fa"],
-				"helmet": ["#341b29", "#763535", "#c0503c", "#d88b82", "#eac4c7"],
-				"rust": ["#291034", "#591e56", "#8e2a7a", "#b674a9", "#dab9d9"],
+				"background": ["#110c0d", "#1b1416", "#271d20", "#5c4f52", "#a6999b"],
+				"steel": ["#1f0c16", "#4a1527", "#7a2338", "#a8566a", "#d6a3ae"],
+				"mechanism": ["#29200f", "#5a4622", "#a3843f", "#cdb579", "#ebe0bf"],
+				"suit": ["#2a0f1c", "#5c1a30", "#93304a", "#c26a7e", "#e6b5c0"],
+				"helmet": ["#29200f", "#5a4622", "#a3843f", "#cdb579", "#ebe0bf"],
+				"rust": ["#24140f", "#4f2717", "#7e4024", "#a87458", "#d3b6a4"],
+				"time": ["#1c3a54", "#308ba6", "#3fe6ff", "#96ebff", "#ceeeff"],
+				"fire": ["#40180f", "#9c3a14", "#ff7a1a", "#ffb070", "#ffe0c0"],
+				"interact": ["#40180f", "#9c3a14", "#ff7a1a", "#ffb070", "#ffe0c0"],
+				"water": ["#0f2a2e", "#1c4c52", "#2f7a7c", "#6fa8a6", "#b8d8d4"],
+				"wood": ["#2c1927", "#623330", "#9d4e33", "#bf887b", "#dec2c4"],
+				"lamp_light": ["#3a2e22", "#8a6f4c", "#e8c48a", "#f2dcb4", "#fbf0dc"]
+			}
+		},
+		"apollo_steel": {
+			"title": "Apollo: steel and brass",
+			"status": "reserve",
+			"skin": "#d7b594",
+			"ramps": {
+				"background": ["#090a14", "#10141f", "#151d28", "#394a50", "#819796"],
+				"steel": ["#151d28", "#202e37", "#394a50", "#577277", "#819796"],
+				"mechanism": ["#341c27", "#884b2b", "#be772b", "#de9e41", "#e8c170"],
+				"suit": ["#241527", "#411d31", "#752438", "#a53030", "#cf573c"],
+				"helmet": ["#602c2c", "#be772b", "#de9e41", "#e8c170", "#e7d5b3"],
+				"rust": ["#341c27", "#602c2c", "#884b2b", "#ad7757", "#c09473"],
+				"time": ["#1c3a54", "#308ba6", "#3fe6ff", "#96ebff", "#ceeeff"],
+				"fire": ["#411d31", "#a53030", "#cf573c", "#da863e", "#e8c170"],
+				"interact": ["#411d31", "#a53030", "#cf573c", "#da863e", "#e8c170"],
+				"water": ["#151d28", "#253a5e", "#3c5e8b", "#73bed3", "#a4dddb"],
+				"wood": ["#4d2b32", "#7a4841", "#ad7757", "#c09473", "#d7b594"],
+				"lamp_light": ["#602c2c", "#be772b", "#e8c170", "#e7d5b3", "#ebede9"]
+			}
+		},
+		"apollo_rust": {
+			"title": "Apollo: rust and olive",
+			"status": "reserve",
+			"skin": "#d7b594",
+			"ramps": {
+				"background": ["#090a14", "#1a1018", "#241527", "#4d2b32", "#7a4841"],
+				"steel": ["#241527", "#4d2b32", "#7a4841", "#ad7757", "#c09473"],
+				"mechanism": ["#341c27", "#884b2b", "#be772b", "#de9e41", "#e8c170"],
+				"suit": ["#10141f", "#19332d", "#25562e", "#468232", "#75a743"],
+				"helmet": ["#602c2c", "#be772b", "#de9e41", "#e8c170", "#e7d5b3"],
+				"rust": ["#241527", "#411d31", "#602c2c", "#884b2b", "#ad7757"],
+				"time": ["#1c3a54", "#308ba6", "#3fe6ff", "#96ebff", "#ceeeff"],
+				"fire": ["#411d31", "#a53030", "#cf573c", "#da863e", "#e8c170"],
+				"interact": ["#411d31", "#a53030", "#cf573c", "#da863e", "#e8c170"],
+				"water": ["#10141f", "#202e37", "#394a50", "#577277", "#a8b5b2"],
+				"wood": ["#341c27", "#602c2c", "#884b2b", "#c09473", "#d7b594"],
+				"lamp_light": ["#602c2c", "#be772b", "#e8c170", "#e7d5b3", "#ebede9"]
+			}
+		},
+		"foundry": {
+			"title": "Foundry: loft grey, brass and rust",
+			"status": "reserve",
+			"skin": "#e0b89a",
+			"ramps": {
+				"background": ["#141110", "#1e1a18", "#2e2b29", "#4a4642", "#6b6762"],
+				"steel": ["#2e2b29", "#4a4642", "#6b6762", "#a89b8c", "#d2c6b8"],
+				"mechanism": ["#3a2b21", "#5c4033", "#b08d57", "#d2b48c", "#f3efdc"],
+				"suit": ["#2a1010", "#6e2424", "#a53b3b", "#c96a5a", "#e8b0a0"],
+				"helmet": ["#5c3a14", "#a8701f", "#f6b565", "#f8cf98", "#fbe8cc"],
+				"rust": ["#3b2317", "#8a4b2b", "#c97a4a", "#f2c392", "#fff2e2"],
+				"time": ["#1c3a54", "#308ba6", "#3fe6ff", "#96ebff", "#ceeeff"],
+				"fire": ["#3b1410", "#8a2a1a", "#e0552a", "#f6b565", "#fbe2b8"],
+				"interact": ["#3b1410", "#8a2a1a", "#e0552a", "#f6b565", "#fbe2b8"],
+				"water": ["#0f2224", "#163638", "#214e51", "#4f7f7f", "#9dbdb9"],
+				"wood": ["#3b2317", "#5c4033", "#8b4513", "#c97a4a", "#d2b48c"],
+				"lamp_light": ["#3a2b21", "#7a4b21", "#c58b3a", "#e0c489", "#f3efdc"]
+			}
+		},
+		"graphite_bronze": {
+			"title": "Graphite and bronze",
+			"status": "reserve",
+			"skin": "#eac4c7",
+			"ramps": {
+				"background": ["#0d0d0e", "#161618", "#202023", "#525258", "#a0a0a6"],
+				"steel": ["#1b1719", "#363033", "#5a5054", "#8a7f82", "#c4bbbc"],
+				"mechanism": ["#2a1b13", "#5a3826", "#9a6440", "#c69a78", "#e8d0bd"],
+				"suit": ["#2a0f1c", "#5c1a30", "#93304a", "#c26a7e", "#e6b5c0"],
+				"helmet": ["#2a1b13", "#5a3826", "#9a6440", "#c69a78", "#e8d0bd"],
+				"rust": ["#24140f", "#4f2717", "#7e4024", "#a87458", "#d3b6a4"],
 				"time": ["#1c3a54", "#308ba6", "#3fe6ff", "#96ebff", "#ceeeff"],
 				"fire": ["#431727", "#9c242b", "#ff2418", "#ff8478", "#ffc3c4"],
 				"interact": ["#431727", "#9c242b", "#ff2418", "#ff8478", "#ffc3c4"],
-				"water": ["#17244a", "#28538d", "#3786d7", "#7fade7", "#c1d3f5"],
+				"water": ["#0f2a2e", "#1c4c52", "#2f7a7c", "#6fa8a6", "#b8d8d4"],
 				"wood": ["#2c1927", "#623330", "#9d4e33", "#bf887b", "#dec2c4"],
-				"lamp_light": ["#341b29", "#763535", "#c0503c", "#d88b82", "#eac4c7"]
+				"lamp_light": ["#3a2e22", "#8a6f4c", "#e8c48a", "#f2dcb4", "#fbf0dc"]
 			}
 		},
 		"green_purple": {

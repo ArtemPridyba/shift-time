@@ -97,6 +97,66 @@ func test_material_shader_has_every_number() -> void:
 	check(code.contains("MAX_STEPS = %d" % Content.ART_MATERIAL_MAX_PX), "the shader's reach must match ART_MATERIAL_MAX_PX")
 
 
+# --- slabs ------------------------------------------------------------------
+
+func test_perspective_numbers_are_checked() -> void:
+	var art := Content.art()
+	check(Content.art_perspective().size() == Content.ART_PERSPECTIVE_KEYS.size(), "art.json must give every perspective number")
+	var cases := {
+		"a missing perspective": func(a: Dictionary) -> void: a.erase("perspective"),
+		"a missing number": func(a: Dictionary) -> void: a["perspective"].erase("eye_x"),
+		"a number as text": func(a: Dictionary) -> void: a["perspective"]["tile_px"] = "64",
+		"an eye off the screen": func(a: Dictionary) -> void: a["perspective"]["eye_y"] = -10,
+		"an eye too close": func(a: Dictionary) -> void: a["perspective"]["distance_px"] = 100,
+		"slabs deeper than the eye's distance": func(a: Dictionary) -> void: a["perspective"]["slab_depth_px"] = 5000,
+		"an unknown key": func(a: Dictionary) -> void: a["perspective"]["tilt"] = 1,
+	}
+	for name: String in cases:
+		var broken: Dictionary = art.duplicate(true)
+		(cases[name] as Callable).call(broken)
+		check(not Content.validate_art(broken).is_empty(), "%s must be reported" % name)
+
+
+func test_box_shows_the_faces_turned_to_the_eye() -> void:
+	var eye := StyleBlock.eye()
+	check(StyleBlock.project(eye + Vector2(300, 200), 0.0) == eye + Vector2(300, 200), "the middle plane must stay where the collision is")
+	var far := StyleBlock.project(eye + Vector2(300, 200), 100.0)
+	check(far.distance_to(eye) < Vector2(300, 200).length(), "the back must recede towards the eye")
+	# Below and right of the eye: the top and the left side show, the front grows.
+	var box := StyleBlock.new()
+	box.size = Vector2(128, 64)
+	box.depth = 96.0
+	box.position = eye + Vector2(200, 300)
+	var faces := box.side_faces()
+	check(faces.has("top") and faces.has("left"), "a box below and right of the eye must show its top and left side")
+	check(not faces.has("bottom") and not faces.has("right"), "a box below and right of the eye must hide its bottom and right side")
+	var front := box.front_rect()
+	check(front.size.x > box.size.x, "the front face must be nearer, so bigger than the collision")
+	check(box.position == eye + Vector2(200, 300) and box.size == Vector2(128, 64), "a box must not change its collision rectangle")
+	box.free()
+	# Above and left of the eye: the bottom and the right side.
+	box = StyleBlock.new()
+	box.size = Vector2(64, 64)
+	box.position = eye - Vector2(300, 300)
+	faces = box.side_faces()
+	check(faces.has("bottom") and faces.has("right") and faces.size() == 2, "a box above and left of the eye must show its bottom and right side")
+	box.free()
+
+
+func test_slab_keeps_its_collision_and_draws_its_kind() -> void:
+	for kind in StyleSlab.KINDS:
+		var slab := StyleSlab.new()
+		slab.kind = kind
+		slab.size = Vector2(192, 48)
+		slab.open_left = true
+		check(slab.depth == float(Content.art_perspective()["slab_depth_px"]), "a %s must be as deep as art.json says" % kind)
+		check(slab.front.texture != null, "a %s must have a front face" % kind)
+		if slab.front.texture != null:
+			check(Vector2i(slab.front.texture.get_size()) == Vector2i(slab.front_rect().size.round()), "the %s front must fill the front face" % kind)
+		check(slab.size == Vector2(192, 48), "a slab must not change its collision rectangle")
+		slab.free()
+
+
 # --- the showcase -----------------------------------------------------------
 
 func test_showcase_switches_palettes_and_rewinds() -> void:
