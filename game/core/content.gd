@@ -8,6 +8,11 @@ const TIME_PATH := "res://data/time.json"
 const LEVELS_PATH := "res://data/levels.json"
 const OBJECTS_PATH := "res://data/objects.json"
 const TIME_HUD_PATH := "res://data/time_hud.json"
+const ART_PATH := "res://data/art.json"
+## Colour roles every palette in `art.json` must give, each as a ramp from dark to light.
+const ART_ROLES: Array[String] = ["background", "steel", "mechanism", "suit", "helmet", "rust", "time", "fire", "interact", "water", "wood", "lamp_light"]
+const ART_RAMP_SIZE := 5
+const ART_STATUSES: Array[String] = ["main", "reserve"]
 
 const PLAYER_KEYS: Array[String] = [
 	"walk_speed", "acceleration", "friction", "gravity",
@@ -78,6 +83,20 @@ static func time_hud() -> Dictionary:
 	return data if data is Dictionary else {}
 
 
+static func art() -> Dictionary:
+	var data: Variant = load_json(ART_PATH)
+	return data if data is Dictionary else {}
+
+
+## The ramps of the active palette: role -> five colours, dark to light.
+static func active_palette() -> Dictionary:
+	var data := art()
+	var palettes: Variant = data.get("palettes")
+	if not palettes is Dictionary or not palettes.get(data.get("active_palette", "")) is Dictionary:
+		return {}
+	return palettes[data["active_palette"]]
+
+
 ## The entry of `levels.json` whose scene is `scene_path`, or an empty
 ## dictionary (a room opened on its own, a test scene).
 static func level_for_scene(scene_path: String) -> Dictionary:
@@ -107,6 +126,7 @@ static func validate() -> PackedStringArray:
 	if time_data is Dictionary and validate_time(time_data).is_empty():
 		errors.append_array(validate_objects(load_json(OBJECTS_PATH), time_data))
 	errors.append_array(validate_time_hud(load_json(TIME_HUD_PATH)))
+	errors.append_array(validate_art(load_json(ART_PATH)))
 	return errors
 
 
@@ -349,6 +369,49 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 ## The wrist device and the time indicator (task 1.5): colors, sizes, flicker,
 ## streaks, the glow and streaks along the screen edges and the (still empty)
 ## sound paths.
+static func validate_art(data: Variant) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not data is Dictionary:
+		errors.append("art.json: expected an object")
+		return errors
+	var palettes: Variant = data.get("palettes")
+	if not palettes is Dictionary or palettes.is_empty():
+		errors.append("art.json: 'palettes' must be a non-empty object")
+		return errors
+	if not palettes.has(data.get("active_palette", "")):
+		errors.append("art.json: 'active_palette' must name one of 'palettes'")
+	var mains := 0
+	for name: Variant in palettes:
+		var where := "art.json: palette '%s'" % name
+		var palette: Variant = palettes[name]
+		if not palette is Dictionary:
+			errors.append("%s must be an object" % where)
+			continue
+		if not palette.get("title") is String:
+			errors.append("%s: 'title' must be text" % where)
+		if not palette.get("status") in ART_STATUSES:
+			errors.append("%s: 'status' must be one of %s" % [where, ART_STATUSES])
+		elif palette["status"] == "main":
+			mains += 1
+		if not palette.get("skin") is String or not Color.html_is_valid(palette["skin"]):
+			errors.append("%s: 'skin' must be a color like \"#eac4c7\"" % where)
+		var ramps: Variant = palette.get("ramps")
+		if not ramps is Dictionary:
+			errors.append("%s: 'ramps' must be an object" % where)
+			continue
+		for role in ART_ROLES:
+			var ramp: Variant = ramps.get(role)
+			if not ramp is Array or ramp.size() != ART_RAMP_SIZE:
+				errors.append("%s: ramp '%s' must list %d colors" % [where, role, ART_RAMP_SIZE])
+				continue
+			for color: Variant in ramp:
+				if not color is String or not Color.html_is_valid(color):
+					errors.append("%s: ramp '%s' has a bad color '%s'" % [where, role, color])
+	if mains != 1:
+		errors.append("art.json: exactly one palette must have status 'main'")
+	return errors
+
+
 static func validate_time_hud(data: Variant) -> PackedStringArray:
 	var errors := PackedStringArray()
 	if not data is Dictionary:

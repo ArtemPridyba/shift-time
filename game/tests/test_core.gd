@@ -73,6 +73,30 @@ func test_data_check_catches_broken_data() -> void:
 	check(not Content.levels().is_empty(), "levels.json must list the test rooms")
 
 
+func test_art_palettes_are_checked() -> void:
+	var art := Content.art()
+	check(not Content.active_palette().is_empty(), "the active palette must load")
+	check(Content.validate_art(art).is_empty(), "shipped art.json must be valid")
+	check(not Content.validate_art("text").is_empty(), "non-object art.json must be reported")
+	var broken: Dictionary = art.duplicate(true)
+	broken["active_palette"] = "missing"
+	check(not Content.validate_art(broken).is_empty(), "unknown active palette must be reported")
+	broken = art.duplicate(true)
+	var palette: Dictionary = broken["palettes"][broken["active_palette"]]
+	palette["ramps"]["time"] = ["#7FE8FF"]
+	check(not Content.validate_art(broken).is_empty(), "a short ramp must be reported")
+	broken = art.duplicate(true)
+	broken["palettes"][broken["active_palette"]]["ramps"]["fire"][0] = "not a color"
+	check(not Content.validate_art(broken).is_empty(), "a bad color must be reported")
+	broken = art.duplicate(true)
+	broken["palettes"][broken["active_palette"]]["ramps"].erase("water")
+	check(not Content.validate_art(broken).is_empty(), "a missing role must be reported")
+	broken = art.duplicate(true)
+	for name: String in broken["palettes"]:
+		broken["palettes"][name]["status"] = "main"
+	check(not Content.validate_art(broken).is_empty(), "two main palettes must be reported")
+
+
 func test_physics_rate_matches_data() -> void:
 	var ticks := int(Content.time()["physics_ticks_per_second"])
 	check(Engine.physics_ticks_per_second == ticks, "engine runs %d ticks per second, time.json says %d" % [Engine.physics_ticks_per_second, ticks])
