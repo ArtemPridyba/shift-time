@@ -1,0 +1,133 @@
+{
+	"_about": "The heroine as a cutout doll (task Д5, D77). Parts are cut from docs/art/heroine/character_parts_hq.jpg by tools/cut_heroine_parts.py. Every length is in pixels of the part pictures; scale turns them into game pixels. at: where the joint sits in the parent part's picture (for a part without parent: from the feet, the rig's origin). pivot: the same joint in the part's own picture. z: drawing order, higher in front. size: draw the part this many times larger than on the sheet (default 1). far: the far side of the body, drawn darker. Poses give each part's angle in degrees, positive clockwise; lift moves the whole body up in part pixels. soles: points of the boot soles; every pose is lowered or raised so the lowest of them stands on the floor. run: the cycle of poses by the distance walked (cycle_px game pixels for all keys, so the feet do not slide), min_speed_px: slower is standing, blend_seconds: how fast she goes from one pose to the next.",
+	"parts_dir": "res://assets/art/heroine/parts",
+	"scale": 0.07267,
+	"far_tint": "#7d8088",
+	"parts": {
+		"pelvis": {"texture": "pelvis", "parent": "", "at": [ 0, -782 ], "pivot": [ 113, 38 ], "z": 10},
+		"thigh_far": {"texture": "thigh", "parent": "pelvis", "at": [ 140, 114 ], "pivot": [ 73, 52 ], "z": 3, "far": true},
+		"shin_far": {"texture": "shin", "parent": "thigh_far", "at": [ 111, 252 ], "pivot": [ 93, 42 ], "z": 4, "far": true},
+		"thigh_near": {"texture": "thigh", "parent": "pelvis", "at": [ 129, 114 ], "pivot": [ 73, 52 ], "z": 8},
+		"shin_near": {"texture": "shin", "parent": "thigh_near", "at": [ 111, 252 ], "pivot": [ 93, 42 ], "z": 9},
+		"battery": {"texture": "battery", "parent": "pelvis", "at": [ 128, 61 ], "pivot": [ 189, 44 ], "z": 11},
+		"torso": {"texture": "torso", "parent": "pelvis", "at": [ 113, 18 ], "pivot": [ 112, 302 ], "z": 7},
+		"helmet": {"texture": "helmet", "parent": "torso", "at": [ 36, 118 ], "pivot": [ 128, 134 ], "z": 5, "size": 1.15},
+		"head": {"texture": "head", "parent": "torso", "at": [ 112, 84 ], "pivot": [ 151, 274 ], "z": 6},
+		"respirator": {"texture": "respirator", "parent": "torso", "at": [ 204, 89 ], "pivot": [ 118, 81 ], "z": 13},
+		"sleeve_far": {"texture": "sleeve_far", "parent": "torso", "at": [ 62, 74 ], "pivot": [ 63, 29 ], "z": 2, "far": true},
+		"forearm_far": {"texture": "forearm_far", "parent": "sleeve_far", "at": [ 75, 234 ], "pivot": [ 31, 20 ], "z": 1, "far": true},
+		"sleeve_near": {"texture": "sleeve_near", "parent": "torso", "at": [ 62, 81 ], "pivot": [ 64, 28 ], "z": 14},
+		"gauntlet": {"texture": "gauntlet", "parent": "sleeve_near", "at": [ 76, 264 ], "pivot": [ 74, 28 ], "z": 15, "size": 1.25}
+	},
+	"strip": {
+		"part": "gauntlet",
+		"texture": "gauntlet_strip"
+	},
+	"cable": {
+		"from": ["battery", 37, 113],
+		"to": ["gauntlet", 52, 74],
+		"sag": 68,
+		"points": 12,
+		"width": 15.2,
+		"color": "#1f1d1c",
+		"z": 12
+	},
+	"poses": {
+		"idle": {
+			"lift": 0.0,
+			"angles": {
+				"helmet": -90,
+				"sleeve_near": 2,
+				"sleeve_far": 4,
+				"gauntlet": -2,
+				"forearm_far": 2,
+				"thigh_near": 8,
+				"thigh_far": 4,
+				"shin_far": 2,
+				"shin_near": 0
+			}
+		},
+		"run_b": {
+			"lift": 0.0,
+			"angles": {
+				"helmet": -90,
+				"sleeve_near": 17,
+				"sleeve_far": -16,
+				"gauntlet": -12,
+				"forearm_far": -23,
+				"thigh_near": -22,
+				"thigh_far": 37,
+				"shin_far": 17,
+				"shin_near": 8,
+				"torso": 4,
+				"head": -4
+			}
+		},
+		"run_a": {
+			"lift": 20.0,
+			"angles": {
+				"helmet": -90,
+				"sleeve_near": 7,
+				"sleeve_far": -6,
+				"gauntlet": -6,
+				"forearm_far": -16,
+				"thigh_near": -4,
+				"thigh_far": 16,
+				"shin_far": 17,
+				"shin_near": 7,
+				"torso": 2,
+				"head": -2
+			}
+		},
+		"run_b2": {
+			"lift": 0.0,
+			"angles": {
+				"helmet": -90,
+				"sleeve_near": -10,
+				"sleeve_far": 19,
+				"gauntlet": -14,
+				"forearm_far": -8,
+				"thigh_near": 41,
+				"thigh_far": -26,
+				"shin_far": 10,
+				"shin_near": 15,
+				"torso": 4,
+				"head": -4
+			}
+		},
+		"run_a2": {
+			"lift": 20.0,
+			"angles": {
+				"helmet": -90,
+				"sleeve_near": -4,
+				"sleeve_far": 9,
+				"gauntlet": -12,
+				"forearm_far": -2,
+				"thigh_near": 20,
+				"thigh_far": -8,
+				"shin_far": 9,
+				"shin_near": 15,
+				"torso": 2,
+				"head": -2
+			}
+		}
+	},
+	"soles": {
+		"shin_near": [
+			[50, 518],
+			[130, 526],
+			[210, 522]
+		],
+		"shin_far": [
+			[50, 518],
+			[130, 526],
+			[210, 522]
+		]
+	},
+	"run": {
+		"keys": ["run_b", "run_a", "run_b2", "run_a2"],
+		"cycle_px": 110,
+		"min_speed_px": 20,
+		"blend_seconds": 0.08
+	}
+}

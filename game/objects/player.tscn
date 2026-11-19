@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://objects/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://ui/time_hud.gd" id="2_hud"]
 [ext_resource type="Script" path="res://ui/breath_vignette.gd" id="3_vignette"]
+[ext_resource type="Script" path="res://objects/heroine/heroine_rig.gd" id="4_rig"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
 size = Vector2(44, 92)
@@ -15,6 +16,9 @@ script = ExtResource("1_player")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, -46)
 shape = SubResource("RectangleShape2D_body")
+
+[node name="Heroine" type="Node2D" parent="."]
+script = ExtResource("4_rig")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position = Vector2(0, -46)

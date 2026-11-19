@@ -12,9 +12,6 @@ signal drowned
 ## The player stood in fire too long: the room resets.
 signal burned
 
-const BODY_COLOR := Color("#d9dde3")
-const MARK_COLOR := Color("#7b828c")
-
 var _motion: PlayerMotion
 var _breath: Breath
 var _scorch: Scorch
@@ -31,6 +28,8 @@ var _intro_total := 0
 
 @onready var _shape: CollisionShape2D = $CollisionShape2D
 @onready var _camera: Camera2D = $Camera2D
+## The look: the heroine's doll (task Д5); the hitbox stays 44x92.
+@onready var _rig: HeroineRig = $Heroine
 
 
 func _ready() -> void:
@@ -57,9 +56,10 @@ func _physics_process(delta: float) -> void:
 	var water := water_contact()
 	velocity = _motion.step(velocity, axis, jump, is_on_floor(), delta, water)
 	move_and_slide()
+	_rig.step(get_real_velocity().x, is_on_floor(), delta)
 	if axis != 0.0 and signf(axis) != _facing:
 		_facing = signf(axis)
-		queue_redraw()
+		_rig.set_facing(_facing)
 	_head_under = bool(water.get("head_under", false))
 	_bubbles.emitting = _head_under
 	_bubbles.position.x = 8.0 * _facing
@@ -72,15 +72,6 @@ func _physics_process(delta: float) -> void:
 		_try_interact()
 
 
-func _draw() -> void:
-	# Placeholder body: a light block with a dark mark on the side it faces.
-	draw_rect(Rect2(Vector2(-_size.x / 2.0, -_size.y), _size), BODY_COLOR)
-	var mark := Vector2(10, 16)
-	var mark_x := _size.x / 2.0 - mark.x - 4.0 if _facing > 0.0 else -_size.x / 2.0 + 4.0
-	draw_rect(Rect2(Vector2(mark_x, -_size.y + 14.0), mark), MARK_COLOR)
-
-
-## The room tells the camera where the world ends (pixels).
 func set_camera_limits(rect: Rect2i) -> void:
 	_camera.limit_left = rect.position.x
 	_camera.limit_top = rect.position.y
