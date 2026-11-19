@@ -14,6 +14,10 @@ var _body: Node2D
 var _cable: Line2D
 var _strip: HeroineStrip
 var _pose := ""
+## The angles and lift she has now, blending towards the pose she takes.
+var _angles: Dictionary = {}
+var _lift := 0.0
+var _distance := 0.0
 
 
 ## The showcase sets this before adding the rig: the parts at sheet size from
@@ -79,14 +83,78 @@ func set_facing(facing: float) -> void:
 
 func set_pose(pose: String) -> void:
 	_pose = pose
-	var angles := HeroineData.pose_angles(_data, pose)
+	_angles = HeroineData.pose_angles(_data, pose).duplicate()
+	_lift = HeroineData.pose_lift(_data, pose)
+	_apply()
+
+
+## Moves her by how she moves in the game: `speed_px` is the real speed along
+## the floor in px/s. Running, the pose follows the distance walked, so the
+## feet do not slide; standing or in the air she takes the idle pose. Poses
+## blend over `run.blend_seconds`.
+func step(speed_px: float, on_floor: bool, delta: float) -> void:
+	var run: Dictionary = _data.get("run", {})
+	var target_angles: Dictionary
+	var target_lift: float
+	if on_floor and absf(speed_px) >= float(run.get("min_speed_px", 1.0)):
+		_distance += absf(speed_px) * delta
+		var key := HeroineData.run_pose(_data, _distance / float(run.get("cycle_px", 1.0)))
+		target_angles = key["angles"]
+		target_lift = float(key["lift"])
+		_pose = "run"
+	else:
+		target_angles = HeroineData.pose_angles(_data, "idle")
+		target_lift = HeroineData.pose_lift(_data, "idle")
+		_pose = "idle"
+	var blend := float(run.get("blend_seconds", 0.0))
+	var k := 1.0 if blend <= 0.0 else 1.0 - exp(-delta / blend)
+	_angles = HeroineData.blend_angles(_angles, target_angles, k)
+	_lift = lerpf(_lift, target_lift, k)
+	_apply()
+
+
+## Shows the run at `phase` (cycles) at once, without blending: for showcases.
+func set_run_phase(phase: float) -> void:
+	var key := HeroineData.run_pose(_data, phase)
+	_angles = key["angles"]
+	_lift = float(key["lift"])
+	_pose = "run"
+	_apply()
+
+
+## The distance walked in the run, in game pixels: the phase of the run.
+func distance() -> float:
+	return _distance
+
+
+## The lowest point of her soles in the rig's pixels: 0 when she stands.
+func sole_y() -> float:
+	return _lowest_sole() * absf(_body.scale.y)
+
+
+func _apply() -> void:
 	for name: String in _joints:
-		(_joints[name] as Node2D).rotation_degrees = float(angles.get(name, 0.0))
+		(_joints[name] as Node2D).rotation_degrees = float(_angles.get(name, 0.0))
 	var parts: Dictionary = _data.get("parts", {})
+	var root := ""
 	for name: String in parts:
 		if String((parts[name] as Dictionary).get("parent", "")) == "":
-			(_joints[name] as Node2D).position = _vec((parts[name] as Dictionary).get("at")) - Vector2(0, HeroineData.pose_lift(_data, pose))
+			root = name
+	var root_joint: Node2D = _joints[root]
+	root_joint.position = _vec((parts[root] as Dictionary).get("at")) - Vector2(0, _lift)
+	# The lowest sole stands on the floor, whatever the pose does to the legs.
+	if not (_data.get("soles", {}) as Dictionary).is_empty():
+		root_joint.position.y -= _lowest_sole() + _lift
 	_update_cable()
+
+
+func _lowest_sole() -> float:
+	var lowest := -INF
+	var soles: Dictionary = _data.get("soles", {})
+	for part: String in soles:
+		for point: Array in soles[part]:
+			lowest = maxf(lowest, _part_point(part, Vector2(float(point[0]), float(point[1]))).y)
+	return lowest
 
 
 func pose() -> String:

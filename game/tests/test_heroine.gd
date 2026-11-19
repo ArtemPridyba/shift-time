@@ -1,8 +1,9 @@
 extends RefCounted
 ## Tests of the heroine's doll (task Д5, D72–D77): the data check, her height
 ## against the 44x92 hitbox, the feet on the floor, the indicator strip in the
-## time colour from data, the mirror when she turns, and the doll in the
-## player scene. Run by test_runner.gd.
+## time colour from data, the mirror when she turns, the run by the distance
+## walked with the soles on the floor, and the doll in the player scene. Run by
+## test_runner.gd.
 
 const PLAYER_SCENE := "res://objects/player.tscn"
 
@@ -79,6 +80,49 @@ func test_turning_left_mirrors_the_doll_in_place() -> void:
 	rig.set_facing(1.0)
 	check(rig.body_rect().is_equal_approx(right), "turning back must give the same doll")
 	rig.free()
+
+
+func test_run_cycle_is_closed_and_starts_from_its_first_key() -> void:
+	var data := HeroineData.load_data()
+	var first := String((data["run"]["keys"] as Array)[0])
+	var start := HeroineData.run_pose(data, 0.0)
+	var end := HeroineData.run_pose(data, 0.9999)
+	var again := HeroineData.run_pose(data, 1.0)
+	for part: String in start["angles"]:
+		check(is_equal_approx(float(start["angles"][part]), float(HeroineData.pose_angles(data, first).get(part, 0.0))), "phase 0 must be the first key, %s differs" % part)
+		check(absf(float(end["angles"][part]) - float(start["angles"][part])) < 0.1, "the end of the cycle must meet its start, %s jumps" % part)
+		check(is_equal_approx(float(again["angles"][part]), float(start["angles"][part])), "phase 1 must repeat phase 0")
+
+
+func test_soles_stay_on_the_floor_through_the_run() -> void:
+	var rig := _rig()
+	var data := HeroineData.load_data()
+	var scale_px := float(data["scale"])
+	for i in 16:
+		var phase := float(i) / 16.0
+		rig.set_run_phase(phase)
+		var lift := float(HeroineData.run_pose(data, phase)["lift"]) * scale_px
+		check(absf(rig.sole_y() + lift) < 0.01, "at phase %.2f the lowest sole must stand on the floor (lifted by the pose's bob), got %.2f" % [phase, rig.sole_y()])
+		check(rig.sole_y() <= 0.01 and rig.sole_y() > -3.0, "at phase %.2f the bob must stay within 3 px, got %.2f" % [phase, rig.sole_y()])
+	rig.free()
+
+
+func test_run_phase_follows_the_distance_not_the_time() -> void:
+	var fast := _rig()
+	var slow := _rig()
+	for i in 60:
+		fast.step(360.0, true, 1.0 / 60.0)
+	for i in 120:
+		slow.step(180.0, true, 1.0 / 60.0)
+	check(fast.pose() == "run" and slow.pose() == "run", "moving on the floor she must run")
+	check(is_equal_approx(fast.distance(), slow.distance()), "the same distance must give the same phase of the run, %.1f and %.1f" % [fast.distance(), slow.distance()])
+	fast.step(0.0, true, 1.0 / 60.0)
+	check(fast.pose() == "idle", "standing she must take the idle pose")
+	slow.step(360.0, false, 1.0 / 60.0)
+	check(slow.pose() == "idle", "in the air she must not run")
+	check(is_equal_approx(slow.distance(), 360.0), "in the air the run must not advance")
+	fast.free()
+	slow.free()
 
 
 func test_player_scene_carries_the_doll() -> void:

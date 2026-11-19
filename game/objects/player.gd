@@ -56,6 +56,7 @@ func _physics_process(delta: float) -> void:
 	var water := water_contact()
 	velocity = _motion.step(velocity, axis, jump, is_on_floor(), delta, water)
 	move_and_slide()
+	_rig.step(get_real_velocity().x, is_on_floor(), delta)
 	if axis != 0.0 and signf(axis) != _facing:
 		_facing = signf(axis)
 		_rig.set_facing(_facing)

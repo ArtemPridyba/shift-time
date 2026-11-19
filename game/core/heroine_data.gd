@@ -26,6 +26,33 @@ static func pose_lift(data: Dictionary, pose: String) -> float:
 	return float(entry.get("lift", 0.0))
 
 
+## The run at `phase` (cycles of the run, any real number): the keys of
+## `run.keys` follow each other evenly and blend linearly, the last into the
+## first. Returns {"angles", "lift"}.
+static func run_pose(data: Dictionary, phase: float) -> Dictionary:
+	var keys: Array = (data.get("run", {}) as Dictionary).get("keys", [])
+	if keys.is_empty():
+		return {"angles": pose_angles(data, "idle"), "lift": pose_lift(data, "idle")}
+	var at: float = fposmod(phase, 1.0) * keys.size()
+	var i := int(floor(at)) % keys.size()
+	var j := (i + 1) % keys.size()
+	var t: float = at - floor(at)
+	var a := String(keys[i])
+	var b := String(keys[j])
+	return {
+		"angles": blend_angles(pose_angles(data, a), pose_angles(data, b), t),
+		"lift": lerpf(pose_lift(data, a), pose_lift(data, b), t),
+	}
+
+
+## Angles from `a` towards `b` by `t` (0..1); a part missing in one is 0 there.
+static func blend_angles(a: Dictionary, b: Dictionary, t: float) -> Dictionary:
+	var out: Dictionary = {}
+	for key: Variant in a.keys() + b.keys():
+		out[key] = lerpf(float(a.get(key, 0.0)), float(b.get(key, 0.0)), t)
+	return out
+
+
 ## Game pixels per sheet pixel of each picture: tools/cut_heroine_parts.py
 ## shrinks every picture by this factor, the rig draws it back at sheet scale.
 static func bake_factors(data: Dictionary) -> Dictionary:
@@ -120,6 +147,29 @@ static func validate(data: Variant) -> PackedStringArray:
 	for pose in POSES:
 		if not poses.has(pose):
 			errors.append("heroine.json: pose %s is missing" % pose)
+	var run: Variant = data.get("run")
+	if not run is Dictionary or not (run.get("keys") is Array) or (run.get("keys") as Array).size() < 2:
+		errors.append("heroine.json: run.keys must list at least two poses")
+	else:
+		for key: Variant in run["keys"]:
+			if not poses.has(String(key)):
+				errors.append("heroine.json: run key %s is not a pose" % key)
+		for number in ["cycle_px", "min_speed_px"]:
+			if not _positive(run.get(number)):
+				errors.append("heroine.json: run.%s must be a number above 0" % number)
+		if not _number(run.get("blend_seconds")) or float(run.get("blend_seconds")) < 0.0:
+			errors.append("heroine.json: run.blend_seconds must be 0 or more")
+	var soles: Variant = data.get("soles")
+	if not soles is Dictionary or (soles as Dictionary).is_empty():
+		errors.append("heroine.json: soles must name the boots and their sole points")
+	else:
+		for part: String in soles:
+			if not parts.has(part) or not soles[part] is Array or (soles[part] as Array).is_empty():
+				errors.append("heroine.json: soles.%s must be a part with [x, y] points" % part)
+				continue
+			for point: Variant in soles[part]:
+				if not _point(point):
+					errors.append("heroine.json: soles.%s: every point must be [x, y]" % part)
 	for pose: String in poses:
 		var entry: Variant = poses[pose]
 		if not entry is Dictionary or not _number(entry.get("lift", 0)) or not entry.get("angles", {}) is Dictionary:
