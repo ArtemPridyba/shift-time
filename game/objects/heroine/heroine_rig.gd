@@ -129,7 +129,9 @@ func _to_rig(node: Node2D) -> Transform2D:
 
 
 ## A part's picture: baked by tools/cut_heroine_parts.py to its size in the
-## game, so it is drawn back at sheet scale and shows 1:1 on screen.
+## game, so it is drawn back at sheet scale and shows 1:1 on screen. Nearest
+## pixels: at 1:1 linear filtering at a fraction of a pixel blurs the picture
+## (the showcase's large doll keeps linear).
 func _picture(dir: String, texture: String, pivot: Vector2, bakes: Dictionary) -> Sprite2D:
 	var bake := float(bakes.get(texture, 1.0))
 	var sprite := Sprite2D.new()
@@ -137,7 +139,7 @@ func _picture(dir: String, texture: String, pivot: Vector2, bakes: Dictionary) -
 	sprite.centered = false
 	sprite.offset = -pivot * bake
 	sprite.scale = Vector2.ONE / bake
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR if full_size else CanvasItem.TEXTURE_FILTER_NEAREST
 	return sprite
 
 

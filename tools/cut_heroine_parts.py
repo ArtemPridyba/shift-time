@@ -7,8 +7,8 @@ Reads docs/art/heroine/character_parts.jpg (512x286, flat grey background)
 and writes one PNG per part into game/assets/art/heroine/parts/, cropped to
 the part with a 2 px margin, plus parts.json with each crop's place on the
 sheet and its bake factor. The grey background goes by a flood fill from the sheet's border, so
-grey inside a part (sleeves, metal) stays; the edge gets a soft alpha and takes
-its colour from inside the part. The indicator strip of the
+grey inside a part (sleeves, metal) stays; the edge is unmixed from the grey
+(`_unmix`), so hair strands lose the grey between them. The indicator strip of the
 gauntlet (magenta on the sheet) is painted over with dark glass and saved as a
 white mask, gauntlet_strip.png, that the game tints with the time colour (D76).
 Each picture is shrunk with Lanczos to its size in the game (`scale` and the
@@ -23,7 +23,7 @@ from collections import deque
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 ROOT = Path(__file__).resolve().parent.parent
 SHEET = ROOT / "docs/art/heroine/character_parts.jpg"
@@ -38,8 +38,17 @@ FLOOD = 22
 # Soft edge: alpha grows from 0 to 1 over this range of the same distance.
 EDGE_LO = 8.0
 EDGE_HI = 48.0
-# How far into the part the edge looks for its colour.
-RING_REACH = 3
+# How far from the background the edge is unmixed, in pixels.
+EDGE_REACH = 3
+# Grey this close (sum of |RGB - grey|) inside a part is background.
+ENCLOSED = 14
+# Below this distance from grey a colour is grey-ish (metal, the sleeves).
+GREYISH = 40.0
+# Unsharp mask on the pictures shrunk for the game (percent, radius in px).
+SHARPEN = 90
+SHARPEN_RADIUS = 0.8
+# Edge alpha below this goes clear, above 1 - this goes solid.
+SPECK = 0.2
 MARGIN = 2
 # How magenta (min of R-G and B-G) a pixel of the strip is at full strength.
 STRIP_FULL = 120.0
@@ -110,13 +119,52 @@ def _background(dist: np.ndarray) -> np.ndarray:
     return bg
 
 
-def _shrink(mask: np.ndarray, steps: int) -> np.ndarray:
-    for _ in range(steps):
-        out = mask.copy()
-        for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-            out &= np.roll(np.roll(mask, dy, axis=0), dx, axis=1)
-        mask = out
-    return mask
+def _unmix(sheet: np.ndarray, dist: np.ndarray, clear: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Alpha and colour of every pixel: the edge is unmixed from the grey.
+
+    A pixel near the background is taken as c = a * F + (1 - a) * grey, where F
+    is the colour of a less grey pixel around it. Of those, F is the one that
+    explains c best (c lies closest to the line from grey to F): a hair strand
+    for a pixel between strands, the skin for the edge of the face. So thin
+    strands keep their colour and lose the grey between them, and the light
+    JPG ringing goes clear.
+    """
+    h, w = dist.shape
+    grey = np.full(3, BG)
+    off = sheet - grey
+    near = np.zeros((h, w), dtype=bool)
+    best_error = np.full((h, w), np.inf)
+    best_alpha = np.ones((h, w))
+    best_colour = sheet.copy()
+    solid = np.where(clear, -1.0, dist)
+    for dy in range(-EDGE_REACH, EDGE_REACH + 1):
+        for dx in range(-EDGE_REACH, EDGE_REACH + 1):
+            near |= np.roll(np.roll(clear, dy, axis=0), dx, axis=1)
+            if dy == 0 and dx == 0:
+                continue
+            other = np.roll(np.roll(solid, dy, axis=0), dx, axis=1)
+            colour = np.roll(np.roll(sheet, dy, axis=0), dx, axis=1)
+            towards = colour - grey
+            length = (towards**2).sum(axis=2)
+            usable = (other > dist + 10.0) & (length > GREYISH**2)
+            alpha = np.clip((off * towards).sum(axis=2) / np.maximum(length, 1.0), 0.0, 1.0)
+            error = ((off - alpha[..., None] * towards) ** 2).sum(axis=2)
+            better = usable & (error < best_error)
+            best_error = np.where(better, error, best_error)
+            best_alpha = np.where(better, alpha, best_alpha)
+            best_colour[better] = colour[better]
+    edge = near & ~clear
+    # Where no neighbour explains the pixel (grey-ish metal at the border),
+    # the edge keeps the plain distance ramp.
+    ramp = np.clip((dist - EDGE_LO) / (EDGE_HI - EDGE_LO), 0.0, 1.0)
+    found = np.isfinite(best_error)
+    edge_alpha = np.where(found, best_alpha, np.where(dist > EDGE_HI, 1.0, ramp))
+    # JPG noise leaves faint specks and nearly solid edge pixels: snap them.
+    edge_alpha = np.where(edge_alpha < SPECK, 0.0, np.where(edge_alpha > 1.0 - SPECK, 1.0, edge_alpha))
+    alpha = np.where(clear, 0.0, np.where(edge, edge_alpha, 1.0))
+    unmixed = np.clip(grey + off / np.maximum(alpha, 0.05)[..., None], 0, 255)
+    colour = np.where((edge & found)[..., None], 0.5 * unmixed + 0.5 * best_colour, sheet)
+    return alpha, colour
 
 
 def _cut_strip(rgba: np.ndarray) -> tuple[np.ndarray, list[int]]:
@@ -151,7 +199,13 @@ def _bake(rgba: np.ndarray, factor: float) -> Image.Image:
     out = np.dstack([np.asarray(band) for band in bands])
     alpha = np.clip(out[..., 3], 0, 255)
     colour = np.where(alpha[..., None] > 0.5, out[..., :3] / np.maximum(alpha[..., None], 1e-3) * 255.0, 0)
-    baked = np.dstack([np.clip(colour, 0, 255), alpha]).round().astype(np.uint8)
+    colour = np.clip(colour, 0, 255)
+    if SHARPEN > 0:
+        # The sheet is a soft JPG: give the small picture back some crispness.
+        rgb = Image.fromarray(colour.round().astype(np.uint8), "RGB")
+        rgb = rgb.filter(ImageFilter.UnsharpMask(radius=SHARPEN_RADIUS, percent=SHARPEN, threshold=1))
+        colour = np.where(alpha[..., None] > 0.5, np.asarray(rgb).astype(np.float64), colour)
+    baked = np.dstack([colour, alpha]).round().astype(np.uint8)
     return Image.fromarray(baked, "RGBA")
 
 
@@ -169,31 +223,10 @@ def main() -> None:
     sheet = np.asarray(Image.open(SHEET).convert("RGB")).astype(np.float64)
     dist = np.abs(sheet - BG).sum(axis=2)
     bg = _background(dist)
-    alpha = np.where(bg, np.clip((dist - EDGE_LO) / (EDGE_HI - EDGE_LO), 0.0, 1.0), 1.0)
-    # Background pixels far from any part stay fully clear.
-    near = np.zeros_like(bg)
-    fg = ~bg
-    for dy in (-1, 0, 1):
-        for dx in (-1, 0, 1):
-            near |= np.roll(np.roll(fg, dy, axis=0), dx, axis=1)
-    alpha = np.where(near, alpha, 0.0)
-    # The outer ring of a part is grey blended with the part (and the JPG's
-    # light ringing): it gets a soft alpha and the colour from inside the part.
-    interior = _shrink(fg, 2)
-    ring = near & ~interior
-    soft = np.clip((dist - EDGE_LO) / (EDGE_HI - EDGE_LO), 0.0, 1.0)
-    alpha = np.where(ring, np.minimum(alpha, soft), alpha)
-    colour = sheet.copy()
-    total = np.zeros_like(sheet)
-    count = np.zeros(dist.shape)
-    for dy in range(-RING_REACH, RING_REACH + 1):
-        for dx in range(-RING_REACH, RING_REACH + 1):
-            shifted = np.roll(np.roll(interior, dy, axis=0), dx, axis=1)
-            total += np.roll(np.roll(sheet * interior[..., None], dy, axis=0), dx, axis=1)
-            count += shifted
-    inside = count > 0
-    fill = ring & inside
-    colour[fill] = total[fill] / count[fill][:, None]
+    # Pure grey shut inside a part (between hair strands, in the helmet's
+    # strap) is background too.
+    clear = bg | (dist < ENCLOSED)
+    alpha, colour = _unmix(sheet, dist, clear)
     rgba = np.dstack([colour, alpha * 255.0]).round().astype(np.uint8)
 
     boxes = _components(alpha > 0.5)

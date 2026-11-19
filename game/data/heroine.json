@@ -11,13 +11,13 @@
 		"shin_near": {"texture": "shin", "parent": "thigh_near", "at": [ 30, 72 ], "pivot": [ 25, 12 ], "z": 9},
 		"battery": {"texture": "battery", "parent": "pelvis", "at": [ 34, 16 ], "pivot": [ 50, 12 ], "z": 11},
 		"torso": {"texture": "torso", "parent": "pelvis", "at": [ 30, 10 ], "pivot": [ 30, 80 ], "z": 7},
-		"helmet": {"texture": "helmet", "parent": "torso", "at": [ 12, 36 ], "pivot": [ 34, 36 ], "z": 5},
+		"helmet": {"texture": "helmet", "parent": "torso", "at": [ 2, 36 ], "pivot": [ 34, 36 ], "z": 5},
 		"head": {"texture": "head", "parent": "torso", "at": [ 30, 20 ], "pivot": [ 40, 72 ], "z": 6},
 		"respirator": {"texture": "respirator", "parent": "torso", "at": [ 54, 24 ], "pivot": [ 32, 22 ], "z": 13},
-		"sleeve_far": {"texture": "sleeve_far", "parent": "torso", "at": [ 24, 20 ], "pivot": [ 17, 8 ], "z": 2, "far": true},
-		"forearm_far": {"texture": "forearm_far", "parent": "sleeve_far", "at": [ 20, 58 ], "pivot": [ 9, 6 ], "z": 1, "far": true},
-		"sleeve_near": {"texture": "sleeve_near", "parent": "torso", "at": [ 28, 22 ], "pivot": [ 17, 8 ], "z": 14},
-		"gauntlet": {"texture": "gauntlet", "parent": "sleeve_near", "at": [ 20, 58 ], "pivot": [ 20, 8 ], "z": 15, "size": 1.25}
+		"sleeve_far": {"texture": "sleeve_far", "parent": "torso", "at": [ 22, 20 ], "pivot": [ 17, 8 ], "z": 2, "far": true},
+		"forearm_far": {"texture": "forearm_far", "parent": "sleeve_far", "at": [ 20, 62 ], "pivot": [ 9, 6 ], "z": 1, "far": true},
+		"sleeve_near": {"texture": "sleeve_near", "parent": "torso", "at": [ 22, 22 ], "pivot": [ 17, 8 ], "z": 14},
+		"gauntlet": {"texture": "gauntlet", "parent": "sleeve_near", "at": [ 20, 70 ], "pivot": [ 20, 8 ], "z": 15, "size": 1.25}
 	},
 	"strip": {
 		"part": "gauntlet",
@@ -37,6 +37,8 @@
 			"lift": 0,
 			"angles": {
 				"helmet": -90,
+				"sleeve_near": 4,
+				"sleeve_far": 4,
 				"gauntlet": 10,
 				"forearm_far": 16,
 				"thigh_near": 8,
