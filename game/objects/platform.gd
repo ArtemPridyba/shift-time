@@ -132,6 +132,17 @@ func position_at(cycle_phase: int) -> Vector2:
 	return _base()
 
 
+## How far the platform is from its start along its path, in pixels, and the
+## same as 0…1: mechanisms on it (task Д2) turn by the recorded phase.
+func mech_travel() -> float:
+	return (position_at(phase) - _base()).length()
+
+
+func mech_fraction() -> float:
+	var full := travel.length()
+	return mech_travel() / full if full > 0.0 else 0.0
+
+
 func rect_at(at: Vector2) -> Rect2:
 	var size := _size()
 	return Rect2(at - size / 2.0, size)

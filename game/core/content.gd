@@ -9,6 +9,7 @@ const LEVELS_PATH := "res://data/levels.json"
 const OBJECTS_PATH := "res://data/objects.json"
 const TIME_HUD_PATH := "res://data/time_hud.json"
 const ART_PATH := "res://data/art.json"
+const LOOK_PATH := "res://data/look.json"
 ## Colour roles every palette in `art.json` must give, each as a ramp from dark to light.
 const ART_ROLES: Array[String] = ["background", "steel", "mechanism", "suit", "helmet", "rust", "time", "fire", "interact", "water", "wood", "lamp_light"]
 const ART_RAMP_SIZE := 5
@@ -102,6 +103,22 @@ static func art() -> Dictionary:
 	return data if data is Dictionary else {}
 
 
+## The look of the Night Hall (task Д2): particle presets and mechanism colours.
+static func look() -> Dictionary:
+	var data: Variant = load_json(LOOK_PATH)
+	return data if data is Dictionary else {}
+
+
+static func look_particles() -> Dictionary:
+	var particles: Variant = look().get("particles")
+	return particles if particles is Dictionary else {}
+
+
+static func look_mech() -> Dictionary:
+	var mech: Variant = look().get("mech")
+	return mech if mech is Dictionary else {}
+
+
 ## The numbers of the shared material, `material` of `art.json`.
 static func art_material() -> Dictionary:
 	var material: Variant = art().get("material")
@@ -153,6 +170,7 @@ static func validate() -> PackedStringArray:
 		errors.append_array(validate_objects(load_json(OBJECTS_PATH), time_data))
 	errors.append_array(validate_time_hud(load_json(TIME_HUD_PATH)))
 	errors.append_array(validate_art(load_json(ART_PATH)))
+	errors.append_array(validate_look(load_json(LOOK_PATH)))
 	return errors
 
 
@@ -553,6 +571,84 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 
 
 ## A number between `low` and `high` (`low` itself is allowed unless `above_low`).
+const LOOK_MECH_COLORS: Array[String] = ["iron", "iron_light", "iron_shadow", "iron_dark", "outline", "valve", "valve_light", "rust", "yellow"]
+const LOOK_PAIRS: Array[String] = ["velocity", "velocity_jitter", "gravity", "wobble_px", "wobble_hz", "size", "burst_area"]
+
+
+## Particles that run backwards and the mechanisms' colours (task Д2).
+static func validate_look(data: Variant) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not data is Dictionary:
+		errors.append("look.json: expected an object")
+		return errors
+	var particles: Variant = data.get("particles")
+	if not particles is Dictionary or particles.is_empty():
+		errors.append("look.json: 'particles' must be a non-empty object")
+	else:
+		for name: Variant in particles:
+			errors.append_array(_particle_problems(particles[name], "look.json: particles '%s'" % name))
+	var mech: Variant = data.get("mech")
+	if not mech is Dictionary:
+		errors.append("look.json: 'mech' must be an object")
+		return errors
+	for key in LOOK_MECH_COLORS:
+		if not mech.get(key) is String or not Color.html_is_valid(mech[key]):
+			errors.append("look.json: 'mech.%s' must be a color like \"#4c4c53\"" % key)
+	if not _is_number(mech.get("outline_px")) or float(mech["outline_px"]) <= 0.0:
+		errors.append("look.json: 'mech.outline_px' must be a number above 0")
+	return errors
+
+
+static func _particle_problems(preset: Variant, where: String) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not preset is Dictionary:
+		errors.append("%s must be an object" % where)
+		return errors
+	if not preset.get("shape") in ParticleField.SHAPES:
+		errors.append("%s: 'shape' must be one of %s" % [where, ParticleField.SHAPES])
+	if not preset.get("blend") in ParticleField.BLENDS:
+		errors.append("%s: 'blend' must be one of %s" % [where, ParticleField.BLENDS])
+	if not preset.get("on_floor") in ParticleField.FLOORS:
+		errors.append("%s: 'on_floor' must be one of %s" % [where, ParticleField.FLOORS])
+	var limits := {
+		"rate": [0.0, 200.0], "lifetime": [0.01, 60.0], "lifetime_jitter": [0.0, 0.95],
+		"spin": [-60.0, 60.0], "stretch": [0.0, 1.0], "alpha": [0.0, 1.0],
+		"fade_in": [0.0, 1.0], "fade_out": [0.0, 1.0], "burst_count": [0.0, 200.0],
+		"burst_every": [0.0, 60.0],
+	}
+	for key: String in limits:
+		var value: Variant = preset.get(key)
+		if not _is_number(value) or float(value) < limits[key][0] or float(value) > limits[key][1]:
+			errors.append("%s: '%s' must be a number from %s to %s" % [where, key, limits[key][0], limits[key][1]])
+	if _is_number(preset.get("rate")) and _is_number(preset.get("burst_count")) \
+			and float(preset["rate"]) <= 0.0 and float(preset["burst_count"]) <= 0.0:
+		errors.append("%s: needs 'rate' or 'burst_count' above 0" % where)
+	for key in LOOK_PAIRS:
+		var pair: Variant = preset.get(key)
+		if not pair is Array or pair.size() != 2 or not _is_number(pair[0]) or not _is_number(pair[1]):
+			errors.append("%s: '%s' must be two numbers" % [where, key])
+	var size: Variant = preset.get("size")
+	if size is Array and size.size() == 2 and _is_number(size[0]) and _is_number(size[1]) \
+			and (float(size[0]) <= 0.0 or float(size[0]) > float(size[1])):
+		errors.append("%s: 'size' must be [min, max] with 0 < min <= max" % where)
+	var cone: Variant = preset.get("cone")
+	if cone != null:
+		if not cone is Dictionary or not _is_number(cone.get("spread")) or not _is_number(cone.get("length_px")) \
+				or float(cone["spread"]) <= 0.0 or float(cone["spread"]) >= 1.5 or float(cone["length_px"]) <= 0.0:
+			errors.append("%s: 'cone' must be {spread above 0 and below 1.5, length_px above 0}" % where)
+	else:
+		var area: Variant = preset.get("area")
+		if not area is Array or area.size() != 4 or not area.all(func(v: Variant) -> bool: return _is_number(v)) \
+				or float(area[2]) < 0.0 or float(area[3]) < 0.0:
+			errors.append("%s: 'area' must be [x, y, width, height] with width and height at least 0" % where)
+	for key in ["color", "color_end"]:
+		if key == "color_end" and not preset.has(key):
+			continue
+		if not preset.get(key) is String or not Color.html_is_valid(preset[key]):
+			errors.append("%s: '%s' must be a color like \"#ffd9a8\"" % [where, key])
+	return errors
+
+
 static func _check_range(errors: PackedStringArray, section: Dictionary, section_name: String, key: String, low: float, high: float, above_low := false) -> void:
 	if not section.has(key) or not _is_number(section[key]):
 		errors.append("time_hud.json: '%s.%s' must be a number" % [section_name, key])
