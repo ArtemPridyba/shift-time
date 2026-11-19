@@ -171,6 +171,7 @@ static func validate() -> PackedStringArray:
 	errors.append_array(validate_time_hud(load_json(TIME_HUD_PATH)))
 	errors.append_array(validate_art(load_json(ART_PATH)))
 	errors.append_array(validate_look(load_json(LOOK_PATH)))
+	errors.append_array(HeroineData.validate(load_json(HeroineData.PATH)))
 	return errors
 
 

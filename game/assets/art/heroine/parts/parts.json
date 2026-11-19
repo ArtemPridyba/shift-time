@@ -1,0 +1,104 @@
+{
+	"head": {
+		"sheet_rect": [
+			24,
+			16,
+			73,
+			79
+		]
+	},
+	"helmet": {
+		"sheet_rect": [
+			116,
+			20,
+			67,
+			73
+		]
+	},
+	"respirator": {
+		"sheet_rect": [
+			205,
+			36,
+			43,
+			39
+		]
+	},
+	"torso": {
+		"sheet_rect": [
+			282,
+			16,
+			58,
+			87
+		]
+	},
+	"pelvis": {
+		"sheet_rect": [
+			385,
+			33,
+			60,
+			63
+		]
+	},
+	"sleeve_far": {
+		"sheet_rect": [
+			33,
+			119,
+			36,
+			69
+		]
+	},
+	"sleeve_near": {
+		"sheet_rect": [
+			156,
+			120,
+			36,
+			71
+		]
+	},
+	"thigh": {
+		"sheet_rect": [
+			282,
+			125,
+			49,
+			93
+		]
+	},
+	"shin": {
+		"sheet_rect": [
+			353,
+			126,
+			61,
+			143
+		]
+	},
+	"gauntlet": {
+		"sheet_rect": [
+			87,
+			156,
+			55,
+			84
+		],
+		"strip_rect": [
+			26,
+			52,
+			12,
+			5
+		]
+	},
+	"forearm_far": {
+		"sheet_rect": [
+			211,
+			151,
+			51,
+			91
+		]
+	},
+	"battery": {
+		"sheet_rect": [
+			424,
+			166,
+			56,
+			45
+		]
+	}
+}
