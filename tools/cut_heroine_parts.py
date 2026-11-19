@@ -3,9 +3,10 @@
 
     python3 tools/cut_heroine_parts.py
 
-Reads docs/art/heroine/character_parts.jpg (512x286, flat grey background)
+Reads docs/art/heroine/character_parts_hq.jpg (a 2340x1080 phone screenshot of
+the Gemini sheet: flat grey inside CROP_X)
 and writes one PNG per part into game/assets/art/heroine/parts/, cropped to
-the part with a 2 px margin, plus parts.json with each crop's place on the
+the part with a 6 px margin, plus parts.json with each crop's place on the
 sheet and its bake factor. The grey background goes by a flood fill from the sheet's border, so
 grey inside a part (sleeves, metal) stays; the edge is unmixed from the grey
 (`_unmix`), so hair strands lose the grey between them. The indicator strip of the
@@ -26,7 +27,9 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 ROOT = Path(__file__).resolve().parent.parent
-SHEET = ROOT / "docs/art/heroine/character_parts.jpg"
+SHEET = ROOT / "docs/art/heroine/character_parts_hq.jpg"
+# The grey sheet inside the phone screenshot (the dark bands at the sides go).
+CROP_X = (210, 2128)
 OUT = ROOT / "game/assets/art/heroine/parts"
 # The same parts at sheet size, only for the showcase (not exported).
 FULL = OUT / "full"
@@ -35,39 +38,40 @@ DATA = ROOT / "game/data/heroine.json"
 BG = 128.0
 # Sum of |RGB - grey| below this joins the background flood.
 FLOOD = 22
-# Soft edge: alpha grows from 0 to 1 over this range of the same distance.
-EDGE_LO = 8.0
-EDGE_HI = 48.0
 # How far from the background the edge is unmixed, in pixels.
-EDGE_REACH = 3
+EDGE_REACH = 6
 # Grey this close (sum of |RGB - grey|) inside a part is background.
 ENCLOSED = 14
 # Below this distance from grey a colour is grey-ish (metal, the sleeves).
 GREYISH = 40.0
 # Unsharp mask on the pictures shrunk for the game (percent, radius in px).
-SHARPEN = 90
+SHARPEN = 50
 SHARPEN_RADIUS = 0.8
+# The colour of the drawing's dark lines and hair.
+INK = (24, 21, 20)
+# A pixel this far from grey is a pure colour even at the very edge.
+PURE = 260.0
 # Edge alpha below this goes clear, above 1 - this goes solid.
 SPECK = 0.2
-MARGIN = 2
+MARGIN = 6
 # How magenta (min of R-G and B-G) a pixel of the strip is at full strength.
 STRIP_FULL = 120.0
-MIN_PIXELS = 300
+MIN_PIXELS = 3000
 
 # Parts by the centre of their box on the sheet, left to right, top to bottom.
 NAMES = [
-    ((59, 55), "head"),
-    ((149, 56), "helmet"),
-    ((226, 55), "respirator"),
-    ((311, 60), "torso"),
-    ((414, 64), "pelvis"),
-    ((50, 153), "sleeve_far"),
-    ((173, 155), "sleeve_near"),
-    ((306, 171), "thigh"),
-    ((383, 198), "shin"),
-    ((114, 198), "gauntlet"),
-    ((236, 196), "forearm_far"),
-    ((451, 188), "battery"),
+    ((221, 208), "head"),
+    ((556, 213), "helmet"),
+    ((847, 209), "respirator"),
+    ((1168, 225), "torso"),
+    ((1561, 243), "pelvis"),
+    ((184, 580), "sleeve_far"),
+    ((651, 587), "sleeve_near"),
+    ((1149, 646), "thigh"),
+    ((1442, 746), "shin"),
+    ((424, 747), "gauntlet"),
+    ((886, 741), "forearm_far"),
+    ((1700, 712), "battery"),
 ]
 
 
@@ -136,7 +140,14 @@ def _unmix(sheet: np.ndarray, dist: np.ndarray, clear: np.ndarray) -> tuple[np.n
     best_error = np.full((h, w), np.inf)
     best_alpha = np.ones((h, w))
     best_colour = sheet.copy()
-    solid = np.where(clear, -1.0, dist)
+    # A colour to unmix towards must be a pure one: inside the part (two pixels
+    # from the background) or strongly coloured (a dark hair strand).
+    inner = np.zeros((h, w), dtype=bool)
+    for dy in range(-2, 3):
+        for dx in range(-2, 3):
+            inner |= np.roll(np.roll(clear, dy, axis=0), dx, axis=1)
+    pure = (~inner | (dist > PURE)) & ~clear
+    solid = np.where(pure, dist, -1.0)
     for dy in range(-EDGE_REACH, EDGE_REACH + 1):
         for dx in range(-EDGE_REACH, EDGE_REACH + 1):
             near |= np.roll(np.roll(clear, dy, axis=0), dx, axis=1)
@@ -146,7 +157,7 @@ def _unmix(sheet: np.ndarray, dist: np.ndarray, clear: np.ndarray) -> tuple[np.n
             colour = np.roll(np.roll(sheet, dy, axis=0), dx, axis=1)
             towards = colour - grey
             length = (towards**2).sum(axis=2)
-            usable = (other > dist + 10.0) & (length > GREYISH**2)
+            usable = (other > dist) & (length > GREYISH**2)
             alpha = np.clip((off * towards).sum(axis=2) / np.maximum(length, 1.0), 0.0, 1.0)
             error = ((off - alpha[..., None] * towards) ** 2).sum(axis=2)
             better = usable & (error < best_error)
@@ -154,11 +165,15 @@ def _unmix(sheet: np.ndarray, dist: np.ndarray, clear: np.ndarray) -> tuple[np.n
             best_alpha = np.where(better, alpha, best_alpha)
             best_colour[better] = colour[better]
     edge = near & ~clear
-    # Where no neighbour explains the pixel (grey-ish metal at the border),
-    # the edge keeps the plain distance ramp.
-    ramp = np.clip((dist - EDGE_LO) / (EDGE_HI - EDGE_LO), 0.0, 1.0)
+    # Where no pure colour is near (the faint tip of a loose strand), the pixel
+    # is unmixed towards dark ink; lighter than the grey, it is JPG ringing.
     found = np.isfinite(best_error)
-    edge_alpha = np.where(found, best_alpha, np.where(dist > EDGE_HI, 1.0, ramp))
+    ink = np.array(INK, dtype=np.float64) - grey
+    ink_alpha = np.clip((off * ink).sum(axis=2) / (ink**2).sum(), 0.0, 1.0)
+    lost = edge & ~found
+    best_colour[lost] = INK
+    edge_alpha = np.where(found, best_alpha, ink_alpha)
+    found = found | lost
     # JPG noise leaves faint specks and nearly solid edge pixels: snap them.
     edge_alpha = np.where(edge_alpha < SPECK, 0.0, np.where(edge_alpha > 1.0 - SPECK, 1.0, edge_alpha))
     alpha = np.where(clear, 0.0, np.where(edge, edge_alpha, 1.0))
@@ -178,12 +193,12 @@ def _cut_strip(rgba: np.ndarray) -> tuple[np.ndarray, list[int]]:
     solid = rgba[..., 3] > 200
     pink = np.minimum(r - g, b - g)
     magenta = (pink > 60) & solid
-    tint = (pink > 18) & solid
+    tint = (pink > 8) & solid
     ys, xs = np.nonzero(magenta)
     box = [int(xs.min()), int(ys.min()), int(xs.max() - xs.min() + 1), int(ys.max() - ys.min() + 1)]
     mask = np.zeros(rgba.shape, dtype=np.uint8)
     mask[..., :3] = 255
-    mask[..., 3] = np.where(tint, np.clip((pink - 18) / (STRIP_FULL - 18), 0, 1) * 255, 0).astype(np.uint8)
+    mask[..., 3] = np.where(tint, np.clip((pink - 8) / (STRIP_FULL - 8), 0, 1) * 255, 0).astype(np.uint8)
     grey = rgb[tint].astype(np.float64).mean(axis=1, keepdims=True)
     rgb[tint] = np.clip(grey * 0.6, 0, 255)
     rgb[magenta] = (24, 26, 30)
@@ -220,7 +235,7 @@ def _bake_factors() -> dict[str, float]:
 
 
 def main() -> None:
-    sheet = np.asarray(Image.open(SHEET).convert("RGB")).astype(np.float64)
+    sheet = np.asarray(Image.open(SHEET).convert("RGB")).astype(np.float64)[:, CROP_X[0] : CROP_X[1]]
     dist = np.abs(sheet - BG).sum(axis=2)
     bg = _background(dist)
     # Pure grey shut inside a part (between hair strands, in the helmet's

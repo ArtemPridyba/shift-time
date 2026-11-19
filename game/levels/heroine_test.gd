@@ -6,7 +6,7 @@ extends Node2D
 ## `tools/shots.sh --scene heroine_test --ticks 2`.
 
 const RIG := preload("res://objects/heroine/heroine_rig.gd")
-const FLOOR_Y := 700.0
+const FLOOR_Y := 760.0
 const BACKDROP := Color("#2a2220")
 const FLOOR := Color("#151212")
 const HITBOX := Color(0.5, 0.9, 1.0, 0.8)
@@ -19,11 +19,11 @@ func _ready() -> void:
 	_add(Vector2(200, FLOOR_Y), -1.0, true, Color(0, 0, 0, 0))
 	_add(Vector2(300, FLOOR_Y), 1.0, false, Color(0, 0, 0, 0))
 	_add(Vector2(400, FLOOR_Y), 1.0, false, OTHER_TIME_COLOUR)
-	# Up close, from the parts at sheet size: one sheet pixel per screen pixel.
+	# Up close, from the parts at sheet size: half a sheet pixel per screen pixel.
 	var big: HeroineRig = RIG.new()
 	big.full_size = true
 	big.position = Vector2(900, FLOOR_Y)
-	var zoom := 1.0 / float(HeroineData.load_data().get("scale", 1.0))
+	var zoom := 0.5 / float(HeroineData.load_data().get("scale", 1.0))
 	big.scale = Vector2(zoom, zoom)
 	add_child(big)
 
