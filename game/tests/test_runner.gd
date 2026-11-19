@@ -18,6 +18,8 @@ extends SceneTree
 const SUITES: Array[String] = [
 	"res://tests/test_core.gd",
 	"res://tests/test_art.gd",
+	"res://tests/test_time_particles.gd",
+	"res://tests/test_mech.gd",
 	"res://tests/test_time_manager.gd",
 	"res://tests/test_timeline.gd",
 	"res://tests/test_time_world.gd",

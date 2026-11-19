@@ -1,0 +1,162 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://levels/mech_test.gd" id="1_show"]
+[ext_resource type="PackedScene" path="res://objects/door.tscn" id="2_door"]
+[ext_resource type="PackedScene" path="res://objects/platform.tscn" id="3_platform"]
+[ext_resource type="Script" path="res://levels/room_time.gd" id="4_room"]
+[ext_resource type="Script" path="res://objects/mech/gear.gd" id="5_gear"]
+[ext_resource type="Script" path="res://objects/mech/rack.gd" id="6_rack"]
+[ext_resource type="Script" path="res://objects/mech/chain.gd" id="7_chain"]
+[ext_resource type="Script" path="res://objects/mech/valve_wheel.gd" id="8_wheel"]
+[ext_resource type="Script" path="res://objects/fx/time_particles.gd" id="9_fx"]
+
+[node name="MechTest" type="Node2D"]
+script = ExtResource("1_show")
+
+[node name="Gate" parent="." instance=ExtResource("2_door")]
+position = Vector2(420, 804)
+object_id = "gate"
+
+[node name="Rack" type="Node2D" parent="Gate"]
+position = Vector2(26.5, -96)
+script = ExtResource("6_rack")
+length = 384.0
+teeth_side = 1
+
+[node name="GateGear" type="Node2D" parent="."]
+position = Vector2(496, 760)
+script = ExtResource("5_gear")
+driven_path = NodePath("../Gate")
+radius = 36.0
+teeth = 14
+
+[node name="GateGearSmall" type="Node2D" parent="."]
+position = Vector2(532, 724)
+script = ExtResource("5_gear")
+driven_path = NodePath("../Gate")
+ratio = -1.8
+radius = 20.0
+teeth = 8
+
+[node name="GateWheel" type="Node2D" parent="."]
+position = Vector2(330, 700)
+script = ExtResource("8_wheel")
+driven_path = NodePath("../Gate")
+
+[node name="Column" type="Node2D" parent="."]
+position = Vector2(1020, 470)
+script = ExtResource("6_rack")
+length = 430.0
+
+[node name="LiftChain" type="Node2D" parent="."]
+position = Vector2(860, 300)
+script = ExtResource("7_chain")
+driven_path = NodePath("../Lift")
+ratio = -1.0
+to = Vector2(0, 560)
+
+[node name="Lift" parent="." instance=ExtResource("3_platform")]
+position = Vector2(900, 840)
+object_id = "lift"
+travel = Vector2(0, -256)
+
+[node name="CarriageGear" type="Node2D" parent="Lift"]
+position = Vector2(80, 0)
+script = ExtResource("5_gear")
+driven_path = NodePath("..")
+radius = 24.0
+
+[node name="Slider" parent="." instance=ExtResource("3_platform")]
+position = Vector2(1480, 752)
+object_id = "slider"
+travel = Vector2(240, 0)
+
+[node name="Hangers" type="Node2D" parent="Slider"]
+
+[node name="HangerLeft" type="Line2D" parent="Slider/Hangers"]
+points = PackedVector2Array(-60, -56, -60, -14)
+width = 6.0
+default_color = Color(0.165, 0.165, 0.188, 1)
+
+[node name="HangerRight" type="Line2D" parent="Slider/Hangers"]
+points = PackedVector2Array(60, -56, 60, -14)
+width = 6.0
+default_color = Color(0.165, 0.165, 0.188, 1)
+
+[node name="RollerLeft" type="Node2D" parent="Slider"]
+position = Vector2(-60, -56)
+script = ExtResource("5_gear")
+driven_path = NodePath("..")
+radius = 12.0
+teeth = 0
+
+[node name="RollerRight" type="Node2D" parent="Slider"]
+position = Vector2(60, -56)
+script = ExtResource("5_gear")
+driven_path = NodePath("..")
+radius = 12.0
+teeth = 0
+
+[node name="Handwheel" type="Node2D" parent="Slider"]
+position = Vector2(0, 0)
+script = ExtResource("8_wheel")
+driven_path = NodePath("..")
+radius = 26.0
+
+[node name="Dust" type="MultiMeshInstance2D" parent="."]
+position = Vector2(1200, 126)
+script = ExtResource("9_fx")
+noise_seed = 3
+
+[node name="Ash" type="MultiMeshInstance2D" parent="."]
+position = Vector2(640, 40)
+script = ExtResource("9_fx")
+preset = "ash"
+noise_seed = 5
+
+[node name="Sparks" type="MultiMeshInstance2D" parent="."]
+position = Vector2(1712, 300)
+script = ExtResource("9_fx")
+preset = "sparks"
+noise_seed = 7
+has_floor = true
+floor_y = 600.0
+
+[node name="Drops" type="MultiMeshInstance2D" parent="."]
+position = Vector2(252, 384)
+script = ExtResource("9_fx")
+preset = "drops"
+noise_seed = 11
+has_floor = true
+floor_y = 516.0
+
+[node name="Shards" type="MultiMeshInstance2D" parent="."]
+position = Vector2(1250, 880)
+script = ExtResource("9_fx")
+preset = "shards"
+noise_seed = 13
+bursts_at = PackedFloat32Array(3, 9, 15)
+has_floor = true
+floor_y = 15.0
+
+[node name="Floor" type="ColorRect" parent="."]
+offset_top = 900.0
+offset_right = 1920.0
+offset_bottom = 1080.0
+color = Color(0.235, 0.204, 0.196, 1)
+
+[node name="FloorTop" type="ColorRect" parent="."]
+offset_top = 900.0
+offset_right = 1920.0
+offset_bottom = 906.0
+color = Color(0.329, 0.29, 0.275, 1)
+
+[node name="Hint" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 980.0
+offset_right = 900.0
+offset_bottom = 1040.0
+text = "Hold Shift: the world runs back. Mechanisms turn from the recorded doors and platforms."
+
+[node name="RoomTime" type="Node" parent="."]
+script = ExtResource("4_room")

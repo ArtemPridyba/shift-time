@@ -171,6 +171,17 @@ func rect_at(amount: int) -> Rect2:
 	return Rect2(_base() + Vector2(-size.x / 2.0, -size.y / 2.0 - travel * amount / OPEN_MAX), size)
 
 
+## How far the door has moved from closed, in pixels, and the same as 0…1:
+## mechanisms on it (task Д2) turn by the recorded `open`, never by their own
+## clock.
+func mech_travel() -> float:
+	return travel * float(open) / float(OPEN_MAX)
+
+
+func mech_fraction() -> float:
+	return float(open) / float(OPEN_MAX)
+
+
 func _apply() -> void:
 	position = _base() + Vector2(0.0, -travel * open / OPEN_MAX)
 	queue_redraw()
