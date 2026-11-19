@@ -16,8 +16,14 @@ var _strip: HeroineStrip
 var _pose := ""
 
 
+## The showcase sets this before adding the rig: the parts at sheet size from
+## `parts_dir/full`, sharp when the doll is drawn large.
+var full_size := false
+
+
 func _ready() -> void:
-	build(HeroineData.load_data())
+	if _body == null:
+		build(HeroineData.load_data())
 
 
 func build(data: Dictionary) -> void:
@@ -32,8 +38,9 @@ func build(data: Dictionary) -> void:
 	_body.scale = Vector2(scale_px, scale_px)
 	add_child(_body)
 	var parts: Dictionary = data.get("parts", {})
-	var dir := String(data.get("parts_dir", ""))
+	var dir := _parts_dir(data)
 	var far_tint := Color.from_string(String(data.get("far_tint", "#ffffff")), Color.WHITE)
+	var bakes := {} if full_size else HeroineData.bake_factors(data)
 	for name in HeroineData.build_order(parts):
 		var part: Dictionary = parts[name]
 		var parent := String(part.get("parent", ""))
@@ -49,12 +56,8 @@ func build(data: Dictionary) -> void:
 		# A part may be drawn larger than on the sheet (the gauntlet reads at 94 px).
 		var size := float(part.get("size", 1.0))
 		joint.scale = Vector2(size, size)
-		var sprite := Sprite2D.new()
+		var sprite := _picture(dir, String(part.get("texture", "")), _vec(part.get("pivot")), bakes)
 		sprite.name = "Picture"
-		sprite.texture = load("%s/%s.png" % [dir, String(part.get("texture", ""))])
-		sprite.centered = false
-		sprite.offset = -_vec(part.get("pivot"))
-		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		if bool(part.get("far", false)):
 			sprite.modulate = far_tint
 		joint.add_child(sprite)
@@ -125,21 +128,37 @@ func _to_rig(node: Node2D) -> Transform2D:
 	return transform_to
 
 
+## A part's picture: baked by tools/cut_heroine_parts.py to its size in the
+## game, so it is drawn back at sheet scale and shows 1:1 on screen.
+func _picture(dir: String, texture: String, pivot: Vector2, bakes: Dictionary) -> Sprite2D:
+	var bake := float(bakes.get(texture, 1.0))
+	var sprite := Sprite2D.new()
+	sprite.texture = load("%s/%s.png" % [dir, texture])
+	sprite.centered = false
+	sprite.offset = -pivot * bake
+	sprite.scale = Vector2.ONE / bake
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	return sprite
+
+
+## The indicator strip: a white mask of the strip cut from the gauntlet, laid
+## exactly over the gauntlet's picture and tinted with the time colour.
 func _build_strip(data: Dictionary) -> void:
 	var strip_data: Dictionary = data.get("strip", {})
 	var part := String(strip_data.get("part", ""))
 	if not _joints.has(part):
 		return
-	var rect: Array = strip_data.get("rect", [0, 0, 0, 0])
-	var pivot := _vec((data["parts"][part] as Dictionary).get("pivot"))
+	var under: Sprite2D = _sprites[part]
 	_strip = HeroineStrip.new()
 	_strip.name = "Strip"
-	_strip.rect = Rect2(float(rect[0]) - pivot.x, float(rect[1]) - pivot.y, float(rect[2]), float(rect[3]))
-	_strip.glow_px = float(strip_data.get("glow_px", 0.0))
-	_strip.glow_alpha = float(strip_data.get("glow_alpha", 0.0))
+	_strip.texture = load("%s/%s.png" % [_parts_dir(data), String(strip_data.get("texture", ""))])
+	_strip.centered = false
+	_strip.offset = under.offset
+	_strip.scale = under.scale
+	_strip.texture_filter = under.texture_filter
+	_strip.z_index = under.z_index
 	var colors: Dictionary = Content.time_hud().get("colors", {})
 	_strip.color = Color.from_string(String(colors.get("accent", "#7FE8FF")), Color.CYAN)
-	_strip.z_index = int((data["parts"][part] as Dictionary).get("z", 0))
 	(_joints[part] as Node2D).add_child(_strip)
 
 
@@ -177,15 +196,21 @@ func _update_cable() -> void:
 	_cable.points = points
 
 
-## A point of a part's picture in the body's pixels (before scale and facing).
+## A point of a part's picture (sheet pixels) in the body's pixels, before
+## scale and facing.
 func _part_point(part: String, pixel: Vector2) -> Vector2:
-	var sprite: Sprite2D = _sprites[part]
 	var to_body := Transform2D.IDENTITY
-	var walk: Node = sprite
+	var walk: Node = _joints[part]
 	while walk != null and walk != _body:
 		to_body = (walk as Node2D).transform * to_body
 		walk = walk.get_parent()
-	return to_body * (pixel + sprite.offset)
+	var pivot := _vec((_data["parts"][part] as Dictionary).get("pivot"))
+	return to_body * (pixel - pivot)
+
+
+func _parts_dir(data: Dictionary) -> String:
+	var dir := String(data.get("parts_dir", ""))
+	return dir + "/full" if full_size else dir
 
 
 static func _vec(value: Variant) -> Vector2:

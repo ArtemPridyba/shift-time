@@ -26,6 +26,19 @@ static func pose_lift(data: Dictionary, pose: String) -> float:
 	return float(entry.get("lift", 0.0))
 
 
+## Game pixels per sheet pixel of each picture: tools/cut_heroine_parts.py
+## shrinks every picture by this factor, the rig draws it back at sheet scale.
+static func bake_factors(data: Dictionary) -> Dictionary:
+	var factors: Dictionary = {}
+	var parts: Dictionary = data.get("parts", {})
+	for name: String in parts:
+		var part: Dictionary = parts[name]
+		var factor := float(data.get("scale", 1.0)) * float(part.get("size", 1.0))
+		var texture := String(part.get("texture", ""))
+		factors[texture] = maxf(float(factors.get(texture, 0.0)), factor)
+	return factors
+
+
 ## Parts sorted so every parent comes before its children.
 static func build_order(parts: Dictionary) -> Array[String]:
 	var order: Array[String] = []
@@ -88,8 +101,8 @@ static func validate(data: Variant) -> PackedStringArray:
 	var strip: Variant = data.get("strip")
 	if not strip is Dictionary or not parts.has(String(strip.get("part", ""))):
 		errors.append("heroine.json: strip.part must be a part")
-	elif not _numbers(strip.get("rect"), 4):
-		errors.append("heroine.json: strip.rect must be [x, y, w, h]")
+	elif not ResourceLoader.exists("%s/%s.png" % [dir, String(strip.get("texture", ""))]):
+		errors.append("heroine.json: strip.texture must be a picture in parts_dir")
 	var cable: Variant = data.get("cable")
 	if not cable is Dictionary:
 		errors.append("heroine.json: cable must be an object")

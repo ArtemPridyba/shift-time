@@ -1,36 +1,34 @@
 {
 	"_about": "The heroine as a cutout doll (task Д5, D77). Parts are cut from docs/art/heroine/character_parts.jpg by tools/cut_heroine_parts.py. Every length is in pixels of the part pictures; scale turns them into game pixels. at: where the joint sits in the parent part's picture (for a part without parent: from the feet, the rig's origin). pivot: the same joint in the part's own picture. z: drawing order, higher in front. size: draw the part this many times larger than on the sheet (default 1). far: the far side of the body, drawn darker. Poses give each part's angle in degrees, positive clockwise; lift moves the whole body up in part pixels.",
 	"parts_dir": "res://assets/art/heroine/parts",
-	"scale": 0.26,
+	"scale": 0.272,
 	"far_tint": "#7d8088",
 	"parts": {
-		"pelvis": {"texture": "pelvis", "parent": "", "at": [ 0, -222 ], "pivot": [ 30, 10 ], "z": 10},
-		"thigh_far": {"texture": "thigh", "parent": "pelvis", "at": [ 33, 30 ], "pivot": [ 20, 14 ], "z": 4, "far": true},
-		"shin_far": {"texture": "shin", "parent": "thigh_far", "at": [ 30, 80 ], "pivot": [ 25, 12 ], "z": 3, "far": true},
-		"thigh_near": {"texture": "thigh", "parent": "pelvis", "at": [ 30, 30 ], "pivot": [ 20, 14 ], "z": 9},
-		"shin_near": {"texture": "shin", "parent": "thigh_near", "at": [ 30, 80 ], "pivot": [ 25, 12 ], "z": 8},
+		"pelvis": {"texture": "pelvis", "parent": "", "at": [ 0, -213 ], "pivot": [ 30, 10 ], "z": 10},
+		"thigh_far": {"texture": "thigh", "parent": "pelvis", "at": [ 33, 30 ], "pivot": [ 20, 14 ], "z": 3, "far": true},
+		"shin_far": {"texture": "shin", "parent": "thigh_far", "at": [ 30, 72 ], "pivot": [ 25, 12 ], "z": 4, "far": true},
+		"thigh_near": {"texture": "thigh", "parent": "pelvis", "at": [ 30, 30 ], "pivot": [ 20, 14 ], "z": 8},
+		"shin_near": {"texture": "shin", "parent": "thigh_near", "at": [ 30, 72 ], "pivot": [ 25, 12 ], "z": 9},
 		"battery": {"texture": "battery", "parent": "pelvis", "at": [ 34, 16 ], "pivot": [ 50, 12 ], "z": 11},
 		"torso": {"texture": "torso", "parent": "pelvis", "at": [ 30, 10 ], "pivot": [ 30, 80 ], "z": 7},
 		"helmet": {"texture": "helmet", "parent": "torso", "at": [ 12, 36 ], "pivot": [ 34, 36 ], "z": 5},
-		"head": {"texture": "head", "parent": "torso", "at": [ 29, 16 ], "pivot": [ 40, 72 ], "z": 6},
-		"respirator": {"texture": "respirator", "parent": "torso", "at": [ 46, 10 ], "pivot": [ 32, 22 ], "z": 12},
+		"head": {"texture": "head", "parent": "torso", "at": [ 30, 20 ], "pivot": [ 40, 72 ], "z": 6},
+		"respirator": {"texture": "respirator", "parent": "torso", "at": [ 54, 24 ], "pivot": [ 32, 22 ], "z": 13},
 		"sleeve_far": {"texture": "sleeve_far", "parent": "torso", "at": [ 24, 20 ], "pivot": [ 17, 8 ], "z": 2, "far": true},
 		"forearm_far": {"texture": "forearm_far", "parent": "sleeve_far", "at": [ 20, 58 ], "pivot": [ 9, 6 ], "z": 1, "far": true},
 		"sleeve_near": {"texture": "sleeve_near", "parent": "torso", "at": [ 28, 22 ], "pivot": [ 17, 8 ], "z": 14},
-		"gauntlet": {"texture": "gauntlet", "parent": "sleeve_near", "at": [ 20, 58 ], "pivot": [ 20, 8 ], "z": 13, "size": 1.25}
+		"gauntlet": {"texture": "gauntlet", "parent": "sleeve_near", "at": [ 20, 58 ], "pivot": [ 20, 8 ], "z": 15, "size": 1.25}
 	},
 	"strip": {
 		"part": "gauntlet",
-		"rect": [27, 52, 12, 5],
-		"glow_px": 3,
-		"glow_alpha": 0.35
+		"texture": "gauntlet_strip"
 	},
 	"cable": {
 		"from": ["battery", 10, 30],
 		"to": ["gauntlet", 14, 20],
 		"sag": 18,
 		"points": 12,
-		"width": 3,
+		"width": 4,
 		"color": "#1f1d1c",
 		"z": 12
 	},

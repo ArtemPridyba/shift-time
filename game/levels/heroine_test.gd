@@ -1,32 +1,43 @@
 extends Node2D
 ## Showcase of the heroine's doll (task Д5): the doll at game size next to the
-## 44x92 hitbox, facing right and left, and four times larger to check joints.
-## `tools/shots.sh --scene heroine_test --ticks 2` takes its picture.
+## 44x92 hitbox, facing right and left, and with the strip in the other
+## candidate time colour of D70; and up close from the parts at sheet size, to
+## check the joints:
+## `tools/shots.sh --scene heroine_test --ticks 2`.
 
 const RIG := preload("res://objects/heroine/heroine_rig.gd")
-const FLOOR_Y := 900.0
+const FLOOR_Y := 700.0
 const BACKDROP := Color("#2a2220")
 const FLOOR := Color("#151212")
 const HITBOX := Color(0.5, 0.9, 1.0, 0.8)
+## The other candidate of D70, to compare with the colour in time_hud.json.
+const OTHER_TIME_COLOUR := Color("#7FE8FF")
 
 
 func _ready() -> void:
-	_add(Vector2(260, FLOOR_Y), 1.0, 1.0, true)
-	_add(Vector2(400, FLOOR_Y), 1.0, -1.0, true)
-	_add(Vector2(560, FLOOR_Y), 2.0, 1.0, true)
-	_add(Vector2(1100, FLOOR_Y), 7.5, 1.0, false)
+	_add(Vector2(100, FLOOR_Y), 1.0, true, Color(0, 0, 0, 0))
+	_add(Vector2(200, FLOOR_Y), -1.0, true, Color(0, 0, 0, 0))
+	_add(Vector2(300, FLOOR_Y), 1.0, false, Color(0, 0, 0, 0))
+	_add(Vector2(400, FLOOR_Y), 1.0, false, OTHER_TIME_COLOUR)
+	# Up close, from the parts at sheet size: one sheet pixel per screen pixel.
+	var big: HeroineRig = RIG.new()
+	big.full_size = true
+	big.position = Vector2(900, FLOOR_Y)
+	var zoom := 1.0 / float(HeroineData.load_data().get("scale", 1.0))
+	big.scale = Vector2(zoom, zoom)
+	add_child(big)
 
 
-func _add(at: Vector2, zoom: float, facing: float, hitbox: bool) -> void:
+func _add(at: Vector2, facing: float, hitbox: bool, strip: Color) -> void:
 	var rig: HeroineRig = RIG.new()
 	rig.position = at
-	rig.scale = Vector2(zoom, zoom)
 	add_child(rig)
 	rig.set_facing(facing)
+	if strip.a > 0.0:
+		rig.strip().color = strip
 	if hitbox:
 		var box := HitboxOutline.new()
 		box.position = at
-		box.scale = Vector2(zoom, zoom)
 		box.z_index = 50
 		add_child(box)
 
