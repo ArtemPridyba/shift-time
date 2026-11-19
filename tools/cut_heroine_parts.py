@@ -49,6 +49,15 @@ SHARPEN = 50
 SHARPEN_RADIUS = 0.8
 # The colour of the drawing's dark lines and hair.
 INK = (24, 21, 20)
+# Hair gaps (the head only): a neutral grey (max - min of RGB below CHROMA)
+# lighter than LUMA, within EDGE_PX of the sheet or of a gap (a grey lighter
+# than SEED) and farther than SKIN_PX from the skin, is mixed with the sheet.
+HAIR = (38, 35, 33)
+HAIR_GAP_CHROMA = 14
+HAIR_GAP_LUMA = 48
+HAIR_GAP_SEED = 90
+HAIR_EDGE_PX = 4
+HAIR_SKIN_PX = 8
 # A pixel this far from grey is a pure colour even at the very edge.
 PURE = 260.0
 # Edge alpha below this goes clear, above 1 - this goes solid.
@@ -182,6 +191,39 @@ def _unmix(sheet: np.ndarray, dist: np.ndarray, clear: np.ndarray) -> tuple[np.n
     return alpha, colour
 
 
+def _clear_hair_gaps(rgba: np.ndarray, src: np.ndarray) -> None:
+    """Takes the grey out of the gaps between hair strands (the head only).
+
+    Those gaps are shut in by strands, so the flood never reaches them, and the
+    JPG has blurred them to a neutral grey between the hair and the sheet. A
+    neutral pixel of that grey, away from the skin, is unmixed towards the
+    hair's ink: mostly clear, dark where a strand passes.
+    """
+    r, g, b = (src[..., i] for i in range(3))
+    luma = src.mean(axis=2)
+    neutral = (src.max(axis=2) - src.min(axis=2)) < HAIR_GAP_CHROMA
+    skin = (r - b > 25) & (luma > 90)
+    near_skin = np.zeros_like(skin)
+    for dy in range(-HAIR_SKIN_PX, HAIR_SKIN_PX + 1):
+        for dx in range(-HAIR_SKIN_PX, HAIR_SKIN_PX + 1):
+            near_skin |= np.roll(np.roll(skin, dy, axis=0), dx, axis=1)
+    # Strand edges, blurred lighter than the hair, count only near the sheet:
+    # next to clear pixels or to the lighter grey of a gap.
+    seed = (rgba[..., 3] == 0) | (neutral & (luma > HAIR_GAP_SEED) & ~near_skin)
+    zone = np.zeros_like(seed)
+    for dy in range(-HAIR_EDGE_PX, HAIR_EDGE_PX + 1):
+        for dx in range(-HAIR_EDGE_PX, HAIR_EDGE_PX + 1):
+            zone |= np.roll(np.roll(seed, dy, axis=0), dx, axis=1)
+    gap = neutral & (luma > HAIR_GAP_LUMA) & (luma < BG + 4) & zone & ~near_skin & (rgba[..., 3] > 0)
+    ink = np.array(INK, dtype=np.float64)
+    grey = np.full(3, BG)
+    towards = ink - grey
+    alpha = np.clip(((src - grey) * towards).sum(axis=2) / (towards**2).sum(), 0.0, 1.0)
+    alpha = np.where(alpha < SPECK, 0.0, alpha)
+    rgba[gap, 3] = np.minimum(rgba[gap, 3], (alpha[gap] * 255).round()).astype(np.uint8)
+    rgba[gap, :3] = HAIR
+
+
 def _cut_strip(rgba: np.ndarray) -> tuple[np.ndarray, list[int]]:
     """Takes the magenta strip and its glow off the gauntlet.
 
@@ -260,6 +302,8 @@ def main() -> None:
         crop = rgba[y0 : y1 + 1, x0 : x1 + 1].copy()
         factor = factors[name]
         entry = {"sheet_rect": [x0, y0, x1 - x0 + 1, y1 - y0 + 1], "bake": factor}
+        if name == "head":
+            _clear_hair_gaps(crop, sheet[y0 : y1 + 1, x0 : x1 + 1])
         if name == "gauntlet":
             mask, entry["strip_rect"] = _cut_strip(crop)
             _bake(mask, factor).save(OUT / "gauntlet_strip.png", optimize=True)
