@@ -1,6 +1,6 @@
 {
-	"_about": "The camera on the heroine (D83, 20.11.2026). zoom: how much closer than one room pixel per screen pixel (2 = she is 188 px tall on a 1080 screen). lead_px: how far ahead of her the camera looks in the direction she faces, in room pixels; lead_speed: how fast that look turns when she turns (per second). follow_speed: how fast the camera catches up with her. overview_start_seconds: the whole room is shown this long at the start of a level (any move key ends it sooner). overview_blend_seconds: how long the camera takes between the overview and the close view. The overview is the whole room fitted into the screen; hold the 'overview' key (Tab) to see it.",
-	"zoom": 2.0,
+	"_about": "The camera on the heroine (D83, 20.11.2026). zoom: how much closer than one room pixel per screen pixel (3 = she is about 280 px tall on a 1080 screen, a quarter of it; Boris 20.11: at 2 she still looked like a bug). lead_px: how far ahead of her the camera looks in the direction she faces, in room pixels; lead_speed: how fast that look turns when she turns (per second). follow_speed: how fast the camera catches up with her. overview_start_seconds: the whole room is shown this long at the start of a level (any move key ends it sooner). overview_blend_seconds: how long the camera takes between the overview and the close view. The overview is the whole room fitted into the screen; hold the 'overview' key (Tab) to see it.",
+	"zoom": 3.0,
 	"lead_px": 140,
 	"lead_speed": 2.5,
 	"follow_speed": 8,
