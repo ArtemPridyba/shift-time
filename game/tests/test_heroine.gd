@@ -66,7 +66,9 @@ func test_strip_is_drawn_in_the_time_colour_from_data() -> void:
 	check(rig.strip() != null, "the gauntlet must have the indicator strip")
 	if rig.strip() != null:
 		check(rig.strip().color.is_equal_approx(Color.from_string(accent, Color.BLACK)), "the strip must use the time colour of time_hud.json")
-		check(rig.strip().get_parent() == rig.joint("gauntlet"), "the strip must move with the gauntlet")
+		rig.set_pose("run")
+		var gauntlet := rig.joint("gauntlet").global_transform
+		check(rig.strip().global_position.is_equal_approx(gauntlet.origin) and is_equal_approx(rig.strip().global_rotation, gauntlet.get_rotation()), "the strip must move with the gauntlet")
 	rig.free()
 
 
@@ -237,6 +239,36 @@ func test_player_scene_carries_the_doll() -> void:
 	if rig != null:
 		check(rig.pose() == "idle", "standing still, she must take the idle pose")
 	player.free()
+
+
+## D81, D84 (20.11.2026): the parts at sheet size with mipmaps, and the look
+## of the whole doll from data, checked by the data check.
+func test_parts_come_at_sheet_size_with_mipmaps_and_the_look_from_data() -> void:
+	var data := HeroineData.load_data()
+	var rig := _rig()
+	var head := rig.joint("head")
+	var picture: Sprite2D = null
+	for child in rig.get_node("Body").get_children():
+		if child.name == "Picture_head":
+			picture = child
+	check(picture != null, "the head's picture lies in the doll's group")
+	if picture != null and bool(data.get("sheet_parts", false)):
+		check(picture.texture_filter == CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS, "sheet-size parts are smoothed with mipmaps")
+		check(picture.texture.resource_path.contains("/full/"), "sheet-size parts come from parts_dir/full")
+		check(picture.global_position.is_equal_approx(head.global_position), "the picture follows its joint")
+	check(rig.get_node("Body") is CanvasGroup, "the doll is one group, so the rim falls on her outline only")
+	var look: Dictionary = data["look"]
+	check(is_equal_approx(float(rig.look_parameter("gain")), float(look["gain"])), "the gain comes from look in heroine.json")
+	var broken: Dictionary = data.duplicate(true)
+	broken["look"]["rim"] = 2.0
+	check(not HeroineData.validate(broken).is_empty(), "a rim above 1 must be reported")
+	broken = data.duplicate(true)
+	broken["look"]["rim_dir"] = [0, 0]
+	check(not HeroineData.validate(broken).is_empty(), "a rim without a direction must be reported")
+	broken = data.duplicate(true)
+	broken["sheet_parts"] = "yes"
+	check(not HeroineData.validate(broken).is_empty(), "sheet_parts that is no true or false must be reported")
+	rig.free()
 
 
 func _rig() -> HeroineRig:

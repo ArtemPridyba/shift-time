@@ -139,6 +139,9 @@ static func validate(data: Variant) -> PackedStringArray:
 		errors.append("heroine.json: parts_dir must be a res:// folder")
 	if not _positive(data.get("scale")):
 		errors.append("heroine.json: scale must be a number above 0")
+	if data.has("sheet_parts") and not data.get("sheet_parts") is bool:
+		errors.append("heroine.json: sheet_parts must be true or false")
+	errors.append_array(_validate_look(data.get("look")))
 	if Color.from_string(String(data.get("far_tint", "")), Color(0, 0, 0, 0)).a == 0.0:
 		errors.append("heroine.json: far_tint must be a colour")
 	var parts: Variant = data.get("parts")
@@ -229,6 +232,24 @@ static func validate(data: Variant) -> PackedStringArray:
 				errors.append("heroine.json: pose %s turns %s, which is not a part" % [pose, part])
 			elif not _number(entry["angles"][part]):
 				errors.append("heroine.json: pose %s: the angle of %s must be a number" % [pose, part])
+	return errors
+
+
+## Brightness and the warm rim of the whole doll (D81).
+static func _validate_look(look: Variant) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not look is Dictionary:
+		errors.append("heroine.json: look must be an object")
+		return errors
+	for key in ["gain", "gamma", "rim_px"]:
+		if not _positive(look.get(key)):
+			errors.append("heroine.json: look.%s must be above 0" % key)
+	if not _number(look.get("rim")) or float(look.get("rim")) < 0.0 or float(look.get("rim")) > 1.0:
+		errors.append("heroine.json: look.rim must be 0 to 1")
+	if Color.from_string(String(look.get("rim_color", "")), Color(0, 0, 0, 0)).a == 0.0:
+		errors.append("heroine.json: look.rim_color must be a colour like \"#ffb46a\"")
+	if not _numbers(look.get("rim_dir"), 2) or (float(look.get("rim_dir")[0]) == 0.0 and float(look.get("rim_dir")[1]) == 0.0):
+		errors.append("heroine.json: look.rim_dir must be two numbers, not both 0")
 	return errors
 
 
