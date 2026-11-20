@@ -379,70 +379,57 @@ func _draw_motes() -> void:
 
 
 ## The threads out now (D85): the head of each on its way in (0..1), how far it
-## has faded in, its start angle and how far away it starts, in the rig's
-## pixels. Empty in forward time and for the first second of Shift.
+## has faded in, and where its trip starts as an offset from the gauntlet, in
+## screen pixels. Empty in forward time and for the first second of Shift.
 func threads_now() -> Array[Dictionary]:
 	var now: Array[Dictionary] = []
 	if _rewind <= 0.0 or _threads == null or not _threads.is_inside_tree():
 		return now
-	var light: Dictionary = _data.get("light", {})
-	var spec: Dictionary = light.get("threads", {})
-	var motes: Dictionary = light.get("motes", {})
-	var to_screen := _threads.get_global_transform_with_canvas()
-	var per_px := 1.0 / maxf(absf(to_screen.get_scale().y), 0.0001)
-	var view := _local_view(to_screen)
-	var centre := device_point()
+	var spec: Dictionary = (_data.get("light", {}) as Dictionary).get("threads", {})
+	var screen := _threads.get_viewport().get_visible_rect()
+	var gauntlet := _threads.get_global_transform_with_canvas() * device_point()
 	for i in TimeThreads.count(spec, _held):
 		var trip := TimeThreads.trip(spec, i, _mote_time)
 		var fade := TimeThreads.fade_in(spec, i, _held) * _rewind
 		if float(trip["along"]) < 0.0 or fade <= 0.0:
 			continue
-		var from := TimeThreads.start_distance(centre, float(trip["angle"]), float(motes.get("flatten", 0.8)), view, float(spec.get("margin_px", 40.0)) * per_px)
-		now.append({"head": trip["along"], "fade": fade, "angle": trip["angle"], "from": from, "per_px": per_px})
+		var start := TimeThreads.start_point(screen, float(trip["edge"]), float(spec.get("margin_px", 40.0))) - gauntlet
+		now.append({"head": trip["along"], "fade": fade, "start": start})
 	return now
 
 
-## The screen in the threads' own pixels.
-func _local_view(to_screen: Transform2D) -> Rect2:
-	var screen := _threads.get_viewport().get_visible_rect()
-	var back := to_screen.affine_inverse()
-	var box := Rect2(back * screen.position, Vector2.ZERO)
-	for corner in [Vector2(screen.end.x, screen.position.y), screen.end, Vector2(screen.position.x, screen.end.y)]:
-		box = box.expand(back * corner)
-	return box
-
-
-## Under Shift soft pale threads come in from beyond the screen edge and
-## curl into the gauntlet: thick at the edge, normal near it. Each is a wide
-## faint glow, a body and a dim core, so it has no hard edge to catch the eye
-## (D85.2). They light nothing (D76).
+## Under Shift soft threads come in from beyond the screen edge straight into
+## the gauntlet (D85.3): wide and nearly clear at the edge, so they never catch
+## the eye there; narrower, brighter and sharper near the gauntlet, where the
+## eye should be. Each is a faint glow, a body and a core, one line per layer.
+## They light nothing (D76).
 func _draw_threads() -> void:
-	var light: Dictionary = _data.get("light", {})
-	var spec: Dictionary = light.get("threads", {})
-	var motes: Dictionary = light.get("motes", {})
-	var centre := device_point()
-	var layers := [
-		[float(spec.get("glow_px", 8.0)), _accent, 0.18],
-		[float(spec.get("edge_px", 3.0)), _accent.lerp(_core, 0.3), 0.3],
-		[float(spec.get("core_px", 1.0)), _core, 0.2],
-	]
+	var spec: Dictionary = (_data.get("light", {}) as Dictionary).get("threads", {})
+	var to_screen := _threads.get_global_transform_with_canvas()
+	var back := to_screen.affine_inverse()
+	var per_px := 1.0 / maxf(absf(to_screen.get_scale().y), 0.0001)
+	var gauntlet := to_screen * device_point()
+	var body := _accent.lerp(_core, 0.3)
 	for thread in threads_now():
 		var head := float(thread["head"])
-		var per_px := float(thread["per_px"])
-		var points := TimeThreads.trail(spec, float(motes.get("flatten", 0.8)), float(thread["angle"]), float(thread["from"]), head)
-		# One line per layer, so no beads where pieces would overlap; its width
-		# is the one at the middle of the trail.
+		var points := TimeThreads.trail(spec, thread["start"] as Vector2, head)
 		var line := PackedVector2Array()
-		var strength := PackedFloat32Array()
+		var glow := PackedColorArray()
+		var mid := PackedColorArray()
+		var core := PackedColorArray()
 		for point in points:
-			line.append(centre + (point["offset"] as Vector2))
-			strength.append(TimeThreads.alpha(spec, head, float(point["trail"])) * float(thread["fade"]))
-		var middle := float(points[points.size() / 2]["along"])
-		for layer: Array in layers:
-			var colours := PackedColorArray()
-			for a in strength:
-				colours.append(Color(layer[1] as Color, a * float(layer[2])))
-			_threads.draw_polyline_colors(line, colours, float(layer[0]) * per_px * TimeThreads.width_scale(spec, middle), true)
+			line.append(back * (gauntlet + (point["offset"] as Vector2)))
+			var along := float(point["along"])
+			var a := TimeThreads.alpha(spec, along, head, float(point["trail"])) * float(thread["fade"])
+			var sharp := TimeThreads.sharpness(spec, along)
+			glow.append(Color(_accent, a * 0.16))
+			mid.append(Color(body, a * (0.12 + 0.3 * sharp)))
+			core.append(Color(_core, a * 0.45 * sharp))
+		# One width per line, the one at the middle of the trail.
+		var scale := TimeThreads.width_scale(spec, float(points[points.size() / 2]["along"])) * per_px
+		_threads.draw_polyline_colors(line, glow, float(spec.get("glow_px", 8.0)) * scale, true)
+		_threads.draw_polyline_colors(line, mid, float(spec.get("edge_px", 3.0)) * scale, true)
+		_threads.draw_polyline_colors(line, core, float(spec.get("core_px", 1.0)) * scale, true)
 
 
 ## A shader uniform of the light, for tests.

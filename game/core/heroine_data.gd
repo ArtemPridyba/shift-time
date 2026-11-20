@@ -11,7 +11,7 @@ const LIGHT_KEYS: Array[String] = ["forward", "rewind", "radius_px", "tint"]
 ## Numbers of `light.motes` (D80.1), each above 0.
 const MOTE_KEYS: Array[String] = ["count", "from_min_px", "from_max_px", "size_min_px", "size_max_px", "hz", "swirl", "flatten"]
 ## Numbers of `light.threads` (D85, Д5.1), each above 0.
-const THREAD_KEYS: Array[String] = ["first", "max", "start_seconds", "every_seconds", "fade_in_seconds", "period_seconds", "travel_seconds", "trail", "pull", "swirl", "curl", "segments", "margin_px", "core_px", "edge_px", "glow_px", "edge_scale", "shrink_until", "alpha"]
+const THREAD_KEYS: Array[String] = ["first", "max", "start_seconds", "every_seconds", "fade_in_seconds", "period_seconds", "travel_seconds", "trail", "pull", "curl", "segments", "margin_px", "core_px", "edge_px", "glow_px", "edge_alpha", "sharp_at", "edge_scale", "shrink_until", "alpha"]
 ## Numbers of `light.breath` (D86): the strip breathes in forward time.
 const BREATH_KEYS: Array[String] = ["seconds", "low"]
 
@@ -374,7 +374,9 @@ static func _validate_threads(light: Dictionary) -> PackedStringArray:
 				errors.append("heroine.json: light.threads.first must be at most max")
 			if int(threads["max"]) > 32:
 				errors.append("heroine.json: light.threads.max must be at most 32")
-			for key in ["trail", "shrink_until", "alpha"]:
+			if not _number(threads.get("swirl")) or not _number(threads.get("start_edge")):
+				errors.append("heroine.json: light.threads.swirl and start_edge must be numbers")
+			for key in ["trail", "shrink_until", "alpha", "edge_alpha", "sharp_at", "start_edge"]:
 				if float(threads[key]) > 1.0:
 					errors.append("heroine.json: light.threads.%s must be at most 1" % key)
 	var breath: Variant = light.get("breath")
