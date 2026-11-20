@@ -44,7 +44,7 @@ var _overlay_time := 0.0
 var _overlay_pin := -1.0
 var _exit := 0.0
 var _material: ShaderMaterial
-## The material of the whole doll: brightness and the warm rim (D81).
+## The material of the whole doll: her brightness (D81).
 var _look: ShaderMaterial
 ## [picture, part, scale]: every picture in the group and the joint it follows.
 var _flat: Array = []
@@ -75,7 +75,7 @@ func build(data: Dictionary) -> void:
 	_joints.clear()
 	_sprites.clear()
 	_full = full_size or bool(data.get("sheet_parts", false))
-	# One group, so the look shader sees her outline and not her parts (D81).
+	# One group, so the look shader draws her as one picture (D81).
 	var group := CanvasGroup.new()
 	_look = ShaderMaterial.new()
 	_look.shader = LOOK_SHADER
@@ -277,23 +277,13 @@ func _update_light(delta: float) -> void:
 	_update_look()
 
 
-## Brightness and the warm rim of `look` in heroine.json (D81). The rim's width
-## is in room pixels, so it keeps its size on her at every camera zoom.
+## Brightness of `look` in heroine.json (D81): she is never a black cut-out.
 func _update_look() -> void:
 	if _look == null:
 		return
 	var look: Dictionary = _data.get("look", {})
 	_look.set_shader_parameter("gain", float(look.get("gain", 1.0)))
 	_look.set_shader_parameter("gamma", float(look.get("gamma", 1.0)))
-	_look.set_shader_parameter("rim", float(look.get("rim", 0.0)))
-	_look.set_shader_parameter("rim_color", Color.from_string(String(look.get("rim_color", "#ffb46a")), Color.ORANGE))
-	var to_screen := Transform2D.IDENTITY
-	if is_inside_tree():
-		to_screen = get_viewport().get_final_transform() * get_global_transform_with_canvas()
-	var towards := _vec(look.get("rim_dir")).normalized()
-	var screen_dir := to_screen.basis_xform(towards).normalized()
-	var width := float(look.get("rim_px", 0.0)) * absf(to_screen.get_scale().y)
-	_look.set_shader_parameter("rim_offset", screen_dir * width)
 
 
 ## A shader uniform of the whole doll's look, for tests.

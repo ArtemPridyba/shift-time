@@ -235,21 +235,15 @@ static func validate(data: Variant) -> PackedStringArray:
 	return errors
 
 
-## Brightness and the warm rim of the whole doll (D81).
+## Brightness of the whole doll (D81).
 static func _validate_look(look: Variant) -> PackedStringArray:
 	var errors := PackedStringArray()
 	if not look is Dictionary:
 		errors.append("heroine.json: look must be an object")
 		return errors
-	for key in ["gain", "gamma", "rim_px"]:
+	for key in ["gain", "gamma"]:
 		if not _positive(look.get(key)):
 			errors.append("heroine.json: look.%s must be above 0" % key)
-	if not _number(look.get("rim")) or float(look.get("rim")) < 0.0 or float(look.get("rim")) > 1.0:
-		errors.append("heroine.json: look.rim must be 0 to 1")
-	if Color.from_string(String(look.get("rim_color", "")), Color(0, 0, 0, 0)).a == 0.0:
-		errors.append("heroine.json: look.rim_color must be a colour like \"#ffb46a\"")
-	if not _numbers(look.get("rim_dir"), 2) or (float(look.get("rim_dir")[0]) == 0.0 and float(look.get("rim_dir")[1]) == 0.0):
-		errors.append("heroine.json: look.rim_dir must be two numbers, not both 0")
 	return errors
 
 

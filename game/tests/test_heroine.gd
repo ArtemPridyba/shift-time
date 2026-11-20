@@ -256,15 +256,12 @@ func test_parts_come_at_sheet_size_with_mipmaps_and_the_look_from_data() -> void
 		check(picture.texture_filter == CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS, "sheet-size parts are smoothed with mipmaps")
 		check(picture.texture.resource_path.contains("/full/"), "sheet-size parts come from parts_dir/full")
 		check(picture.global_position.is_equal_approx(head.global_position), "the picture follows its joint")
-	check(rig.get_node("Body") is CanvasGroup, "the doll is one group, so the rim falls on her outline only")
+	check(rig.get_node("Body") is CanvasGroup, "the doll is one group, brightened as one picture")
 	var look: Dictionary = data["look"]
 	check(is_equal_approx(float(rig.look_parameter("gain")), float(look["gain"])), "the gain comes from look in heroine.json")
 	var broken: Dictionary = data.duplicate(true)
-	broken["look"]["rim"] = 2.0
-	check(not HeroineData.validate(broken).is_empty(), "a rim above 1 must be reported")
-	broken = data.duplicate(true)
-	broken["look"]["rim_dir"] = [0, 0]
-	check(not HeroineData.validate(broken).is_empty(), "a rim without a direction must be reported")
+	broken["look"]["gain"] = 0
+	check(not HeroineData.validate(broken).is_empty(), "gain 0 must be reported")
 	broken = data.duplicate(true)
 	broken["sheet_parts"] = "yes"
 	check(not HeroineData.validate(broken).is_empty(), "sheet_parts that is no true or false must be reported")
