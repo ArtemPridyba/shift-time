@@ -574,6 +574,7 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 	_check_range(errors, rewind, "rewind", "fade_seconds", 0.0, 10.0, true)
 	_check_range(errors, rewind, "rewind", "world_saturation", 0.0, 1.0)
 	_check_range(errors, rewind, "rewind", "world_brightness", 0.0, 1.0)
+	_check_range(errors, rewind, "rewind", "world_fade_seconds", 0.0, 60.0, true)
 	var particles: Dictionary = data["particles"]
 	_check_range(errors, particles, "particles", "count", 0.0, 32.0)
 	_check_range(errors, particles, "particles", "cycle_seconds", 0.0, 60.0, true)

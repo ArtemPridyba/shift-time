@@ -203,6 +203,7 @@ func test_hud_follows_time_manager_in_the_room() -> void:
 	check(hud.get_node_or_null("Edges") == null, "the glow along the screen edges must be gone (D85)")
 	await _ticks(10)
 	check(hud.world_faded(), "the world must fade under Shift (D86)")
+	check(hud.world_fade() < 0.2, "the world must fade slowly, not at once (D85.5), got %f" % hud.world_fade())
 	var vignette: Dictionary = Content.time_hud()["vignette"]
 	var early := hud.vignette_strength()
 	check(early > float(vignette["forward"]), "under Shift the frame's edges must start to darken, got %f" % early)

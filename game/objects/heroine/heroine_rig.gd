@@ -406,38 +406,60 @@ func threads_now() -> Array[Dictionary]:
 	return now
 
 
-## Under Shift soft threads come in from beyond the screen edge straight into
-## the gauntlet (D85.3): wide and nearly clear at the edge, so they never catch
-## the eye there; narrower, brighter and sharper near the gauntlet, where the
-## eye should be. Each is a faint glow, a body and a core, one line per layer.
-## They light nothing (D76).
+## Under Shift soft threads whirl in from beyond the screen edge, clockwise,
+## into the gauntlet (D85.5): very wide and faint at the edge, narrowing on
+## the way, sharp only near the gauntlet, where the eye should be. Each is a
+## feathered strip (clear at its sides) with a thin core that shows near the
+## gauntlet. They light nothing (D76).
 func _draw_threads() -> void:
 	var spec: Dictionary = (_data.get("light", {}) as Dictionary).get("threads", {})
 	var to_screen := _threads.get_global_transform_with_canvas()
 	var back := to_screen.affine_inverse()
 	var per_px := 1.0 / maxf(absf(to_screen.get_scale().y), 0.0001)
 	var gauntlet := to_screen * device_point()
-	var body := _accent.lerp(_core, 0.3)
+	var soft := _accent.lerp(_core, 0.2)
+	var item := _threads.get_canvas_item()
 	for thread in threads_now():
 		var head := float(thread["head"])
 		var points := TimeThreads.trail(spec, thread["start"] as Vector2, head, float(thread["swirl"]))
-		var line := PackedVector2Array()
-		var glow := PackedColorArray()
-		var mid := PackedColorArray()
+		var centres := PackedVector2Array()
+		var wide := PackedFloat32Array()
+		var thin := PackedFloat32Array()
+		var body := PackedColorArray()
 		var core := PackedColorArray()
 		for point in points:
-			line.append(back * (gauntlet + (point["offset"] as Vector2)))
+			centres.append(back * (gauntlet + (point["offset"] as Vector2)))
 			var along := float(point["along"])
 			var a := TimeThreads.alpha(spec, along, head, float(point["trail"])) * float(thread["fade"])
 			var sharp := TimeThreads.sharpness(spec, along)
-			glow.append(Color(_accent, a * 0.3))
-			mid.append(Color(body, a * (0.12 + 0.3 * sharp)))
-			core.append(Color(_core, a * 0.45 * sharp))
-		# One width per line, the one at the middle of the trail.
-		var scale := TimeThreads.width_scale(spec, float(points[points.size() / 2]["along"])) * per_px
-		_threads.draw_polyline_colors(line, glow, float(spec.get("glow_px", 8.0)) * scale, true)
-		_threads.draw_polyline_colors(line, mid, float(spec.get("edge_px", 3.0)) * scale, true)
-		_threads.draw_polyline_colors(line, core, float(spec.get("core_px", 1.0)) * scale, true)
+			wide.append(TimeThreads.width_px(spec, along) * per_px)
+			thin.append(float(spec.get("core_px", 1.0)) * 2.0 * per_px)
+			body.append(Color(soft, a * 0.8))
+			core.append(Color(_core, a * 0.7 * sharp))
+		_feathered_strip(item, centres, wide, body)
+		_feathered_strip(item, centres, thin, core)
+
+
+## A strip along `centres`, `widths` wide, coloured `colours` along its middle
+## and clear at both sides, so it has no hard edge.
+func _feathered_strip(item: RID, centres: PackedVector2Array, widths: PackedFloat32Array, colours: PackedColorArray) -> void:
+	var count := centres.size()
+	if count < 2:
+		return
+	var points := PackedVector2Array()
+	var tints := PackedColorArray()
+	var indices := PackedInt32Array()
+	for j in count:
+		var ahead := centres[mini(j + 1, count - 1)] - centres[maxi(j - 1, 0)]
+		var side := Vector2(-ahead.y, ahead.x).normalized() * widths[j] * 0.5
+		var clear := Color(colours[j], 0.0)
+		points.append_array([centres[j] - side, centres[j], centres[j] + side])
+		tints.append_array([clear, colours[j], clear])
+		if j > 0:
+			var p := (j - 1) * 3
+			var q := j * 3
+			indices.append_array([p, p + 1, q, p + 1, q + 1, q, p + 1, p + 2, q + 1, p + 2, q + 2, q + 1])
+	RenderingServer.canvas_item_add_triangle_array(item, indices, points, tints)
 
 
 ## A shader uniform of the light, for tests.

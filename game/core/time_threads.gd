@@ -7,9 +7,9 @@ extends RefCounted
 ## Each trip starts from its own point just beyond the screen edge, spread
 ## evenly round the whole edge by the golden ratio, wherever the heroine
 ## stands, and fixed on the screen for the whole trip (D85.3: as many from the
-## right as from the left). It swirls into the gauntlet (D85.4: the whirl is
-## the point), turning the way that keeps it on the screen: a thread that has
-## come in never goes out and back in (`choose_swirl`).
+## right as from the left). It whirls clockwise into the gauntlet (D85.4,
+## D85.5: the whirl is the point), turning less where a full turn would carry
+## it off the screen and back in (`choose_swirl`).
 ##
 ## They build up while Shift is held: none for `start_seconds`, then `first`
 ## threads, then one more every `every_seconds`, never more than `max`. Each
@@ -85,16 +85,15 @@ static func offset(spec: Dictionary, start: Vector2, along: float, swirl: float)
 
 
 ## The turn for a trip from `start` (offset from the gauntlet at `gauntlet`,
-## both in screen pixels): `swirl` of the data, clockwise or anticlockwise,
-## whichever keeps the thread on `screen` once it is in; if neither does, a
-## smaller turn. Chosen once per trip, so a thread never changes its way.
+## both in screen pixels): always clockwise (D85.5), `swirl` of the data, or
+## less where the full turn would carry the thread off `screen` and back.
+## Chosen once per trip, so a thread never changes its way.
 static func choose_swirl(spec: Dictionary, start: Vector2, gauntlet: Vector2, screen: Rect2) -> float:
-	var swirl := float(spec.get("swirl", 2.0))
-	for attempt in 5:
-		for sign in [1.0, -1.0]:
-			if stays_on_screen(spec, start, gauntlet, screen, swirl * sign):
-				return swirl * sign
-		swirl *= 0.6
+	var swirl := absf(float(spec.get("swirl", 2.0)))
+	for attempt in 8:
+		if stays_on_screen(spec, start, gauntlet, screen, swirl):
+			return swirl
+		swirl *= 0.75
 	return 0.0
 
 
@@ -108,6 +107,12 @@ static func stays_on_screen(spec: Dictionary, start: Vector2, gauntlet: Vector2,
 		elif inside:
 			return false
 	return true
+
+
+## Width of a thread at `along`, in screen pixels: `edge_px` near the
+## gauntlet, `edge_scale` times that at the screen edge.
+static func width_px(spec: Dictionary, along: float) -> float:
+	return float(spec.get("edge_px", 4.0)) * width_scale(spec, along)
 
 
 ## Width of a thread at `along` as a multiple of its normal width: `edge_scale`
@@ -140,7 +145,7 @@ static func alpha(spec: Dictionary, along: float, head: float, trail_k: float) -
 	var sharp := sharpness(spec, along)
 	var near := lerpf(float(spec.get("edge_alpha", 0.3)), 1.0, sharp)
 	# A wide soft thread melts at its head too, so it never ends in a blunt cut.
-	var tip := 1.0 - (1.0 - sharp) * 0.8 * smoothstep(0.75, 1.0, trail_k)
+	var tip := 1.0 - (1.0 - sharp) * smoothstep(0.7, 1.0, trail_k)
 	return float(spec.get("alpha", 0.7)) * trail_k * near * tip * gone
 
 

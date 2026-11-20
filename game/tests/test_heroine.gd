@@ -351,6 +351,7 @@ func test_threads_come_from_beyond_the_screen_edge_thick_and_thin_out() -> void:
 			check(TimeThreads.offset(spec, from, 1.0, swirl).length() < 0.001, "thread %d must end in the gauntlet" % i)
 			# A whirl into the gauntlet (D85.4) that closes in and never leaves the screen once in.
 			check(TimeThreads.stays_on_screen(spec, from, gauntlet, screen, swirl), "thread %d from %s must not leave the screen once it is in" % [i, from])
+			check(swirl >= 0.0, "every thread whirls clockwise (D85.5)")
 			var last := INF
 			for s in range(1, 41):
 				var at := TimeThreads.offset(spec, from, float(s) / 40.0, swirl)
@@ -358,6 +359,7 @@ func test_threads_come_from_beyond_the_screen_edge_thick_and_thin_out() -> void:
 				last = at.length()
 		check(turned >= 8, "most threads must whirl in, not fly straight: %d of 12 at %s" % [turned, gauntlet])
 	check(is_equal_approx(TimeThreads.width_scale(spec, 0.0), float(spec["edge_scale"])), "at the screen edge a thread is edge_scale times wider")
+	check(TimeThreads.width_px(spec, 0.0) >= 40.0, "at the screen edge a thread is really wide (D85.5), got %.1f px" % TimeThreads.width_px(spec, 0.0))
 	check(is_equal_approx(TimeThreads.width_scale(spec, 1.0), 1.0), "near the gauntlet a thread has its normal width")
 	check(TimeThreads.width_scale(spec, 0.3) < TimeThreads.width_scale(spec, 0.1), "a thread narrows on its way in")
 	check(TimeThreads.alpha(spec, 0.0, 0.5, 1.0) < TimeThreads.alpha(spec, 0.8, 0.5, 1.0) * 0.5, "a thread is nearly clear at the edge and bright near the gauntlet")

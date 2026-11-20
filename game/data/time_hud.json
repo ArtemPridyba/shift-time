@@ -17,7 +17,8 @@
 		"sweep_hz": 1.6,
 		"fade_seconds": 0.25,
 		"world_saturation": 0.7,
-		"world_brightness": 0.95
+		"world_brightness": 0.95,
+		"world_fade_seconds": 2.0
 	},
 	"particles": {
 		"count": 9,

@@ -46,6 +46,8 @@ var _vignette := {}
 ## How dark the frame's edges are now, and how long Shift has been held.
 var _vignette_now := 0.0
 var _rewind_held := 0.0
+var _world_fade := 0.0
+var _world_fade_seconds := 2.0
 
 
 func _ready() -> void:
@@ -79,6 +81,7 @@ func _process(delta: float) -> void:
 		position = Vector2(_offset.x * facing, _offset.y)
 	if parent != null and parent.has_method("show_time_light"):
 		parent.call("show_time_light", state.glow(), state.rewind_amount)
+	_world_fade = move_toward(_world_fade, 1.0 if state.is_rewinding() else 0.0, delta / _world_fade_seconds)
 	_update_fade()
 	_update_vignette(delta)
 	queue_redraw()
@@ -153,6 +156,7 @@ func _read_config(config: Dictionary) -> void:
 ## colour (see `time_fade.gdshader`). The heroine is drawn after it.
 func _build_fade(config: Dictionary) -> void:
 	var rewind := config.get("rewind", {}) as Dictionary
+	_world_fade_seconds = maxf(float(rewind.get("world_fade_seconds", 2.0)), 0.01)
 	_fade = Node2D.new()
 	_fade.name = "WorldFade"
 	_fade.top_level = true
@@ -172,8 +176,8 @@ func _build_fade(config: Dictionary) -> void:
 
 
 func _update_fade() -> void:
-	_fade_material.set_shader_parameter("amount", state.rewind_amount)
-	_fade_rect.visible = state.rewind_amount > 0.001
+	_fade_material.set_shader_parameter("amount", world_fade())
+	_fade_rect.visible = world_fade() > 0.001
 	if _fade_rect.visible and is_inside_tree():
 		var screen := get_viewport().get_visible_rect()
 		_fade.global_transform = get_viewport().get_canvas_transform().affine_inverse()
@@ -214,12 +218,20 @@ func _update_vignette(delta: float) -> void:
 	var low := float(_vignette.get("forward", 0.0))
 	var high := float(_vignette.get("rewind", 0.0))
 	_rewind_held = _rewind_held + delta if state.is_rewinding() else 0.0
-	var target := lerpf(low, high, clampf(_rewind_held / maxf(float(_vignette.get("ramp_seconds", 10.0)), 0.001), 0.0, 1.0))
+	# Eased in: the first seconds barely change it, nothing darkens at once.
+	var ramp := clampf(_rewind_held / maxf(float(_vignette.get("ramp_seconds", 10.0)), 0.001), 0.0, 1.0)
+	var target := lerpf(low, high, ramp * ramp * (3.0 - 2.0 * ramp))
 	if target >= _vignette_now:
 		_vignette_now = target
 	else:
 		_vignette_now = move_toward(_vignette_now, target, absf(high - low) * delta / maxf(float(_vignette.get("release_seconds", 1.0)), 0.001))
 	_vignette_material.set_shader_parameter("strength", _vignette_now)
+
+
+## How far the world has faded (0..1): it comes in slowly over
+## `rewind.world_fade_seconds` of Shift, so nothing darkens at once (D85.5).
+func world_fade() -> float:
+	return smoothstep(0.0, 1.0, _world_fade)
 
 
 ## A parameter of the world fade, for tests.
