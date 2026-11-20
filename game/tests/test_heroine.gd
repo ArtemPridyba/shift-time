@@ -367,7 +367,19 @@ func test_threads_come_from_beyond_the_screen_edge_thick_and_thin_out() -> void:
 	var trail := TimeThreads.trail(spec, Vector2(800, 0), 0.5, 2.0)
 	check(trail.size() == int(spec["segments"]) + 1, "a trail has segments + 1 points")
 	check(TimeThreads.alpha(spec, 0.5, 0.5, 1.0) > TimeThreads.alpha(spec, 0.5, 0.5, 0.2), "a thread fades toward its tail")
-	check(TimeThreads.alpha(spec, 1.0, 1.0, 1.0) < 0.01, "a thread is gone once it enters the gauntlet")
+	check(TimeThreads.alpha(spec, 1.0, 1.0, 1.0) < 0.01, "a part of a thread is gone once it reaches the gauntlet's centre")
+	# The head reaches the centre first; the rest flows in after it (D85.7).
+	var arrived := TimeThreads.trail(spec, Vector2(800, 0), 1.0, 2.0)
+	check(TimeThreads.alpha(spec, float(arrived[arrived.size() / 2]["along"]), 1.0, 0.5) > 0.05, "when the head is in, the rest of the thread is still on its way")
+	var period := float(spec["period_seconds"])
+	var whole := 1.0 + float(spec["trail"])
+	var seen_whole := false
+	for s in 200:
+		var head := float(TimeThreads.trip(spec, 0, float(s) * period / 200.0)["along"])
+		if head > 1.0:
+			seen_whole = true
+		check(head <= whole + 0.001, "the head never goes past the tail's way in, got %f" % head)
+	check(seen_whole, "the trip goes on after the head is in, until the tail is in")
 	var broken: Dictionary = data.duplicate(true)
 	broken["light"]["threads"]["max"] = 0
 	check(not HeroineData.validate(broken).is_empty(), "no threads at all must be reported")

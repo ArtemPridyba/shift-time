@@ -42,8 +42,9 @@ static func fade_in(spec: Dictionary, index: int, held: float) -> float:
 
 
 ## Thread `index` at her time `t` (seconds, always forward): where its head is
-## on the way in (`along`, 0 at the screen edge, 1 in the gauntlet; -1 while
-## it rests between two trips) and where round the screen edge this trip
+## on the way in (`along`, 0 at the screen edge, 1 in the gauntlet's centre,
+## up to 1 + `trail` while the rest of it flows in after the head, D85.7; -1
+## while it rests between two trips) and where round the screen edge this trip
 ## starts (`edge`, 0..1 along the edge clockwise from the top left corner).
 static func trip(spec: Dictionary, index: int, t: float) -> Dictionary:
 	var period := maxf(float(spec.get("period_seconds", 3.0)), 0.001)
@@ -53,7 +54,8 @@ static func trip(spec: Dictionary, index: int, t: float) -> Dictionary:
 	var local := (u - float(cycle)) * period
 	# Every trip of every thread takes the next place round the edge.
 	var edge := fposmod(float(spec.get("start_edge", 0.13)) + GOLDEN_RATIO * float(index * 7 + cycle * 61), 1.0)
-	return {"along": local / travel if local <= travel else -1.0, "edge": edge, "cycle": cycle}
+	var whole := 1.0 + float(spec.get("trail", 0.4))
+	return {"along": local / travel * whole if local <= travel else -1.0, "edge": edge, "cycle": cycle}
 
 
 ## The point `edge` (0..1) round the edge of `screen`, clockwise from the top
@@ -139,9 +141,11 @@ static func trail(spec: Dictionary, start: Vector2, head: float, swirl: float) -
 
 ## How bright a thread is at a point of its trail that is `along` its way:
 ## nearly clear at the screen edge (`edge_alpha` of full), full near the
-## gauntlet, fading toward the tail, gone as its head enters the gauntlet.
+## gauntlet, fading toward the tail, gone only in the gauntlet's centre.
 static func alpha(spec: Dictionary, along: float, head: float, trail_k: float) -> float:
-	var gone := 1.0 - smoothstep(0.86, 1.0, head)
+	# Each part of a thread vanishes only in the gauntlet's centre: the head goes
+	# in first, the tail last, never the whole thread at once (D85.7).
+	var gone := 1.0 - smoothstep(0.96, 1.0, along)
 	var sharp := sharpness(spec, along)
 	var near := lerpf(float(spec.get("edge_alpha", 0.3)), 1.0, sharp)
 	# A wide soft thread melts at its head too, so it never ends in a blunt cut.
