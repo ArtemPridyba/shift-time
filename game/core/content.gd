@@ -533,15 +533,14 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 	if not errors.is_empty():
 		return errors
 	var colors: Dictionary = data["colors"]
-	for key: String in ["accent", "plate", "pin"]:
+	for key: String in ["accent", "glyph"]:
 		if not colors.get(key) is String or not Color.html_is_valid(colors[key]):
 			errors.append("time_hud.json: 'colors.%s' must be a color like \"#7FE8FF\"" % key)
 	var device: Dictionary = data["device"]
-	for key: String in ["plate_width_px", "plate_height_px", "glyph_height_px", "glow_radius_px"]:
+	for key: String in ["glyph_height_px", "stroke_px"]:
 		_check_range(errors, device, "device", key, 0.0, 1000.0, true)
 	_check_range(errors, device, "device", "offset_x_px", -1000.0, 1000.0)
 	_check_range(errors, device, "device", "offset_y_px", -1000.0, 1000.0)
-	_check_range(errors, device, "device", "glow_alpha", 0.0, 1.0)
 	var rewind: Dictionary = data["rewind"]
 	_check_range(errors, rewind, "rewind", "flicker_hz", 0.0, 60.0, true)
 	_check_range(errors, rewind, "rewind", "flicker_depth", 0.0, 1.0)

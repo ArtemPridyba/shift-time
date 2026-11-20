@@ -206,7 +206,7 @@ func test_hud_follows_time_manager_in_the_room() -> void:
 	await _tree.process_frame
 
 
-func test_device_stays_on_the_hero_and_flips_with_facing() -> void:
+func test_device_sits_on_the_gauntlet_and_is_never_mirrored() -> void:
 	await _settle()
 	var room: Node = (load(ROOM_PATH) as PackedScene).instantiate()
 	_tree.root.add_child(room)
@@ -215,15 +215,46 @@ func test_device_stays_on_the_hero_and_flips_with_facing() -> void:
 	var player := room.get_node_or_null("Player") as Player
 	check(hud != null and player != null, "the room must have a player with a device")
 	if hud != null and player != null:
-		var offset_x := float((Content.time_hud()["device"] as Dictionary)["offset_x_px"])
+		# She lands and settles first; the device reads the arm in _process,
+		# after the physics tick, so the check waits one more frame.
+		await _ticks(40)
 		await _tree.process_frame
-		check(is_equal_approx(hud.position.x, offset_x * player.facing()), "the device must sit on the side the hero faces")
+		check(hud.position.distance_to(player.device_point()) < 0.01, "the device must sit on the gauntlet strip: %s against %s" % [hud.position, player.device_point()])
+		var right_x := hud.position.x
 		Input.action_press("move_left")
 		await _ticks(5)
 		Input.action_release("move_left")
+		await _ticks(40)
 		await _tree.process_frame
 		check(player.facing() < 0.0, "the hero must face left after walking left")
-		check(is_equal_approx(hud.position.x, -offset_x), "the device must move to the left side with the hero")
+		check(absf(hud.position.x + right_x) < 0.5, "turning left must put the device on the other side: %.1f and %.1f" % [right_x, hud.position.x])
+		check(hud.position.distance_to(player.device_point()) < 0.01, "facing left, the device must still sit on the strip")
+		check(hud.get_global_transform().get_scale().x > 0.0, "the device must never be mirrored")
+		check(hud.z_index > 15, "the device must draw above the doll")
+	room.queue_free()
+	await _tree.process_frame
+
+
+func test_device_lights_only_the_heroine_and_brighter_in_rewind() -> void:
+	await _settle()
+	var room: Node = (load(ROOM_PATH) as PackedScene).instantiate()
+	_tree.root.add_child(room)
+	await _ticks(3)
+	var player := room.get_node_or_null("Player") as Player
+	check(player != null, "the room must have a player")
+	if player != null:
+		check(player.get_node_or_null("TimeHud/Glow") == null, "no halo around the device: its light falls only on her (D76)")
+		var rig := player.rig()
+		var forward := rig.light_strength()
+		check(forward > 0.0, "in forward time the gauntlet lights her weakly")
+		check(rig.wave_strength() == 0.0, "no waves over her body in forward time")
+		Input.action_press("rewind")
+		await _ticks(30)
+		check(rig.light_strength() > forward, "under Shift the light must be stronger: %.2f then %.2f" % [forward, rig.light_strength()])
+		check(rig.wave_strength() > 0.0, "under Shift waves must run over her body")
+		Input.action_release("rewind")
+		await _ticks(30)
+		check(rig.wave_strength() == 0.0, "after the release the waves must fade")
 	room.queue_free()
 	await _tree.process_frame
 
