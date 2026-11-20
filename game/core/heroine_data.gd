@@ -247,6 +247,30 @@ static func _validate_look(look: Variant) -> PackedStringArray:
 	return errors
 
 
+## The rings of the time wave in the room (D67.1), in pixels from the
+## gauntlet: the same rings as on her body (`heroine_light.gdshader`: a band
+## where fract(d / wave_px + phase) is below wave_width, its middle at half of
+## it), but only every `room_every`-th and only within `room_reach_px`. So a
+## ring of the room runs on into a ring of her body and both close in on the
+## gauntlet together. `total` is the wave phase not wrapped to 0..1, so a ring
+## keeps its place in the sequence as it moves.
+static func room_wave_radii(light: Dictionary, total: float) -> PackedFloat32Array:
+	var radii := PackedFloat32Array()
+	var step := float(light.get("wave_px", 16.0))
+	var middle := float(light.get("wave_width", 0.25)) * 0.5
+	var every := maxi(int(light.get("room_every", 1)), 1)
+	var reach := float(light.get("room_reach_px", 0.0))
+	var n := ceili(total - middle)
+	while true:
+		var radius := step * (float(n) + middle - total)
+		if radius > reach:
+			break
+		if radius >= 0.0 and posmod(n, every) == 0:
+			radii.append(radius)
+		n += 1
+	return radii
+
+
 ## The air, the overlays, the walk out of the doorway and the light.
 static func _validate_motion(data: Dictionary, poses: Dictionary) -> PackedStringArray:
 	var errors := PackedStringArray()
@@ -293,9 +317,13 @@ static func _validate_motion(data: Dictionary, poses: Dictionary) -> PackedStrin
 		for key in LIGHT_KEYS:
 			if not _number(light.get(key)) or float(light.get(key)) < 0.0:
 				errors.append("heroine.json: light.%s must be 0 or more" % key)
-		for key in ["radius_px", "wave_px"]:
+		for key in ["radius_px", "wave_px", "room_reach_px", "room_width_px"]:
 			if not _positive(light.get(key)):
 				errors.append("heroine.json: light.%s must be above 0" % key)
+		if not _number(light.get("room_every")) or float(light.get("room_every")) < 1.0 or float(light.get("room_every")) != floorf(float(light.get("room_every"))):
+			errors.append("heroine.json: light.room_every must be a whole number, 1 or more")
+		if not _number(light.get("room_alpha")) or float(light.get("room_alpha")) < 0.0 or float(light.get("room_alpha")) > 1.0:
+			errors.append("heroine.json: light.room_alpha must be 0 to 1")
 		if _number(light.get("wave_width")) and float(light.get("wave_width")) > 1.0:
 			errors.append("heroine.json: light.wave_width must be at most 1")
 	return errors

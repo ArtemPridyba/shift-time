@@ -52,6 +52,10 @@ var _accent := Color("#7FE8FF")
 var _glow := 1.0
 var _rewind := 0.0
 var _wave_phase := 0.0
+## The wave phase not wrapped: the rings of the room keep their order (D67.1).
+var _wave_total := 0.0
+## The rings of the time wave in the room, drawn under the doll (D67.1).
+var _room_waves: Node2D
 
 
 ## The showcase sets this before adding the rig: the parts at sheet size from
@@ -75,6 +79,10 @@ func build(data: Dictionary) -> void:
 	_joints.clear()
 	_sprites.clear()
 	_full = full_size or bool(data.get("sheet_parts", false))
+	_room_waves = Node2D.new()
+	_room_waves.name = "RoomWaves"
+	_room_waves.draw.connect(_draw_room_waves)
+	add_child(_room_waves)
 	# One group, so the look shader draws her as one picture (D81).
 	var group := CanvasGroup.new()
 	_look = ShaderMaterial.new()
@@ -263,7 +271,10 @@ func _update_light(delta: float) -> void:
 		return
 	var light: Dictionary = _data.get("light", {})
 	if _rewind > 0.0:
-		_wave_phase = fposmod(_wave_phase + delta * float(light.get("wave_hz", 0.0)), 1.0)
+		_wave_total += delta * float(light.get("wave_hz", 0.0))
+		_wave_phase = fposmod(_wave_total, 1.0)
+	if _room_waves != null:
+		_room_waves.queue_redraw()
 	var to_canvas := get_global_transform() if is_inside_tree() else transform
 	var scale_px := absf(to_canvas.get_scale().y)
 	_material.set_shader_parameter("light_pos", to_canvas * device_point())
@@ -289,6 +300,29 @@ func _update_look() -> void:
 ## A shader uniform of the whole doll's look, for tests.
 func look_parameter(parameter: StringName) -> Variant:
 	return _look.get_shader_parameter(parameter)
+
+
+## The radii of the rings in the room now, in the rig's pixels; empty in
+## forward time (D67.1).
+func room_wave_radii() -> PackedFloat32Array:
+	if _rewind <= 0.0:
+		return PackedFloat32Array()
+	return HeroineData.room_wave_radii(_data.get("light", {}), _wave_total)
+
+
+## Under Shift thin rings of the time colour close in on the gauntlet from the
+## room, fading with the distance; they are no light and light nothing (D76).
+func _draw_room_waves() -> void:
+	var light: Dictionary = _data.get("light", {})
+	var reach := float(light.get("room_reach_px", 1.0))
+	var alpha := float(light.get("room_alpha", 0.0)) * _rewind
+	var width := float(light.get("room_width_px", 1.0))
+	var centre := device_point()
+	for radius in room_wave_radii():
+		var fade := 1.0 - smoothstep(reach * 0.4, reach, radius)
+		var colour := Color(_accent, alpha * fade)
+		if colour.a > 0.0 and radius > width:
+			_room_waves.draw_arc(centre, radius, 0.0, TAU, 96, colour, width, true)
 
 
 ## A shader uniform of the light, for tests.

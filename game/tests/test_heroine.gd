@@ -268,6 +268,36 @@ func test_parts_come_at_sheet_size_with_mipmaps_and_the_look_from_data() -> void
 	rig.free()
 
 
+## D67.1 (20.11.2026): the rings in the room are the rings of her body
+## carried on, and close in on the gauntlet with them; none in forward time.
+func test_room_rings_continue_the_body_rings_and_close_in() -> void:
+	var data := HeroineData.load_data()
+	var light: Dictionary = data["light"]
+	var step := float(light["wave_px"])
+	var middle := float(light["wave_width"]) * 0.5
+	var radii := HeroineData.room_wave_radii(light, 2.3)
+	check(radii.size() > 0, "there are rings in the room")
+	for radius in radii:
+		check(absf(fposmod(radius / step + fposmod(2.3, 1.0), 1.0) - middle) < 0.001, "a ring at %.1f px lies on the middle of a body band" % radius)
+		check(radius <= float(light["room_reach_px"]), "no ring beyond the reach")
+	if radii.size() > 1:
+		check(is_equal_approx(radii[1] - radii[0], step * float(light["room_every"])), "rings are every room_every-th band apart")
+	var later := HeroineData.room_wave_radii(light, 2.4)
+	check(later[0] < radii[0] or later.size() > radii.size(), "as the phase grows the rings close in on the gauntlet")
+	var rig := _rig()
+	rig.set_time_light(1.0, 0.0)
+	check(rig.room_wave_radii().is_empty(), "no rings in forward time")
+	rig.set_time_light(1.0, 1.0)
+	check(not rig.room_wave_radii().is_empty(), "rings under Shift")
+	var broken: Dictionary = data.duplicate(true)
+	broken["light"]["room_every"] = 0.5
+	check(not HeroineData.validate(broken).is_empty(), "room_every below 1 must be reported")
+	broken = data.duplicate(true)
+	broken["light"]["room_alpha"] = 2
+	check(not HeroineData.validate(broken).is_empty(), "room_alpha above 1 must be reported")
+	rig.free()
+
+
 func _rig() -> HeroineRig:
 	var rig := HeroineRig.new()
 	rig.build(HeroineData.load_data())
