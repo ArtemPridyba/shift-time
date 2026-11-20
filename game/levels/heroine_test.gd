@@ -7,7 +7,7 @@ extends Node2D
 ## halfway). Bottom: the time device on the gauntlet three times as large and
 ## 1:1, facing right and left (the arrows are never mirrored), and the strip in
 ## the other candidate time colour of D70. Under Shift every doll shows the
-## stronger light and the waves:
+## stronger light, the even glow and the motes of time (D80.1):
 ## `tools/shots.sh --scene heroine_test --plan '60:;90:rewind' --at 60,150`.
 
 const RIG := preload("res://objects/heroine/heroine_rig.gd")

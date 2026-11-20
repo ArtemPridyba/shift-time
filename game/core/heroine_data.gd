@@ -7,7 +7,9 @@ extends RefCounted
 const PATH := "res://data/heroine.json"
 const POSES: Array[String] = ["idle", "jump", "fall", "press", "land", "exit"]
 const OVERLAYS: Array[String] = ["press", "land"]
-const LIGHT_KEYS: Array[String] = ["forward", "rewind", "radius_px", "wave_px", "wave_hz", "wave_width", "wave_strength"]
+const LIGHT_KEYS: Array[String] = ["forward", "rewind", "radius_px", "tint"]
+## Numbers of `light.motes` (D80.1), each above 0.
+const MOTE_KEYS: Array[String] = ["count", "from_min_px", "from_max_px", "size_min_px", "size_max_px", "hz", "swirl", "flatten"]
 
 
 static func load_data() -> Dictionary:
@@ -247,28 +249,35 @@ static func _validate_look(look: Variant) -> PackedStringArray:
 	return errors
 
 
-## The rings of the time wave in the room (D67.1), in pixels from the
-## gauntlet: the same rings as on her body (`heroine_light.gdshader`: a band
-## where fract(d / wave_px + phase) is below wave_width, its middle at half of
-## it), but only every `room_every`-th and only within `room_reach_px`. So a
-## ring of the room runs on into a ring of her body and both close in on the
-## gauntlet together. `total` is the wave phase not wrapped to 0..1, so a ring
-## keeps its place in the sequence as it moves.
-static func room_wave_radii(light: Dictionary, total: float) -> PackedFloat32Array:
-	var radii := PackedFloat32Array()
-	var step := float(light.get("wave_px", 16.0))
-	var middle := float(light.get("wave_width", 0.25)) * 0.5
-	var every := maxi(int(light.get("room_every", 1)), 1)
-	var reach := float(light.get("room_reach_px", 0.0))
-	var n := ceili(total - middle)
-	while true:
-		var radius := step * (float(n) + middle - total)
-		if radius > reach:
-			break
-		if radius >= 0.0 and posmod(n, every) == 0:
-			radii.append(radius)
-		n += 1
-	return radii
+## The motes of time (D80.1, as the 4th heroine of the "Night shop" mock-up):
+## `count` motes, each with its own angle, start distance, phase and size,
+## the same every run (`seed`).
+static func motes(light: Dictionary) -> Array[Dictionary]:
+	var spec: Dictionary = light.get("motes", {})
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(spec.get("seed", 77))
+	var list: Array[Dictionary] = []
+	for i in int(spec.get("count", 0)):
+		list.append({
+			"angle": rng.randf() * TAU,
+			"from": lerpf(float(spec.get("from_min_px", 50.0)), float(spec.get("from_max_px", 150.0)), rng.randf()),
+			"phase": rng.randf(),
+			"size": lerpf(float(spec.get("size_min_px", 1.0)), float(spec.get("size_max_px", 2.4)), rng.randf()),
+		})
+	return list
+
+
+## Where a mote is at her time `t` (seconds, always forward: she is live), as an
+## offset from the gauntlet, and how far along its way it is (0..1). Every mote
+## spirals in from its start distance and vanishes in the gauntlet, faint far
+## away and bright near it; then it starts again from afar.
+static func mote_at(light: Dictionary, mote: Dictionary, t: float) -> Dictionary:
+	var spec: Dictionary = light.get("motes", {})
+	var along := fposmod(t * float(spec.get("hz", 0.7)) + float(mote["phase"]), 1.0)
+	var distance := float(mote["from"]) * pow(1.0 - along, 1.2)
+	var angle := float(mote["angle"]) + along * float(spec.get("swirl", 2.4))
+	var offset := Vector2(cos(angle) * distance, sin(angle) * distance * float(spec.get("flatten", 0.8)))
+	return {"offset": offset, "along": along}
 
 
 ## The air, the overlays, the walk out of the doorway and the light.
@@ -317,15 +326,23 @@ static func _validate_motion(data: Dictionary, poses: Dictionary) -> PackedStrin
 		for key in LIGHT_KEYS:
 			if not _number(light.get(key)) or float(light.get(key)) < 0.0:
 				errors.append("heroine.json: light.%s must be 0 or more" % key)
-		for key in ["radius_px", "wave_px", "room_reach_px", "room_width_px"]:
-			if not _positive(light.get(key)):
-				errors.append("heroine.json: light.%s must be above 0" % key)
-		if not _number(light.get("room_every")) or float(light.get("room_every")) < 1.0 or float(light.get("room_every")) != floorf(float(light.get("room_every"))):
-			errors.append("heroine.json: light.room_every must be a whole number, 1 or more")
-		if not _number(light.get("room_alpha")) or float(light.get("room_alpha")) < 0.0 or float(light.get("room_alpha")) > 1.0:
-			errors.append("heroine.json: light.room_alpha must be 0 to 1")
-		if _number(light.get("wave_width")) and float(light.get("wave_width")) > 1.0:
-			errors.append("heroine.json: light.wave_width must be at most 1")
+		if not _positive(light.get("radius_px")):
+			errors.append("heroine.json: light.radius_px must be above 0")
+		if _number(light.get("tint")) and float(light.get("tint")) > 1.0:
+			errors.append("heroine.json: light.tint must be at most 1")
+		var spec: Variant = light.get("motes")
+		if not spec is Dictionary:
+			errors.append("heroine.json: light.motes must be an object")
+		else:
+			for key in MOTE_KEYS:
+				if not _positive(spec.get(key)):
+					errors.append("heroine.json: light.motes.%s must be above 0" % key)
+			if errors.is_empty() and float(spec["from_min_px"]) > float(spec["from_max_px"]):
+				errors.append("heroine.json: light.motes.from_min_px must be at most from_max_px")
+			if errors.is_empty() and float(spec["size_min_px"]) > float(spec["size_max_px"]):
+				errors.append("heroine.json: light.motes.size_min_px must be at most size_max_px")
+			if _number(spec.get("seed")) == false:
+				errors.append("heroine.json: light.motes.seed must be a number")
 	return errors
 
 

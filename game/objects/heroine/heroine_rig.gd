@@ -11,7 +11,7 @@ extends Node2D
 ## short overlays (press, land) turn only the parts they name; the walk out of
 ## the doorway bows her and brings her out of the dark. The gauntlet lights only
 ## her own body (`heroine_light.gdshader`): weak forward, stronger under Shift,
-## with waves that run over her into the gauntlet. She never reads world time
+## with an even glow of the time colour and motes of time that spiral into the gauntlet (D80.1). She never reads world time
 ## herself: the time device tells her through `set_time_light`.
 
 const LIGHT_SHADER := preload("res://objects/heroine/heroine_light.gdshader")
@@ -51,11 +51,11 @@ var _flat: Array = []
 var _accent := Color("#7FE8FF")
 var _glow := 1.0
 var _rewind := 0.0
-var _wave_phase := 0.0
-## The wave phase not wrapped: the rings of the room keep their order (D67.1).
-var _wave_total := 0.0
-## The rings of the time wave in the room, drawn under the doll (D67.1).
-var _room_waves: Node2D
+## Her own time for the motes, in seconds: it always runs forward.
+var _mote_time := 0.0
+## The motes of time drawn over the doll (D80.1).
+var _motes: Node2D
+var _mote_list: Array[Dictionary] = []
 
 
 ## The showcase sets this before adding the rig: the parts at sheet size from
@@ -79,10 +79,6 @@ func build(data: Dictionary) -> void:
 	_joints.clear()
 	_sprites.clear()
 	_full = full_size or bool(data.get("sheet_parts", false))
-	_room_waves = Node2D.new()
-	_room_waves.name = "RoomWaves"
-	_room_waves.draw.connect(_draw_room_waves)
-	add_child(_room_waves)
 	# One group, so the look shader draws her as one picture (D81).
 	var group := CanvasGroup.new()
 	_look = ShaderMaterial.new()
@@ -137,6 +133,11 @@ func build(data: Dictionary) -> void:
 		_body.add_child(entry[2] as Node2D)
 		if entry[3] != "":
 			_flat.append([entry[2], entry[3], (entry[2] as Node2D).scale])
+	_mote_list = HeroineData.motes(data.get("light", {}))
+	_motes = Node2D.new()
+	_motes.name = "Motes"
+	_motes.draw.connect(_draw_motes)
+	add_child(_motes)
 	_pose = ""
 	_overlay = ""
 	_exit = 0.0
@@ -261,30 +262,24 @@ func light_strength() -> float:
 	return lerpf(float(light.get("forward", 0.0)), float(light.get("rewind", 0.0)), _rewind) * _glow
 
 
-## The strength of the waves over her body: 0 in forward time.
-func wave_strength() -> float:
-	return float((_data.get("light", {}) as Dictionary).get("wave_strength", 0.0)) * _rewind
+## The even glow of the time colour over her body: 0 in forward time (D80.1).
+func tint_strength() -> float:
+	return float((_data.get("light", {}) as Dictionary).get("tint", 0.0)) * _rewind
 
 
 func _update_light(delta: float) -> void:
 	if _material == null:
 		return
 	var light: Dictionary = _data.get("light", {})
-	if _rewind > 0.0:
-		_wave_total += delta * float(light.get("wave_hz", 0.0))
-		_wave_phase = fposmod(_wave_total, 1.0)
-	if _room_waves != null:
-		_room_waves.queue_redraw()
+	_mote_time += delta
+	if _motes != null:
+		_motes.queue_redraw()
 	var to_canvas := get_global_transform() if is_inside_tree() else transform
 	var scale_px := absf(to_canvas.get_scale().y)
 	_material.set_shader_parameter("light_pos", to_canvas * device_point())
 	_material.set_shader_parameter("radius", float(light.get("radius_px", 1.0)) * scale_px)
 	_material.set_shader_parameter("light", light_strength())
 	_material.set_shader_parameter("accent", _accent)
-	_material.set_shader_parameter("waves", wave_strength())
-	_material.set_shader_parameter("wave_px", float(light.get("wave_px", 1.0)) * scale_px)
-	_material.set_shader_parameter("wave_phase", _wave_phase)
-	_material.set_shader_parameter("wave_width", float(light.get("wave_width", 0.25)))
 	_update_look()
 
 
@@ -295,6 +290,8 @@ func _update_look() -> void:
 	var look: Dictionary = _data.get("look", {})
 	_look.set_shader_parameter("gain", float(look.get("gain", 1.0)))
 	_look.set_shader_parameter("gamma", float(look.get("gamma", 1.0)))
+	_look.set_shader_parameter("accent", _accent)
+	_look.set_shader_parameter("tint", tint_strength())
 
 
 ## A shader uniform of the whole doll's look, for tests.
@@ -302,27 +299,28 @@ func look_parameter(parameter: StringName) -> Variant:
 	return _look.get_shader_parameter(parameter)
 
 
-## The radii of the rings in the room now, in the rig's pixels; empty in
-## forward time (D67.1).
-func room_wave_radii() -> PackedFloat32Array:
+## The motes of time now, as offsets from the gauntlet and how bright each is
+## (0..1); empty in forward time (D80.1).
+func motes_now() -> Array[Dictionary]:
+	var now: Array[Dictionary] = []
 	if _rewind <= 0.0:
-		return PackedFloat32Array()
-	return HeroineData.room_wave_radii(_data.get("light", {}), _wave_total)
-
-
-## Under Shift thin rings of the time colour close in on the gauntlet from the
-## room, fading with the distance; they are no light and light nothing (D76).
-func _draw_room_waves() -> void:
+		return now
 	var light: Dictionary = _data.get("light", {})
-	var reach := float(light.get("room_reach_px", 1.0))
-	var alpha := float(light.get("room_alpha", 0.0)) * _rewind
-	var width := float(light.get("room_width_px", 1.0))
+	for mote in _mote_list:
+		var at := HeroineData.mote_at(light, mote, _mote_time)
+		now.append({"offset": at["offset"], "alpha": float(at["along"]) * _rewind, "size": mote["size"]})
+	return now
+
+
+## Under Shift small motes of the time colour spiral in from all around and
+## vanish in the gauntlet: the device takes time from the world. They light
+## nothing (D76).
+func _draw_motes() -> void:
 	var centre := device_point()
-	for radius in room_wave_radii():
-		var fade := 1.0 - smoothstep(reach * 0.4, reach, radius)
-		var colour := Color(_accent, alpha * fade)
-		if colour.a > 0.0 and radius > width:
-			_room_waves.draw_arc(centre, radius, 0.0, TAU, 96, colour, width, true)
+	for mote in motes_now():
+		var alpha := float(mote["alpha"])
+		if alpha > 0.0:
+			_motes.draw_circle(centre + (mote["offset"] as Vector2), float(mote["size"]), Color(_accent, alpha), true, -1.0, true)
 
 
 ## A shader uniform of the light, for tests.

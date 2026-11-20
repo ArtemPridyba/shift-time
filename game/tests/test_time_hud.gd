@@ -247,14 +247,14 @@ func test_device_lights_only_the_heroine_and_brighter_in_rewind() -> void:
 		var rig := player.rig()
 		var forward := rig.light_strength()
 		check(forward > 0.0, "in forward time the gauntlet lights her weakly")
-		check(rig.wave_strength() == 0.0, "no waves over her body in forward time")
+		check(rig.tint_strength() == 0.0, "no glow of the time colour on her in forward time")
 		Input.action_press("rewind")
 		await _ticks(30)
 		check(rig.light_strength() > forward, "under Shift the light must be stronger: %.2f then %.2f" % [forward, rig.light_strength()])
-		check(rig.wave_strength() > 0.0, "under Shift waves must run over her body")
+		check(rig.tint_strength() > 0.0, "under Shift her figure takes on the time colour")
 		Input.action_release("rewind")
 		await _ticks(30)
-		check(rig.wave_strength() == 0.0, "after the release the waves must fade")
+		check(rig.tint_strength() == 0.0, "after the release the glow must fade")
 	room.queue_free()
 	await _tree.process_frame
 

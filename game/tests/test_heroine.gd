@@ -224,10 +224,7 @@ func test_gauntlet_light_falls_on_her_body_from_the_strip() -> void:
 	rig.set_time_light(1.0, 1.0)
 	rig._process(0.1)
 	check(rig.light_strength() > forward * 2.0, "under Shift the light must be clearly stronger")
-	check(float(rig.light_parameter("waves")) > 0.0, "under Shift the waves must show")
-	var phase := float(rig.light_parameter("wave_phase"))
-	rig._process(0.1)
-	check(not is_equal_approx(float(rig.light_parameter("wave_phase")), phase), "the waves must move")
+	check(float(rig.look_parameter("tint")) > 0.0, "under Shift her figure takes on the time colour")
 	rig.queue_free()
 
 
@@ -268,33 +265,36 @@ func test_parts_come_at_sheet_size_with_mipmaps_and_the_look_from_data() -> void
 	rig.free()
 
 
-## D67.1 (20.11.2026): the rings in the room are the rings of her body
-## carried on, and close in on the gauntlet with them; none in forward time.
-func test_room_rings_continue_the_body_rings_and_close_in() -> void:
+## D80.1 (20.11.2026): under Shift motes of time spiral in from around her
+## and vanish in the gauntlet, faint far away and bright near it; none in
+## forward time. As the 4th heroine of the "Night shop" mock-up.
+func test_motes_spiral_into_the_gauntlet_under_shift_only() -> void:
 	var data := HeroineData.load_data()
 	var light: Dictionary = data["light"]
-	var step := float(light["wave_px"])
-	var middle := float(light["wave_width"]) * 0.5
-	var radii := HeroineData.room_wave_radii(light, 2.3)
-	check(radii.size() > 0, "there are rings in the room")
-	for radius in radii:
-		check(absf(fposmod(radius / step + fposmod(2.3, 1.0), 1.0) - middle) < 0.001, "a ring at %.1f px lies on the middle of a body band" % radius)
-		check(radius <= float(light["room_reach_px"]), "no ring beyond the reach")
-	if radii.size() > 1:
-		check(is_equal_approx(radii[1] - radii[0], step * float(light["room_every"])), "rings are every room_every-th band apart")
-	var later := HeroineData.room_wave_radii(light, 2.4)
-	check(later[0] < radii[0] or later.size() > radii.size(), "as the phase grows the rings close in on the gauntlet")
+	var spec: Dictionary = light["motes"]
+	var list := HeroineData.motes(light)
+	check(list.size() == int(spec["count"]), "%d motes, data says %d" % [list.size(), int(spec["count"])])
+	check(HeroineData.motes(light) == list, "the motes are the same every run")
+	var mote := list[0]
+	var start := 0.05
+	var before := HeroineData.mote_at(light, mote, start)
+	var after := HeroineData.mote_at(light, mote, start + 0.1)
+	if float(after["along"]) > float(before["along"]):
+		check((after["offset"] as Vector2).length() < (before["offset"] as Vector2).length(), "a mote closes in on the gauntlet")
+	for each in list:
+		var spot := HeroineData.mote_at(light, each, 1.3)
+		check((spot["offset"] as Vector2).length() <= float(spec["from_max_px"]) + 0.01, "no mote starts farther than from_max_px")
 	var rig := _rig()
 	rig.set_time_light(1.0, 0.0)
-	check(rig.room_wave_radii().is_empty(), "no rings in forward time")
+	check(rig.motes_now().is_empty() and rig.tint_strength() == 0.0, "no motes and no glow in forward time")
 	rig.set_time_light(1.0, 1.0)
-	check(not rig.room_wave_radii().is_empty(), "rings under Shift")
+	check(rig.motes_now().size() == list.size() and rig.tint_strength() > 0.0, "motes and glow under Shift")
 	var broken: Dictionary = data.duplicate(true)
-	broken["light"]["room_every"] = 0.5
-	check(not HeroineData.validate(broken).is_empty(), "room_every below 1 must be reported")
+	broken["light"]["motes"]["from_min_px"] = 500
+	check(not HeroineData.validate(broken).is_empty(), "motes that start nearer than their minimum must be reported")
 	broken = data.duplicate(true)
-	broken["light"]["room_alpha"] = 2
-	check(not HeroineData.validate(broken).is_empty(), "room_alpha above 1 must be reported")
+	broken["light"]["tint"] = 2
+	check(not HeroineData.validate(broken).is_empty(), "tint above 1 must be reported")
 	rig.free()
 
 
