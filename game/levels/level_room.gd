@@ -14,6 +14,9 @@ var _exit_ticks_left := 0
 func _ready() -> void:
 	super._ready()
 	_begin_intro()
+	var player := get_node_or_null("Player") as Player
+	if player != null:
+		player.show_overview(float(Content.camera().get("overview_start_seconds", 0.0)))
 	var exit := get_node_or_null("Exit") as ExitZone
 	if exit != null:
 		exit.reached.connect(_on_exit_reached)

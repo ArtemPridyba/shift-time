@@ -10,6 +10,9 @@ const OBJECTS_PATH := "res://data/objects.json"
 const TIME_HUD_PATH := "res://data/time_hud.json"
 const ART_PATH := "res://data/art.json"
 const LOOK_PATH := "res://data/look.json"
+const CAMERA_PATH := "res://data/camera.json"
+## Numbers of `camera.json` (D83), each above 0.
+const CAMERA_KEYS := ["zoom", "lead_px", "lead_speed", "follow_speed", "overview_start_seconds", "overview_blend_seconds"]
 ## Colour roles every palette in `art.json` must give, each as a ramp from dark to light.
 const ART_ROLES: Array[String] = ["background", "steel", "mechanism", "suit", "helmet", "rust", "time", "fire", "interact", "water", "wood", "lamp_light"]
 const ART_RAMP_SIZE := 5
@@ -80,6 +83,11 @@ static func load_json(path: String) -> Variant:
 
 static func player() -> Dictionary:
 	var data: Variant = load_json(PLAYER_PATH)
+	return data if data is Dictionary else {}
+
+
+static func camera() -> Dictionary:
+	var data: Variant = load_json(CAMERA_PATH)
 	return data if data is Dictionary else {}
 
 
@@ -172,6 +180,22 @@ static func validate() -> PackedStringArray:
 	errors.append_array(validate_art(load_json(ART_PATH)))
 	errors.append_array(validate_look(load_json(LOOK_PATH)))
 	errors.append_array(HeroineData.validate(load_json(HeroineData.PATH)))
+	errors.append_array(validate_camera(load_json(CAMERA_PATH)))
+	return errors
+
+
+static func validate_camera(data: Variant) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not data is Dictionary:
+		errors.append("camera.json: expected an object")
+		return errors
+	for key: String in CAMERA_KEYS:
+		if not data.has(key):
+			errors.append("camera.json: missing '%s'" % key)
+		elif not _is_number(data[key]) or float(data[key]) <= 0.0:
+			errors.append("camera.json: '%s' must be a number above 0" % key)
+	if errors.is_empty() and float(data["zoom"]) < 1.0:
+		errors.append("camera.json: 'zoom' must be at least 1: the close view is never farther than the room at its own size")
 	return errors
 
 

@@ -123,7 +123,7 @@ func _follow(image: Image) -> Image:
 	var player := get_first_node_in_group("player") as Node2D
 	if player == null:
 		return image
-	var screen := player.get_global_transform_with_canvas().origin + Vector2(0, -46)
+	var screen := player.get_global_transform_with_canvas() * Vector2(0, -46)
 	var corner := Vector2i(screen) - crop / 2
 	corner.x = clampi(corner.x, 0, maxi(0, image.get_width() - crop.x))
 	corner.y = clampi(corner.y, 0, maxi(0, image.get_height() - crop.y))
