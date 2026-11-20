@@ -302,3 +302,78 @@ func _rig() -> HeroineRig:
 	var rig := HeroineRig.new()
 	rig.build(HeroineData.load_data())
 	return rig
+
+
+func test_threads_build_up_under_shift_to_a_limit() -> void:
+	var spec: Dictionary = HeroineData.load_data()["light"]["threads"]
+	var start := float(spec["start_seconds"])
+	var top := int(spec["max"])
+	check(TimeThreads.count(spec, 0.0) == 0 and TimeThreads.count(spec, start - 0.01) == 0, "no threads in the first moment of Shift: the motes come first (D86)")
+	check(TimeThreads.count(spec, start) == int(spec["first"]), "the first threads come after start_seconds")
+	var last := 0
+	var grew := false
+	for i in 400:
+		var n := TimeThreads.count(spec, float(i) * 0.05)
+		check(n >= last, "the threads never get fewer while Shift is held")
+		grew = grew or n > last and last > 0
+		last = n
+	check(grew, "the longer Shift is held, the more threads")
+	check(last == top, "the threads stop at max, got %d" % last)
+	check(TimeThreads.count(spec, 1000.0) == top, "however long Shift is held, never more than max")
+	check(TimeThreads.fade_in(spec, top - 1, start) == 0.0 and TimeThreads.fade_in(spec, 0, start + 1.0) == 1.0, "a new thread fades in, never pops")
+
+
+func test_threads_come_from_beyond_the_screen_edge_thick_and_thin_out() -> void:
+	var data := HeroineData.load_data()
+	var spec: Dictionary = data["light"]["threads"]
+	var motes: Dictionary = data["light"]["motes"]
+	var view := Rect2(-300, -200, 640, 360)
+	for i in 12:
+		var trip := TimeThreads.trip(spec, i, 0.37 * float(i))
+		var angle := float(trip["angle"])
+		var from := TimeThreads.start_distance(Vector2.ZERO, angle, float(motes["flatten"]), view, 10.0)
+		var start := HeroineData.spiral(motes, angle, from, 0.0)
+		check(not view.has_point(start), "thread %d must start beyond the screen edge, starts at %s" % [i, start])
+		check(HeroineData.spiral(motes, angle, from, 1.0).length() < 0.001, "thread %d must end in the gauntlet" % i)
+	var a := float(TimeThreads.trip(spec, 0, 0.0)["angle"])
+	var b := float(TimeThreads.trip(spec, 1, 0.0)["angle"])
+	check(not is_equal_approx(fposmod(a, TAU), fposmod(b, TAU)), "two threads never start from one place")
+	check(is_equal_approx(TimeThreads.width_scale(spec, 0.0), float(spec["edge_scale"])), "at the screen edge a thread is edge_scale times thicker")
+	check(is_equal_approx(TimeThreads.width_scale(spec, 1.0), 1.0), "near the gauntlet a thread has its normal width")
+	check(TimeThreads.width_scale(spec, 0.3) < TimeThreads.width_scale(spec, 0.1), "a thread thins out on its way in")
+	var trail := TimeThreads.trail(spec, motes, a, 500.0, 0.5)
+	check(trail.size() == int(spec["segments"]) + 1, "a trail has segments + 1 points")
+	check(TimeThreads.alpha(spec, 0.5, 1.0) > TimeThreads.alpha(spec, 0.5, 0.2), "a thread fades toward its tail")
+	check(TimeThreads.alpha(spec, 1.0, 1.0) < 0.01, "a thread is gone once it enters the gauntlet")
+	var broken: Dictionary = data.duplicate(true)
+	broken["light"]["threads"]["max"] = 0
+	check(not HeroineData.validate(broken).is_empty(), "no threads at all must be reported")
+	broken = data.duplicate(true)
+	broken["light"]["threads"]["travel_seconds"] = 10
+	check(not HeroineData.validate(broken).is_empty(), "a trip longer than its period must be reported")
+	broken = data.duplicate(true)
+	broken["light"].erase("breath")
+	check(not HeroineData.validate(broken).is_empty(), "a missing breath must be reported")
+
+
+func test_strip_breathes_in_forward_time_and_glows_under_shift() -> void:
+	var rig := _rig()
+	var colours: Dictionary = Content.time_hud()["colors"]
+	var accent := Color(String(colours["accent"]))
+	var core := Color(String(colours["core"]))
+	rig.set_time_light(1.0, 0.0)
+	var seen := {}
+	var strongest := 0.0
+	var weakest := 1.0
+	for i in 60:
+		rig._update_light(0.1)
+		seen[rig.strip().color.to_html()] = true
+		strongest = maxf(strongest, rig.light_strength())
+		weakest = minf(weakest, rig.light_strength())
+	check(seen.size() > 10, "in forward time the strip must breathe, not stand still")
+	check(strongest > weakest * 2.0, "the light on her breathes with the strip: %f..%f" % [weakest, strongest])
+	rig.set_time_light(1.0, 1.0)
+	rig._update_light(0.0)
+	check(rig.strip().color.is_equal_approx(core), "under Shift the strip shows the light core, got %s" % rig.strip().color.to_html())
+	check(not accent.is_equal_approx(core), "the time colour and its core must differ")
+	rig.free()

@@ -57,7 +57,7 @@ func _ready() -> void:
 	_holder(Vector2(1120, BOTTOM_FLOOR_Y), 1.0, 1.0, false)
 	_holder(Vector2(1180, BOTTOM_FLOOR_Y), 1.0, -1.0, false)
 	var other := _posed(Vector2(1260, BOTTOM_FLOOR_Y), 1.0, "idle")
-	other.strip().color = OTHER_TIME_COLOUR
+	other.set_time_colours(OTHER_TIME_COLOUR)
 	_label(Vector2(1100, BOTTOM_FLOOR_Y - 110), "1:1, and D70 cyan")
 
 

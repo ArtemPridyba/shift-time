@@ -16,9 +16,10 @@ const LANE_STEP := 0.618034
 
 ## +1 while time runs forward, -1 while the world is rewound.
 var direction := FORWARD
-## 0 in forward time, 1 in rewind; eases over `edges.fade_seconds`. The glow
-## along the screen edges fades in and out with it.
-var edge_amount := 0.0
+## 0 in forward time, 1 in rewind; eases over `rewind.fade_seconds`. The
+## light on the heroine, her motes and threads and the faded world come and go
+## with it.
+var rewind_amount := 0.0
 ## Phase of the streaks, in cycles. It runs only in rewind and shrinks, so every
 ## streak moves left; in forward time there are no streaks.
 var particle_phase := 0.0
@@ -37,11 +38,10 @@ var _count := 7
 
 func _init(config: Dictionary = {}) -> void:
 	var particles := config.get("particles", {}) as Dictionary
-	var edges := config.get("edges", {}) as Dictionary
 	var rewind := config.get("rewind", {}) as Dictionary
 	_cycle_seconds = maxf(float(particles.get("cycle_seconds", _cycle_seconds)), 0.01)
 	_count = maxi(int(particles.get("count", _count)), 0)
-	_fade_seconds = maxf(float(edges.get("fade_seconds", _fade_seconds)), 0.01)
+	_fade_seconds = maxf(float(rewind.get("fade_seconds", _fade_seconds)), 0.01)
 	_sweep_hz = float(rewind.get("sweep_hz", _sweep_hz))
 	_flicker_hz = float(rewind.get("flicker_hz", _flicker_hz))
 	_flicker_depth = clampf(float(rewind.get("flicker_depth", _flicker_depth)), 0.0, 1.0)
@@ -71,7 +71,7 @@ func step(delta: float) -> void:
 		particle_phase -= fast / _cycle_seconds
 		sweep_phase += fast * _sweep_hz
 		flicker_phase += fast * _flicker_hz
-	edge_amount = move_toward(edge_amount, 1.0 if direction == BACKWARD else 0.0, delta / _fade_seconds)
+	rewind_amount = move_toward(rewind_amount, 1.0 if direction == BACKWARD else 0.0, delta / _fade_seconds)
 
 
 ## Brightness of the device, 0 to 1: steady in forward time, flickering in rewind.

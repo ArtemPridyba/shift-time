@@ -6,8 +6,6 @@ extends Camera2D
 ## back to show the whole room. Presentation only: it changes nothing in the
 ## world and nothing is recorded.
 
-## Where the camera looks on her, in her pixels: the middle of the body.
-const FOCUS := Vector2(0.0, -46.0)
 
 var _params := {}
 var _room := Rect2()
@@ -72,7 +70,8 @@ func _apply() -> void:
 	var amount := smoothstep(0.0, 1.0, _view)
 	var z := CameraView.blend_zoom(close, far, _view)
 	zoom = Vector2(z, z)
-	var near_focus := FOCUS + Vector2(_lead, 0.0)
+	# Her feet stand low on the screen, not in the middle of it (Д5.1).
+	var near_focus := Vector2(_lead, -CameraView.focus_height(screen.y, close, _number("feet_screen_y", 0.72)))
 	if _room.size != Vector2.ZERO and get_parent() is Node2D:
 		var parent := get_parent() as Node2D
 		var room_centre := _room.get_center() - parent.global_position

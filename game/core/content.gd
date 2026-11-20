@@ -12,7 +12,7 @@ const ART_PATH := "res://data/art.json"
 const LOOK_PATH := "res://data/look.json"
 const CAMERA_PATH := "res://data/camera.json"
 ## Numbers of `camera.json` (D83), each above 0.
-const CAMERA_KEYS := ["zoom", "lead_px", "lead_speed", "follow_speed", "overview_start_seconds", "overview_blend_seconds"]
+const CAMERA_KEYS := ["zoom", "lead_px", "lead_speed", "follow_speed", "overview_start_seconds", "overview_blend_seconds", "feet_screen_y"]
 ## Colour roles every palette in `art.json` must give, each as a ramp from dark to light.
 const ART_ROLES: Array[String] = ["background", "steel", "mechanism", "suit", "helmet", "rust", "time", "fire", "interact", "water", "wood", "lamp_light"]
 const ART_RAMP_SIZE := 5
@@ -196,6 +196,8 @@ static func validate_camera(data: Variant) -> PackedStringArray:
 			errors.append("camera.json: '%s' must be a number above 0" % key)
 	if errors.is_empty() and float(data["zoom"]) < 1.0:
 		errors.append("camera.json: 'zoom' must be at least 1: the close view is never farther than the room at its own size")
+	if errors.is_empty() and (float(data["feet_screen_y"]) < 0.5 or float(data["feet_screen_y"]) > 0.95):
+		errors.append("camera.json: 'feet_screen_y' must be from 0.5 to 0.95: her feet stay in the lower half of the screen")
 	return errors
 
 
@@ -551,13 +553,13 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 	if not data is Dictionary:
 		errors.append("time_hud.json: expected an object")
 		return errors
-	for section_name: String in ["colors", "device", "rewind", "particles", "edges", "audio"]:
+	for section_name: String in ["colors", "device", "rewind", "particles", "audio"]:
 		if not data.get(section_name) is Dictionary:
 			errors.append("time_hud.json: missing section '%s'" % section_name)
 	if not errors.is_empty():
 		return errors
 	var colors: Dictionary = data["colors"]
-	for key: String in ["accent", "glyph"]:
+	for key: String in ["accent", "core", "edge", "glyph"]:
 		if not colors.get(key) is String or not Color.html_is_valid(colors[key]):
 			errors.append("time_hud.json: 'colors.%s' must be a color like \"#7FE8FF\"" % key)
 	var device: Dictionary = data["device"]
@@ -569,6 +571,9 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 	_check_range(errors, rewind, "rewind", "flicker_hz", 0.0, 60.0, true)
 	_check_range(errors, rewind, "rewind", "flicker_depth", 0.0, 1.0)
 	_check_range(errors, rewind, "rewind", "sweep_hz", 0.0, 60.0, true)
+	_check_range(errors, rewind, "rewind", "fade_seconds", 0.0, 10.0, true)
+	_check_range(errors, rewind, "rewind", "world_saturation", 0.0, 1.0)
+	_check_range(errors, rewind, "rewind", "world_brightness", 0.0, 1.0)
 	var particles: Dictionary = data["particles"]
 	_check_range(errors, particles, "particles", "count", 0.0, 32.0)
 	_check_range(errors, particles, "particles", "cycle_seconds", 0.0, 60.0, true)
@@ -576,15 +581,6 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 	_check_range(errors, particles, "particles", "size_px", 0.0, 100.0, true)
 	_check_range(errors, particles, "particles", "dash_px", 0.0, 200.0, true)
 	_check_range(errors, particles, "particles", "lane_px", 0.0, 200.0, true)
-	var edges: Dictionary = data["edges"]
-	_check_range(errors, edges, "edges", "glow_strength", 0.0, 1.0)
-	_check_range(errors, edges, "edges", "width", 0.0, 0.5, true)
-	_check_range(errors, edges, "edges", "fade_seconds", 0.0, 10.0, true)
-	_check_range(errors, edges, "edges", "streak_strength", 0.0, 1.0)
-	_check_range(errors, edges, "edges", "streak_density", 0.0, 1.0)
-	_check_range(errors, edges, "edges", "streak_length", 0.0, 1.0, true)
-	_check_range(errors, edges, "edges", "streak_rows", 1.0, 200.0)
-	_check_range(errors, edges, "edges", "streak_thickness", 0.0, 0.5, true)
 	var audio: Dictionary = data["audio"]
 	for key: String in ["forward", "rewind"]:
 		if not audio.get(key) is String:

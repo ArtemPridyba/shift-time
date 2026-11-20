@@ -3,9 +3,11 @@ extends Node2D
 ## The time device's indicator (task 1.5, moved onto the gauntlet in Д5): two
 ## arrows on the strip of the heroine's gauntlet, `>>` in forward time and `<<`
 ## while Shift is held. In rewind the light sweeps along the arrows from right
-## to left, the device flickers, thin streaks run left above and below it, and
-## the edges of the screen glow with the same light and the same streaks.
+## to left, the device flickers and thin streaks run left above and below it.
 ## Forward time has none of this. The direction never reads from color alone.
+## Under Shift the world behind the heroine fades a little (D86, Д5.1); the
+## glow and streaks along the screen edges are gone, the heroine's threads of
+## time took their place (D85).
 ##
 ## It is a child of the player and sits where the player's `device_point()`
 ## says, so it follows her arm; it is never mirrored, so the arrows point the
@@ -15,8 +17,10 @@ extends Node2D
 ## `data/time_hud.json`: the palette can change without code.
 
 ## Above every part of the doll (their z goes up to about 15).
-const EDGE_LAYER := 60
 const DRAW_Z := 40
+## The faded world is drawn at this z, above the room (z 0 and below) and under
+## the player (z 2 in player.tscn), so she never fades: she lives forward.
+const FADE_Z := 1
 const LANE_GAP_PX := 2.0
 
 var state: TimeIndicatorState
@@ -31,8 +35,9 @@ var _spread := 36.0
 var _streak_width := 1.5
 var _dash := 9.0
 var _lane := 14.0
-var _edges: ColorRect
-var _edge_material: ShaderMaterial
+var _fade: Node2D
+var _fade_rect: ColorRect
+var _fade_material: ShaderMaterial
 
 
 func _ready() -> void:
@@ -40,14 +45,14 @@ func _ready() -> void:
 	state = TimeIndicatorState.new(config)
 	_read_config(config)
 	z_index = DRAW_Z
-	_build_edges(config)
+	_build_fade(config)
 	sound = TimeSound.new(config)
 	add_child(sound)
 	var manager := get_node_or_null("/root/TimeManager")
 	if manager != null:
 		manager.direction_changed.connect(_on_direction_changed)
 		state.set_direction(int(manager.direction))
-		state.edge_amount = 1.0 if state.is_rewinding() else 0.0
+		state.rewind_amount = 1.0 if state.is_rewinding() else 0.0
 
 
 func _process(delta: float) -> void:
@@ -64,10 +69,8 @@ func _process(delta: float) -> void:
 			facing = float(parent.call("facing"))
 		position = Vector2(_offset.x * facing, _offset.y)
 	if parent != null and parent.has_method("show_time_light"):
-		parent.call("show_time_light", state.glow(), state.edge_amount)
-	_edge_material.set_shader_parameter("amount", state.edge_amount)
-	_edge_material.set_shader_parameter("phase", state.particle_phase)
-	_edges.visible = state.edge_amount > 0.001
+		parent.call("show_time_light", state.glow(), state.rewind_amount)
+	_update_fade()
 	queue_redraw()
 
 
@@ -135,30 +138,44 @@ func _read_config(config: Dictionary) -> void:
 	_lane = float(particles.get("lane_px", 14.0))
 
 
-## The glow and the streaks along the screen edges: a full-screen layer above
-## the room, added over the picture (see `time_edges.gdshader`).
-func _build_edges(config: Dictionary) -> void:
-	var edges := config.get("edges", {}) as Dictionary
-	var layer := CanvasLayer.new()
-	layer.name = "Edges"
-	layer.layer = EDGE_LAYER
-	add_child(layer)
-	_edge_material = ShaderMaterial.new()
-	_edge_material.shader = load("res://ui/time_edges.gdshader") as Shader
-	_edge_material.set_shader_parameter("glow_color", _accent)
-	for key: String in ["glow_strength", "width", "streak_strength", "streak_density", "streak_length", "streak_rows", "streak_thickness"]:
-		if edges.has(key):
-			_edge_material.set_shader_parameter(key, float(edges[key]))
-	_edge_material.set_shader_parameter("amount", 0.0)
-	_edge_material.set_shader_parameter("phase", 0.0)
-	_edges = ColorRect.new()
-	_edges.material = _edge_material
-	_edges.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_edges.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_edges.visible = false
-	layer.add_child(_edges)
+## The world fades a little under Shift (D86): a layer over the whole screen
+## that reads the picture drawn so far, the room, and lays it back with less
+## colour (see `time_fade.gdshader`). The heroine is drawn after it.
+func _build_fade(config: Dictionary) -> void:
+	var rewind := config.get("rewind", {}) as Dictionary
+	_fade = Node2D.new()
+	_fade.name = "WorldFade"
+	_fade.top_level = true
+	_fade.z_as_relative = false
+	_fade.z_index = FADE_Z
+	add_child(_fade)
+	_fade_material = ShaderMaterial.new()
+	_fade_material.shader = load("res://ui/time_fade.gdshader") as Shader
+	_fade_material.set_shader_parameter("saturation", float(rewind.get("world_saturation", 1.0)))
+	_fade_material.set_shader_parameter("brightness", float(rewind.get("world_brightness", 1.0)))
+	_fade_material.set_shader_parameter("amount", 0.0)
+	_fade_rect = ColorRect.new()
+	_fade_rect.material = _fade_material
+	_fade_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fade_rect.visible = false
+	_fade.add_child(_fade_rect)
 
 
-## A parameter of the edge shader, for tests.
-func edge_parameter(parameter: StringName) -> Variant:
-	return _edge_material.get_shader_parameter(parameter)
+func _update_fade() -> void:
+	_fade_material.set_shader_parameter("amount", state.rewind_amount)
+	_fade_rect.visible = state.rewind_amount > 0.001
+	if _fade_rect.visible and is_inside_tree():
+		var screen := get_viewport().get_visible_rect()
+		_fade.global_transform = get_viewport().get_canvas_transform().affine_inverse()
+		_fade_rect.position = screen.position
+		_fade_rect.size = screen.size
+
+
+## A parameter of the world fade, for tests.
+func fade_parameter(parameter: StringName) -> Variant:
+	return _fade_material.get_shader_parameter(parameter)
+
+
+## True while the world is drawn faded.
+func world_faded() -> bool:
+	return _fade_rect.visible

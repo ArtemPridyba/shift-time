@@ -11,7 +11,10 @@ extends Node2D
 ## short overlays (press, land) turn only the parts they name; the walk out of
 ## the doorway bows her and brings her out of the dark. The gauntlet lights only
 ## her own body (`heroine_light.gdshader`): weak forward, stronger under Shift,
-## with an even glow of the time colour and motes of time that spiral into the gauntlet (D80.1). She never reads world time
+## with an even glow of the time colour and motes of time that spiral into the gauntlet (D80.1). After a second under
+## Shift threads come in from beyond the screen edge by the same spiral, more
+## and more the longer Shift is held (D85, `TimeThreads`). In forward time the
+## strip and its light slowly breathe (D86). She never reads world time
 ## herself: the time device tells her through `set_time_light`.
 
 const LIGHT_SHADER := preload("res://objects/heroine/heroine_light.gdshader")
@@ -49,6 +52,9 @@ var _look: ShaderMaterial
 ## [picture, part, scale]: every picture in the group and the joint it follows.
 var _flat: Array = []
 var _accent := Color("#7FE8FF")
+## The time colour's light core and dark edge (D86).
+var _core := Color("#FFFFFF")
+var _edge := Color("#202020")
 var _glow := 1.0
 var _rewind := 0.0
 ## Her own time for the motes, in seconds: it always runs forward.
@@ -56,6 +62,10 @@ var _mote_time := 0.0
 ## The motes of time drawn over the doll (D80.1).
 var _motes: Node2D
 var _mote_list: Array[Dictionary] = []
+## The threads of time drawn under the motes (D85), and how long Shift has
+## been held, in her seconds: the threads build up with it.
+var _threads: Node2D
+var _held := 0.0
 
 
 ## The showcase sets this before adding the rig: the parts at sheet size from
@@ -94,7 +104,9 @@ func build(data: Dictionary) -> void:
 	var far_tint := Color.from_string(String(data.get("far_tint", "#ffffff")), Color.WHITE)
 	var bakes := {} if _full else HeroineData.bake_factors(data)
 	var colors: Dictionary = Content.time_hud().get("colors", {})
-	_accent = Color.from_string(String(colors.get("accent", "#7FE8FF")), Color.CYAN)
+	set_time_colours(Color.from_string(String(colors.get("accent", "#7FE8FF")), Color.CYAN),
+		Color.from_string(String(colors.get("core", "")), Color(0, 0, 0, 0)),
+		Color.from_string(String(colors.get("edge", "")), Color(0, 0, 0, 0)))
 	_material = ShaderMaterial.new()
 	_material.shader = LIGHT_SHADER
 	for name in HeroineData.build_order(parts):
@@ -134,6 +146,10 @@ func build(data: Dictionary) -> void:
 		if entry[3] != "":
 			_flat.append([entry[2], entry[3], (entry[2] as Node2D).scale])
 	_mote_list = HeroineData.motes(data.get("light", {}))
+	_threads = Node2D.new()
+	_threads.name = "Threads"
+	_threads.draw.connect(_draw_threads)
+	add_child(_threads)
 	_motes = Node2D.new()
 	_motes.name = "Motes"
 	_motes.draw.connect(_draw_motes)
@@ -259,7 +275,40 @@ func _process(delta: float) -> void:
 ## The light's strength now: between `light.forward` and `light.rewind`.
 func light_strength() -> float:
 	var light: Dictionary = _data.get("light", {})
-	return lerpf(float(light.get("forward", 0.0)), float(light.get("rewind", 0.0)), _rewind) * _glow
+	var breath := (light.get("breath", {}) as Dictionary)
+	var low := float(breath.get("low", 1.0))
+	# Breathing keeps the same light on average: from low up to 2 - low.
+	var forward := float(light.get("forward", 0.0)) * (low + 2.0 * (1.0 - low) * breath_amount())
+	return lerpf(forward, float(light.get("rewind", 0.0)), _rewind) * _glow
+
+
+## The time colour, its light core and its dark edge; a transparent core or
+## edge is made from the colour.
+func set_time_colours(accent: Color, core := Color(0, 0, 0, 0), edge := Color(0, 0, 0, 0)) -> void:
+	_accent = accent
+	_core = core if core.a > 0.0 else accent.lerp(Color.WHITE, 0.8)
+	_edge = edge if edge.a > 0.0 else accent.lerp(Color.BLACK, 0.55)
+	if _strip != null:
+		_strip.color = strip_colour()
+
+
+## The breath of the strip in forward time (D86): 0 at its dimmest, 1 at its
+## brightest (as she starts), once every `light.breath.seconds`.
+func breath_amount() -> float:
+	var breath: Dictionary = (_data.get("light", {}) as Dictionary).get("breath", {})
+	var seconds := float(breath.get("seconds", 0.0))
+	if seconds <= 0.0:
+		return 0.5
+	return 0.5 + 0.5 * cos(TAU * _mote_time / seconds)
+
+
+## The strip's colour now: breathing from the dark edge to the time colour in
+## forward time, the light core under Shift.
+func strip_colour() -> Color:
+	var breath: Dictionary = (_data.get("light", {}) as Dictionary).get("breath", {})
+	var low := float(breath.get("low", 1.0))
+	var forward := _edge.lerp(_accent, low + (1.0 - low) * breath_amount())
+	return forward.lerp(_core, _rewind)
 
 
 ## The even glow of the time colour over her body: 0 in forward time (D80.1).
@@ -272,8 +321,12 @@ func _update_light(delta: float) -> void:
 		return
 	var light: Dictionary = _data.get("light", {})
 	_mote_time += delta
+	_held = _held + delta if _rewind > 0.0 else 0.0
+	if _strip != null:
+		_strip.color = strip_colour()
 	if _motes != null:
 		_motes.queue_redraw()
+		_threads.queue_redraw()
 	var to_canvas := get_global_transform() if is_inside_tree() else transform
 	var scale_px := absf(to_canvas.get_scale().y)
 	_material.set_shader_parameter("light_pos", to_canvas * device_point())
@@ -320,7 +373,67 @@ func _draw_motes() -> void:
 	for mote in motes_now():
 		var alpha := float(mote["alpha"])
 		if alpha > 0.0:
-			_motes.draw_circle(centre + (mote["offset"] as Vector2), float(mote["size"]), Color(_accent, alpha), true, -1.0, true)
+			var at := centre + (mote["offset"] as Vector2)
+			_motes.draw_circle(at, float(mote["size"]) * 1.9, Color(_accent, alpha * 0.45), true, -1.0, true)
+			_motes.draw_circle(at, float(mote["size"]) * 0.8, Color(_core, alpha), true, -1.0, true)
+
+
+## The threads out now (D85): the head of each on its way in (0..1), how far it
+## has faded in, its start angle and how far away it starts, in the rig's
+## pixels. Empty in forward time and for the first second of Shift.
+func threads_now() -> Array[Dictionary]:
+	var now: Array[Dictionary] = []
+	if _rewind <= 0.0 or _threads == null or not _threads.is_inside_tree():
+		return now
+	var light: Dictionary = _data.get("light", {})
+	var spec: Dictionary = light.get("threads", {})
+	var motes: Dictionary = light.get("motes", {})
+	var to_screen := _threads.get_global_transform_with_canvas()
+	var per_px := 1.0 / maxf(absf(to_screen.get_scale().y), 0.0001)
+	var view := _local_view(to_screen)
+	var centre := device_point()
+	for i in TimeThreads.count(spec, _held):
+		var trip := TimeThreads.trip(spec, i, _mote_time)
+		var fade := TimeThreads.fade_in(spec, i, _held) * _rewind
+		if float(trip["along"]) < 0.0 or fade <= 0.0:
+			continue
+		var from := TimeThreads.start_distance(centre, float(trip["angle"]), float(motes.get("flatten", 0.8)), view, float(spec.get("margin_px", 40.0)) * per_px)
+		now.append({"head": trip["along"], "fade": fade, "angle": trip["angle"], "from": from, "per_px": per_px})
+	return now
+
+
+## The screen in the threads' own pixels.
+func _local_view(to_screen: Transform2D) -> Rect2:
+	var screen := _threads.get_viewport().get_visible_rect()
+	var back := to_screen.affine_inverse()
+	var box := Rect2(back * screen.position, Vector2.ZERO)
+	for corner in [Vector2(screen.end.x, screen.position.y), screen.end, Vector2(screen.position.x, screen.end.y)]:
+		box = box.expand(back * corner)
+	return box
+
+
+## Under Shift thin pale threads come in from beyond the screen edge and spiral
+## into the gauntlet: thick at the edge, normal near it, a light core over a
+## dark edge. They light nothing (D76).
+func _draw_threads() -> void:
+	var light: Dictionary = _data.get("light", {})
+	var spec: Dictionary = light.get("threads", {})
+	var motes: Dictionary = light.get("motes", {})
+	var centre := device_point()
+	var core := _accent.lerp(_core, 0.75)
+	for thread in threads_now():
+		var head := float(thread["head"])
+		var per_px := float(thread["per_px"])
+		var points := TimeThreads.trail(spec, motes, float(thread["angle"]), float(thread["from"]), head)
+		for layer in 2:
+			var base := float(spec.get("edge_px" if layer == 0 else "core_px", 1.0)) * per_px
+			for j in range(1, points.size()):
+				var a := TimeThreads.alpha(spec, head, float(points[j]["trail"])) * float(thread["fade"])
+				if a <= 0.004:
+					continue
+				var colour := Color(_edge, a * 0.5) if layer == 0 else Color(core, a * 0.75)
+				var width := base * TimeThreads.width_scale(spec, float(points[j]["along"]))
+				_threads.draw_line(centre + (points[j - 1]["offset"] as Vector2), centre + (points[j]["offset"] as Vector2), colour, width, true)
 
 
 ## A shader uniform of the light, for tests.
@@ -490,8 +603,7 @@ func _build_strip(data: Dictionary, order: Array) -> void:
 	_strip.offset = under.offset
 	_strip.scale = under.scale
 	_strip.texture_filter = under.texture_filter
-	var colors: Dictionary = Content.time_hud().get("colors", {})
-	_strip.color = Color.from_string(String(colors.get("accent", "#7FE8FF")), Color.CYAN)
+	_strip.color = strip_colour()
 	# Right above the gauntlet's picture.
 	var z := int((data["parts"][part] as Dictionary).get("z", 0))
 	order.append([z, order.size(), _strip, part])
