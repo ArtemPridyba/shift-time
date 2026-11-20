@@ -288,6 +288,21 @@ func test_level_01_camera_shows_the_room_then_comes_close() -> void:
 	await _free(room)
 
 
+## In the close view her feet stand low on the screen, not in its middle,
+## so the frame is not half floor (Д5.1, Boris 20.11).
+func test_camera_puts_her_feet_low_on_the_screen() -> void:
+	var data := Content.camera()
+	var feet := float(data["feet_screen_y"])
+	check(feet > 0.6, "her feet must stand below the middle of the screen, at %.2f" % feet)
+	var zoom := float(data["zoom"])
+	var up := CameraView.focus_height(1080.0, zoom, feet)
+	var feet_on_screen := 540.0 + up * zoom
+	check(absf(feet_on_screen - feet * 1080.0) < 0.5, "the camera looks %.1f px above her feet, so they stand at %.0f of 1080" % [up, feet_on_screen])
+	var broken: Dictionary = data.duplicate(true)
+	broken["feet_screen_y"] = 0.3
+	check(not Content.validate_camera(broken).is_empty(), "feet above the middle of the screen must be reported")
+
+
 ## The overview is centred on the room along the side where the screen sees
 ## more than the room (D83).
 func test_camera_overview_math() -> void:

@@ -10,6 +10,10 @@ const OVERLAYS: Array[String] = ["press", "land"]
 const LIGHT_KEYS: Array[String] = ["forward", "rewind", "radius_px", "tint"]
 ## Numbers of `light.motes` (D80.1), each above 0.
 const MOTE_KEYS: Array[String] = ["count", "from_min_px", "from_max_px", "size_min_px", "size_max_px", "hz", "swirl", "flatten"]
+## Numbers of `light.threads` (D85, Д5.1), each above 0.
+const THREAD_KEYS: Array[String] = ["first", "max", "start_seconds", "every_seconds", "fade_in_seconds", "period_seconds", "travel_seconds", "trail", "pull", "curl", "segments", "margin_px", "core_px", "edge_px", "glow_px", "edge_alpha", "sharp_at", "edge_scale", "shrink_until", "alpha"]
+## Numbers of `light.breath` (D86): the strip breathes in forward time.
+const BREATH_KEYS: Array[String] = ["seconds", "low"]
 
 
 static func load_data() -> Dictionary:
@@ -274,10 +278,16 @@ static func motes(light: Dictionary) -> Array[Dictionary]:
 static func mote_at(light: Dictionary, mote: Dictionary, t: float) -> Dictionary:
 	var spec: Dictionary = light.get("motes", {})
 	var along := fposmod(t * float(spec.get("hz", 0.7)) + float(mote["phase"]), 1.0)
-	var distance := float(mote["from"]) * pow(1.0 - along, 1.2)
-	var angle := float(mote["angle"]) + along * float(spec.get("swirl", 2.4))
-	var offset := Vector2(cos(angle) * distance, sin(angle) * distance * float(spec.get("flatten", 0.8)))
-	return {"offset": offset, "along": along}
+	return {"offset": spiral(spec, float(mote["angle"]), float(mote["from"]), along), "along": along}
+
+
+## The motes' way into the gauntlet: from `from` pixels away at `angle`,
+## closing in faster at first, turning by `swirl` on the way, flattened in
+## height by `flatten`. `along` runs 0..1.
+static func spiral(motes: Dictionary, angle: float, from: float, along: float) -> Vector2:
+	var distance := from * pow(1.0 - clampf(along, 0.0, 1.0), 1.2)
+	var turned := angle + along * float(motes.get("swirl", 2.4))
+	return Vector2(cos(turned) * distance, sin(turned) * distance * float(motes.get("flatten", 0.8)))
 
 
 ## The air, the overlays, the walk out of the doorway and the light.
@@ -343,6 +353,64 @@ static func _validate_motion(data: Dictionary, poses: Dictionary) -> PackedStrin
 				errors.append("heroine.json: light.motes.size_min_px must be at most size_max_px")
 			if _number(spec.get("seed")) == false:
 				errors.append("heroine.json: light.motes.seed must be a number")
+		errors.append_array(_validate_threads(light))
+		errors.append_array(_validate_far_motes(light))
+	return errors
+
+
+## `light.far_motes` (D85.6, a trial): optional; `"enabled": false` or no
+## section turns them off.
+static func _validate_far_motes(light: Dictionary) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not light.has("far_motes"):
+		return errors
+	var spec: Variant = light["far_motes"]
+	if not spec is Dictionary:
+		errors.append("heroine.json: light.far_motes must be an object")
+		return errors
+	if not spec.get("enabled") is bool:
+		errors.append("heroine.json: light.far_motes.enabled must be true or false")
+	for key in ["count", "hz", "size_min_px", "size_max_px", "edge_scale", "shrink_until", "edge_alpha", "alpha", "swirl", "curl", "pull", "margin_px"]:
+		if not _positive(spec.get(key)):
+			errors.append("heroine.json: light.far_motes.%s must be above 0" % key)
+	if errors.is_empty() and float(spec["size_min_px"]) > float(spec["size_max_px"]):
+		errors.append("heroine.json: light.far_motes.size_min_px must be at most size_max_px")
+	return errors
+
+
+## `light.threads` and `light.breath` (D85, D86).
+static func _validate_threads(light: Dictionary) -> PackedStringArray:
+	var errors := PackedStringArray()
+	var threads: Variant = light.get("threads")
+	if not threads is Dictionary:
+		errors.append("heroine.json: light.threads must be an object")
+	else:
+		for key in THREAD_KEYS:
+			if not _positive(threads.get(key)):
+				errors.append("heroine.json: light.threads.%s must be above 0" % key)
+		if errors.is_empty():
+			if float(threads["travel_seconds"]) > float(threads["period_seconds"]):
+				errors.append("heroine.json: light.threads.travel_seconds must be at most period_seconds")
+			if int(threads["first"]) > int(threads["max"]):
+				errors.append("heroine.json: light.threads.first must be at most max")
+			if int(threads["max"]) > 32:
+				errors.append("heroine.json: light.threads.max must be at most 32")
+			if not _number(threads.get("swirl")) or not _number(threads.get("start_edge")):
+				errors.append("heroine.json: light.threads.swirl and start_edge must be numbers")
+			for key in ["trail", "shrink_until", "alpha", "edge_alpha", "sharp_at", "start_edge"]:
+				if float(threads[key]) > 1.0:
+					errors.append("heroine.json: light.threads.%s must be at most 1" % key)
+	var breath: Variant = light.get("breath")
+	if not breath is Dictionary:
+		errors.append("heroine.json: light.breath must be an object")
+	else:
+		for key in BREATH_KEYS:
+			if not _number(breath.get(key)) or float(breath.get(key)) < 0.0:
+				errors.append("heroine.json: light.breath.%s must be 0 or more" % key)
+		if _number(breath.get("low")) and float(breath.get("low")) > 1.0:
+			errors.append("heroine.json: light.breath.low must be at most 1")
+		if _number(breath.get("seconds")) and float(breath.get("seconds")) <= 0.0:
+			errors.append("heroine.json: light.breath.seconds must be above 0")
 	return errors
 
 

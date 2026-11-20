@@ -36,7 +36,7 @@ func test_data_check_reports_broken_time_hud_data() -> void:
 	var good := Content.time_hud()
 	check(not Content.validate_time_hud(null).is_empty(), "a missing file must be reported")
 	var no_section: Dictionary = good.duplicate(true)
-	no_section.erase("edges")
+	no_section.erase("rewind")
 	check(not Content.validate_time_hud(no_section).is_empty(), "a missing section must be reported")
 	var bad_color: Dictionary = good.duplicate(true)
 	bad_color["colors"]["accent"] = "cyan-ish"
@@ -47,11 +47,17 @@ func test_data_check_reports_broken_time_hud_data() -> void:
 	var no_dash: Dictionary = good.duplicate(true)
 	no_dash["particles"]["dash_px"] = 0
 	check(not Content.validate_time_hud(no_dash).is_empty(), "a zero streak length must be reported")
-	var no_rows: Dictionary = good.duplicate(true)
-	no_rows["edges"].erase("streak_rows")
-	check(not Content.validate_time_hud(no_rows).is_empty(), "a missing edge streak field must be reported")
+	var no_core: Dictionary = good.duplicate(true)
+	no_core["colors"].erase("core")
+	check(not Content.validate_time_hud(no_core).is_empty(), "a missing light core of the time colour must be reported")
+	var bright_world: Dictionary = good.duplicate(true)
+	bright_world["rewind"]["world_saturation"] = 1.5
+	check(not Content.validate_time_hud(bright_world).is_empty(), "a world saturation above 1 must be reported")
+	var flat_vignette: Dictionary = good.duplicate(true)
+	flat_vignette["vignette"]["outer"] = 0.1
+	check(not Content.validate_time_hud(flat_vignette).is_empty(), "a vignette that ends before it starts must be reported")
 	var no_fade: Dictionary = good.duplicate(true)
-	no_fade["edges"]["fade_seconds"] = 0
+	no_fade["rewind"]["fade_seconds"] = 0
 	check(not Content.validate_time_hud(no_fade).is_empty(), "a zero fade time must be reported")
 	var missing_sound: Dictionary = good.duplicate(true)
 	missing_sound["audio"]["rewind"] = "res://audio/does_not_exist.ogg"
@@ -130,20 +136,20 @@ func test_streaks_fade_at_both_ends() -> void:
 			check(alpha < 0.2, "a streak near an end must be faint, got %f at %f" % [alpha, progress])
 
 
-func test_edge_glow_appears_in_rewind_and_clears_after() -> void:
+func test_rewind_light_appears_in_rewind_and_clears_after() -> void:
 	var config := Content.time_hud()
-	var fade := float((config["edges"] as Dictionary)["fade_seconds"])
+	var fade := float((config["rewind"] as Dictionary)["fade_seconds"])
 	var state := TimeIndicatorState.new(config)
-	check(state.edge_amount == 0.0, "the edge glow must be off at the start")
+	check(state.rewind_amount == 0.0, "the rewind light must be off at the start")
 	state.set_direction(-1)
 	var ticks := int(ceil(fade / STEP)) + 2
 	for i in ticks:
 		state.step(STEP)
-	check(is_equal_approx(state.edge_amount, 1.0), "the edge glow must be full after the fade, got %f" % state.edge_amount)
+	check(is_equal_approx(state.rewind_amount, 1.0), "the rewind light must be full after the fade, got %f" % state.rewind_amount)
 	state.set_direction(1)
 	for i in ticks:
 		state.step(STEP)
-	check(is_equal_approx(state.edge_amount, 0.0), "the edge glow must clear after the release, got %f" % state.edge_amount)
+	check(is_equal_approx(state.rewind_amount, 0.0), "the rewind light must clear after the release, got %f" % state.rewind_amount)
 
 
 # --- the grey block set -------------------------------------------------------
@@ -194,13 +200,25 @@ func test_hud_follows_time_manager_in_the_room() -> void:
 	await _ticks(3)
 	check(hud.state.glyph() == "<<", "the device must show '<<' while Shift is held, got '%s'" % hud.state.glyph())
 	check(hud.state.is_rewinding(), "the indicator must be in rewind while Shift is held")
-	var phase_before := float(hud.edge_parameter("phase"))
+	check(hud.get_node_or_null("Edges") == null, "the glow along the screen edges must be gone (D85)")
 	await _ticks(10)
-	var phase_after := float(hud.edge_parameter("phase"))
-	check(phase_after < phase_before, "the edge streaks must run left in rewind: phase %f then %f" % [phase_before, phase_after])
-	check(float(hud.edge_parameter("amount")) > 0.0, "the edge glow must show in rewind")
+	check(hud.world_faded(), "the world must fade under Shift (D86)")
+	check(hud.world_fade() < 0.2, "the world must fade slowly, not at once (D85.5), got %f" % hud.world_fade())
+	var vignette: Dictionary = Content.time_hud()["vignette"]
+	var early := hud.vignette_strength()
+	check(early > float(vignette["forward"]), "under Shift the frame's edges must start to darken, got %f" % early)
+	check(early < lerpf(float(vignette["forward"]), float(vignette["rewind"]), 0.2), "the dark must come slowly, not at once, got %f" % early)
+	check(float(vignette["rewind"]) > float(vignette["forward"]) and float(vignette["forward"]) > 0.0, "the frame is always a little dark at the edges and darker under Shift")
+	check(float(vignette["rewind"]) >= 0.6 and float(vignette["ramp_seconds"]) >= 15.0, "under a long Shift the dark keeps deepening, far, over a long time (D85.8)")
+	check(float(vignette["inner_rewind"]) < float(vignette["inner"]), "the deepening dark creeps in toward the middle")
+	check(float(hud.fade_parameter("amount")) > 0.0, "the world fade must be on in rewind")
+	var saturation := float(hud.fade_parameter("saturation"))
+	check(saturation > 0.0 and saturation < 1.0, "the world must lose some colour, not all, got %f" % saturation)
+	var player := room.get_node("Player") as Node2D
+	check(player.z_index > TimeHud.FADE_Z, "the heroine must be drawn above the faded world, z %d" % player.z_index)
 	Input.action_release("rewind")
-	await _ticks(3)
+	await _ticks(30)
+	check(not hud.world_faded(), "the world must get its colour back after the release")
 	check(hud.state.glyph() == ">>", "the device must return to '>>' after the release, got '%s'" % hud.state.glyph())
 	room.queue_free()
 	await _tree.process_frame

@@ -302,3 +302,137 @@ func _rig() -> HeroineRig:
 	var rig := HeroineRig.new()
 	rig.build(HeroineData.load_data())
 	return rig
+
+
+func test_threads_build_up_under_shift_to_a_limit() -> void:
+	var spec: Dictionary = HeroineData.load_data()["light"]["threads"]
+	var start := float(spec["start_seconds"])
+	var top := int(spec["max"])
+	check(TimeThreads.count(spec, 0.0) == 0 and TimeThreads.count(spec, start - 0.01) == 0, "no threads in the first moment of Shift: the motes come first (D86)")
+	check(TimeThreads.count(spec, start) == int(spec["first"]), "the first threads come after start_seconds")
+	var last := 0
+	var grew := false
+	for i in 400:
+		var n := TimeThreads.count(spec, float(i) * 0.05)
+		check(n >= last, "the threads never get fewer while Shift is held")
+		grew = grew or n > last and last > 0
+		last = n
+	check(grew, "the longer Shift is held, the more threads")
+	check(last == top, "the threads stop at max, got %d" % last)
+	check(TimeThreads.count(spec, 1000.0) == top, "however long Shift is held, never more than max")
+	check(TimeThreads.fade_in(spec, top - 1, start) == 0.0 and TimeThreads.fade_in(spec, 0, start + 1.0) == 1.0, "a new thread fades in, never pops")
+
+
+func test_threads_come_from_beyond_the_screen_edge_thick_and_thin_out() -> void:
+	var data := HeroineData.load_data()
+	var spec: Dictionary = data["light"]["threads"]
+	var screen := Rect2(0, 0, 1920, 1080)
+	# Wherever she stands, as many threads come from the left as from the right (D85.3).
+	var left := 0
+	var right := 0
+	for i in 12:
+		for cycle in 8:
+			var trip := TimeThreads.trip(spec, i, float(spec["period_seconds"]) * float(cycle) + 0.01)
+			var start := TimeThreads.start_point(screen, float(trip["edge"]), 40.0)
+			check(not screen.has_point(start), "thread %d must start beyond the screen edge, starts at %s" % [i, start])
+			if start.x < 960.0:
+				left += 1
+			else:
+				right += 1
+	check(absi(left - right) <= 16, "threads must come evenly from both sides: %d left, %d right" % [left, right])
+	for gauntlet in [Vector2(300, 700), Vector2(1600, 800), Vector2(960, 540), Vector2(120, 950)]:
+		var turned := 0
+		for i in 12:
+			var trip := TimeThreads.trip(spec, i, 0.7 * float(i))
+			var from: Vector2 = TimeThreads.start_point(screen, float(trip["edge"]), 40.0) - gauntlet
+			var swirl := TimeThreads.choose_swirl(spec, from, gauntlet, screen)
+			if absf(swirl) > 1.0:
+				turned += 1
+			check(TimeThreads.offset(spec, from, 1.0, swirl).length() < 0.001, "thread %d must end in the gauntlet" % i)
+			# A whirl into the gauntlet (D85.4) that closes in and never leaves the screen once in.
+			check(TimeThreads.stays_on_screen(spec, from, gauntlet, screen, swirl), "thread %d from %s must not leave the screen once it is in" % [i, from])
+			check(swirl >= 0.0, "every thread whirls clockwise (D85.5)")
+			var last := INF
+			for s in range(1, 41):
+				var at := TimeThreads.offset(spec, from, float(s) / 40.0, swirl)
+				check(at.length() <= last + 0.001, "thread %d must only close in on the gauntlet" % i)
+				last = at.length()
+		check(turned >= 8, "most threads must whirl in, not fly straight: %d of 12 at %s" % [turned, gauntlet])
+	check(is_equal_approx(TimeThreads.width_scale(spec, 0.0), float(spec["edge_scale"])), "at the screen edge a thread is edge_scale times wider")
+	check(TimeThreads.width_px(spec, 0.0) >= 40.0, "at the screen edge a thread is really wide (D85.5), got %.1f px" % TimeThreads.width_px(spec, 0.0))
+	check(is_equal_approx(TimeThreads.width_scale(spec, 1.0), 1.0), "near the gauntlet a thread has its normal width")
+	check(TimeThreads.width_scale(spec, 0.3) < TimeThreads.width_scale(spec, 0.1), "a thread narrows on its way in")
+	check(TimeThreads.alpha(spec, 0.0, 0.5, 1.0) < TimeThreads.alpha(spec, 0.8, 0.5, 1.0) * 0.5, "a thread is nearly clear at the edge and bright near the gauntlet")
+	check(TimeThreads.sharpness(spec, 0.0) == 0.0 and TimeThreads.sharpness(spec, 1.0) == 1.0, "a thread is soft at the edge and sharp near the gauntlet")
+	var trail := TimeThreads.trail(spec, Vector2(800, 0), 0.5, 2.0)
+	check(trail.size() == int(spec["segments"]) + 1, "a trail has segments + 1 points")
+	check(TimeThreads.alpha(spec, 0.5, 0.5, 1.0) > TimeThreads.alpha(spec, 0.5, 0.5, 0.2), "a thread fades toward its tail")
+	check(TimeThreads.alpha(spec, 1.0, 1.0, 1.0) < 0.01, "a part of a thread is gone once it reaches the gauntlet's centre")
+	# The head reaches the centre first; the rest flows in after it (D85.7).
+	var arrived := TimeThreads.trail(spec, Vector2(800, 0), 1.0, 2.0)
+	check(TimeThreads.alpha(spec, float(arrived[arrived.size() / 2]["along"]), 1.0, 0.5) > 0.05, "when the head is in, the rest of the thread is still on its way")
+	var period := float(spec["period_seconds"])
+	var whole := 1.0 + float(spec["trail"])
+	var seen_whole := false
+	for s in 200:
+		var head := float(TimeThreads.trip(spec, 0, float(s) * period / 200.0)["along"])
+		if head > 1.0:
+			seen_whole = true
+		check(head <= whole + 0.001, "the head never goes past the tail's way in, got %f" % head)
+	check(seen_whole, "the trip goes on after the head is in, until the tail is in")
+	var broken: Dictionary = data.duplicate(true)
+	broken["light"]["threads"]["max"] = 0
+	check(not HeroineData.validate(broken).is_empty(), "no threads at all must be reported")
+	broken = data.duplicate(true)
+	broken["light"]["threads"]["travel_seconds"] = 10
+	check(not HeroineData.validate(broken).is_empty(), "a trip longer than its period must be reported")
+	broken = data.duplicate(true)
+	broken["light"].erase("breath")
+	check(not HeroineData.validate(broken).is_empty(), "a missing breath must be reported")
+
+
+func test_strip_breathes_in_forward_time_and_glows_under_shift() -> void:
+	var rig := _rig()
+	var colours: Dictionary = Content.time_hud()["colors"]
+	var accent := Color(String(colours["accent"]))
+	var core := Color(String(colours["core"]))
+	rig.set_time_light(1.0, 0.0)
+	var seen := {}
+	var strongest := 0.0
+	var weakest := 1.0
+	for i in 60:
+		rig._update_light(0.1)
+		seen[rig.strip().color.to_html()] = true
+		strongest = maxf(strongest, rig.light_strength())
+		weakest = minf(weakest, rig.light_strength())
+	check(seen.size() > 10, "in forward time the strip must breathe, not stand still")
+	check(strongest > weakest * 2.0, "the light on her breathes with the strip: %f..%f" % [weakest, strongest])
+	rig.set_time_light(1.0, 1.0)
+	rig._update_light(0.0)
+	check(rig.strip().color.is_equal_approx(core), "under Shift the strip shows the light core, got %s" % rig.strip().color.to_html())
+	check(not accent.is_equal_approx(core), "the time colour and its core must differ")
+	rig.free()
+
+
+## D85.6 (20.11.2026, a trial): far motes come in from the screen edge, big
+## and faint there, small and bright near the gauntlet; one switch turns them off.
+func test_far_motes_shrink_on_their_way_and_can_be_turned_off() -> void:
+	var data := HeroineData.load_data()
+	var far: Dictionary = data["light"]["far_motes"]
+	var mote := {"phase": 0.0, "size": float(far["size_max_px"])}
+	check(FarMotes.size_px(far, mote, 0.0) >= 20.0, "a far mote is big at the screen edge, got %.1f px" % FarMotes.size_px(far, mote, 0.0))
+	check(is_equal_approx(FarMotes.size_px(far, mote, 1.0), float(far["size_max_px"])), "a far mote has its own size at the gauntlet")
+	check(FarMotes.alpha(far, 0.0) < FarMotes.alpha(far, 0.8) * 0.5, "a far mote is faint at the edge and bright near the gauntlet")
+	check(FarMotes.alpha(far, 1.0) < 0.01, "a far mote is gone in the gauntlet's centre")
+	check(FarMotes.list(far).size() == int(far["count"]) and FarMotes.list(far) == FarMotes.list(far), "the far motes are the same every run")
+	var off: Dictionary = data.duplicate(true)
+	off["light"]["far_motes"]["enabled"] = false
+	var quiet := HeroineRig.new()
+	quiet.build(off)
+	quiet.set_time_light(1.0, 1.0)
+	check(quiet.far_motes_now().is_empty(), "enabled false turns the far motes off")
+	quiet.free()
+	var broken: Dictionary = data.duplicate(true)
+	broken["light"]["far_motes"]["enabled"] = "yes"
+	check(not HeroineData.validate(broken).is_empty(), "enabled must be true or false")
+

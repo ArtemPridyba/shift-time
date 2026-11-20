@@ -29,3 +29,10 @@ static func limits(room: Rect2, screen: Vector2, zoom: float) -> Rect2i:
 	var right := ceili(room.end.x + grow.x)
 	var bottom := ceili(room.end.y + grow.y)
 	return Rect2i(left, top, right - left, bottom - top)
+
+
+## Where the close view looks on her, from her feet up, so that her feet
+## stand at `feet_screen_y` of the screen's height (0.5 the middle) at `zoom`
+## (Д5.1: not half a screen of floor under her).
+static func focus_height(screen_height: float, zoom: float, feet_screen_y: float) -> float:
+	return (feet_screen_y - 0.5) * screen_height / maxf(zoom, 0.0001)

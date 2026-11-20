@@ -1,7 +1,9 @@
 {
 	"colors": {
-		"accent": "#F24CE9",
-		"glyph": "#FFE6FD"
+		"accent": "#BE32DC",
+		"core": "#F8DDFB",
+		"edge": "#5A0F6E",
+		"glyph": "#F8DDFB"
 	},
 	"device": {
 		"offset_x_px": 22,
@@ -12,7 +14,11 @@
 	"rewind": {
 		"flicker_hz": 9.0,
 		"flicker_depth": 0.45,
-		"sweep_hz": 1.6
+		"sweep_hz": 1.6,
+		"fade_seconds": 0.25,
+		"world_saturation": 0.7,
+		"world_brightness": 0.95,
+		"world_fade_seconds": 2.0
 	},
 	"particles": {
 		"count": 9,
@@ -22,15 +28,14 @@
 		"dash_px": 5,
 		"lane_px": 4
 	},
-	"edges": {
-		"glow_strength": 0.18,
-		"width": 0.09,
-		"fade_seconds": 0.25,
-		"streak_strength": 0.85,
-		"streak_density": 0.4,
-		"streak_length": 0.12,
-		"streak_rows": 54,
-		"streak_thickness": 0.07
+	"vignette": {
+		"forward": 0.25,
+		"rewind": 0.7,
+		"ramp_seconds": 20.0,
+		"release_seconds": 1.0,
+		"inner": 0.5,
+		"inner_rewind": 0.3,
+		"outer": 1.1
 	},
 	"audio": {
 		"forward": "",
