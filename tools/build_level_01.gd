@@ -26,7 +26,7 @@ const MAP := [
 	"#..........#.............................EE....#",
 	"#..........#..........................##########",
 	"#..........#..........................##########",
-	"#..........D..........................##########",
+	"#..........#..........................##########",
 	"#..........D..........................##########",
 	"#S.........D..........................##########",
 	"####################..................##########",
@@ -39,7 +39,7 @@ const MAP := [
 ]
 
 ## The doorway the hero walks out of (decoration only), in cells.
-const ENTRANCE_CELLS := Rect2i(1, 7, 1, 3)
+const ENTRANCE_CELLS := Rect2i(1, 8, 1, 2)
 
 ## Platform 1 starts flush with the left ground (columns 20-22, top at row 10)
 ## and rides 12 cells right. Platform 2 starts flush with the exit pillar
@@ -93,6 +93,7 @@ func _initialize() -> void:
 	var door: Door = (load("res://objects/door.tscn") as PackedScene).instantiate()
 	door.object_id = "door"
 	door.travel = float(door_cells.size.y * CELL)
+	door.height = float(door_cells.size.y * CELL)
 	door.position = (Vector2(door_cells.position) + Vector2(door_cells.size) / 2.0) * CELL
 	_own(root, door)
 

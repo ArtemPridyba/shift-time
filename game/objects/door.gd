@@ -35,6 +35,9 @@ const GAUGE_BACK_COLOR := Color("#23272d")
 
 @export var object_id := "door"
 @export var travel := 192.0
+## The height of the door in pixels; 0 keeps the 192 of door.tscn. Doors are
+## about 120 px next to the 94 px heroine (D82, 20.11.2026).
+@export var height := 0.0
 ## When set, this door is driven by a button or lever with this object_id.
 ## The cycle runs for looks (open/close speed) but hold times are ignored.
 @export var linked_id := ""
@@ -93,6 +96,11 @@ func apply_settings(settings: Dictionary) -> void:
 
 
 func _ready() -> void:
+	var shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if height > 0.0 and shape != null and shape.shape is RectangleShape2D:
+		var own := (shape.shape as RectangleShape2D).duplicate() as RectangleShape2D
+		own.size.y = height
+		shape.shape = own
 	_base()
 
 
