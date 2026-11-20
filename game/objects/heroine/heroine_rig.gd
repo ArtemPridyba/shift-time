@@ -62,9 +62,6 @@ var _mote_time := 0.0
 ## The motes of time drawn over the doll (D80.1).
 var _motes: Node2D
 var _mote_list: Array[Dictionary] = []
-## The trial far motes (D85.6): tiny dots from farther away; empty when
-## `light.far_motes.enabled` is false.
-var _far_list: Array[Dictionary] = []
 ## The threads of time drawn under the motes (D85), and how long Shift has
 ## been held, in her seconds: the threads build up with it.
 var _threads: Node2D
@@ -151,8 +148,6 @@ func build(data: Dictionary) -> void:
 		if entry[3] != "":
 			_flat.append([entry[2], entry[3], (entry[2] as Node2D).scale])
 	_mote_list = HeroineData.motes(data.get("light", {}))
-	var far: Dictionary = (data.get("light", {}) as Dictionary).get("far_motes", {})
-	_far_list = HeroineData.motes(data.get("light", {}), "far_motes") if bool(far.get("enabled", false)) else ([] as Array[Dictionary])
 	_threads = Node2D.new()
 	_threads.name = "Threads"
 	_threads.draw.connect(_draw_threads)
@@ -372,20 +367,6 @@ func motes_now() -> Array[Dictionary]:
 	return now
 
 
-## The trial far motes now (D85.6): tiny dots that start farther from her and
-## whirl clockwise into the gauntlet; empty in forward time or when disabled.
-func far_motes_now() -> Array[Dictionary]:
-	var now: Array[Dictionary] = []
-	if _rewind <= 0.0:
-		return now
-	var light: Dictionary = _data.get("light", {})
-	var bright := float((light.get("far_motes", {}) as Dictionary).get("alpha", 0.6))
-	for mote in _far_list:
-		var at := HeroineData.mote_at(light, mote, _mote_time, "far_motes")
-		now.append({"offset": at["offset"], "alpha": float(at["along"]) * _rewind * bright, "size": mote["size"]})
-	return now
-
-
 ## Under Shift small motes of the time colour spiral in from all around and
 ## vanish in the gauntlet: the device takes time from the world. They light
 ## nothing (D76).
@@ -397,10 +378,6 @@ func _draw_motes() -> void:
 			var at := centre + (mote["offset"] as Vector2)
 			_motes.draw_circle(at, float(mote["size"]) * 1.9, Color(_accent, alpha * 0.45), true, -1.0, true)
 			_motes.draw_circle(at, float(mote["size"]) * 0.8, Color(_core, alpha), true, -1.0, true)
-	for mote in far_motes_now():
-		var alpha := float(mote["alpha"])
-		if alpha > 0.0:
-			_motes.draw_circle(centre + (mote["offset"] as Vector2), float(mote["size"]), Color(_core, alpha), true, -1.0, true)
 
 
 ## The threads out now (D85): the head of each on its way in (0..1), how far it

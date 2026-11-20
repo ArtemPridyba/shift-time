@@ -400,31 +400,3 @@ func test_strip_breathes_in_forward_time_and_glows_under_shift() -> void:
 	check(rig.strip().color.is_equal_approx(core), "under Shift the strip shows the light core, got %s" % rig.strip().color.to_html())
 	check(not accent.is_equal_approx(core), "the time colour and its core must differ")
 	rig.free()
-
-
-## D85.6 (20.11.2026, a trial): tiny far motes whirl in from farther away;
-## one switch in the data turns them off.
-func test_far_motes_come_from_farther_and_can_be_turned_off() -> void:
-	var data := HeroineData.load_data()
-	var light: Dictionary = data["light"]
-	var far: Dictionary = light["far_motes"]
-	var near: Dictionary = light["motes"]
-	check(float(far["from_min_px"]) > float(near["from_max_px"]) * 0.9, "far motes start farther out than the motes")
-	check(float(far["size_max_px"]) <= float(near["size_min_px"]) * 1.2, "far motes are tiny dots")
-	var rig := _rig()
-	rig.set_time_light(1.0, 0.0)
-	check(rig.far_motes_now().is_empty(), "no far motes in forward time")
-	rig.set_time_light(1.0, 1.0)
-	check(rig.far_motes_now().size() == (int(far["count"]) if bool(far["enabled"]) else 0), "far motes under Shift when enabled")
-	rig.free()
-	var off: Dictionary = data.duplicate(true)
-	off["light"]["far_motes"]["enabled"] = false
-	var quiet := HeroineRig.new()
-	quiet.build(off)
-	quiet.set_time_light(1.0, 1.0)
-	check(quiet.far_motes_now().is_empty(), "enabled false turns the far motes off")
-	quiet.free()
-	var broken: Dictionary = data.duplicate(true)
-	broken["light"]["far_motes"]["enabled"] = "yes"
-	check(not HeroineData.validate(broken).is_empty(), "enabled must be true or false")
-
