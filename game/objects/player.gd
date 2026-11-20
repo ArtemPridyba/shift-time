@@ -27,7 +27,7 @@ var _intro_left := 0
 var _intro_total := 0
 
 @onready var _shape: CollisionShape2D = $CollisionShape2D
-@onready var _camera: Camera2D = $Camera2D
+@onready var _camera: PlayerCamera = $Camera2D
 ## The look: the heroine's doll (task Д5); the hitbox stays 44x92.
 @onready var _rig: HeroineRig = $Heroine
 
@@ -75,10 +75,12 @@ func _physics_process(delta: float) -> void:
 
 
 func set_camera_limits(rect: Rect2i) -> void:
-	_camera.limit_left = rect.position.x
-	_camera.limit_top = rect.position.y
-	_camera.limit_right = rect.end.x
-	_camera.limit_bottom = rect.end.y
+	_camera.set_room(Rect2(rect))
+
+
+## The camera shows the whole room for `seconds` (D83), then comes close.
+func show_overview(seconds: float) -> void:
+	_camera.show_overview(seconds)
 
 
 ## +1 while the hero faces right, -1 while left; the wrist device follows it.

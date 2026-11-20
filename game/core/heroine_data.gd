@@ -7,7 +7,9 @@ extends RefCounted
 const PATH := "res://data/heroine.json"
 const POSES: Array[String] = ["idle", "jump", "fall", "press", "land", "exit"]
 const OVERLAYS: Array[String] = ["press", "land"]
-const LIGHT_KEYS: Array[String] = ["forward", "rewind", "radius_px", "wave_px", "wave_hz", "wave_width", "wave_strength"]
+const LIGHT_KEYS: Array[String] = ["forward", "rewind", "radius_px", "tint"]
+## Numbers of `light.motes` (D80.1), each above 0.
+const MOTE_KEYS: Array[String] = ["count", "from_min_px", "from_max_px", "size_min_px", "size_max_px", "hz", "swirl", "flatten"]
 
 
 static func load_data() -> Dictionary:
@@ -139,6 +141,9 @@ static func validate(data: Variant) -> PackedStringArray:
 		errors.append("heroine.json: parts_dir must be a res:// folder")
 	if not _positive(data.get("scale")):
 		errors.append("heroine.json: scale must be a number above 0")
+	if data.has("sheet_parts") and not data.get("sheet_parts") is bool:
+		errors.append("heroine.json: sheet_parts must be true or false")
+	errors.append_array(_validate_look(data.get("look")))
 	if Color.from_string(String(data.get("far_tint", "")), Color(0, 0, 0, 0)).a == 0.0:
 		errors.append("heroine.json: far_tint must be a colour")
 	var parts: Variant = data.get("parts")
@@ -232,6 +237,49 @@ static func validate(data: Variant) -> PackedStringArray:
 	return errors
 
 
+## Brightness of the whole doll (D81).
+static func _validate_look(look: Variant) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not look is Dictionary:
+		errors.append("heroine.json: look must be an object")
+		return errors
+	for key in ["gain", "gamma"]:
+		if not _positive(look.get(key)):
+			errors.append("heroine.json: look.%s must be above 0" % key)
+	return errors
+
+
+## The motes of time (D80.1, as the 4th heroine of the "Night shop" mock-up):
+## `count` motes, each with its own angle, start distance, phase and size,
+## the same every run (`seed`).
+static func motes(light: Dictionary) -> Array[Dictionary]:
+	var spec: Dictionary = light.get("motes", {})
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(spec.get("seed", 77))
+	var list: Array[Dictionary] = []
+	for i in int(spec.get("count", 0)):
+		list.append({
+			"angle": rng.randf() * TAU,
+			"from": lerpf(float(spec.get("from_min_px", 50.0)), float(spec.get("from_max_px", 150.0)), rng.randf()),
+			"phase": rng.randf(),
+			"size": lerpf(float(spec.get("size_min_px", 1.0)), float(spec.get("size_max_px", 2.4)), rng.randf()),
+		})
+	return list
+
+
+## Where a mote is at her time `t` (seconds, always forward: she is live), as an
+## offset from the gauntlet, and how far along its way it is (0..1). Every mote
+## spirals in from its start distance and vanishes in the gauntlet, faint far
+## away and bright near it; then it starts again from afar.
+static func mote_at(light: Dictionary, mote: Dictionary, t: float) -> Dictionary:
+	var spec: Dictionary = light.get("motes", {})
+	var along := fposmod(t * float(spec.get("hz", 0.7)) + float(mote["phase"]), 1.0)
+	var distance := float(mote["from"]) * pow(1.0 - along, 1.2)
+	var angle := float(mote["angle"]) + along * float(spec.get("swirl", 2.4))
+	var offset := Vector2(cos(angle) * distance, sin(angle) * distance * float(spec.get("flatten", 0.8)))
+	return {"offset": offset, "along": along}
+
+
 ## The air, the overlays, the walk out of the doorway and the light.
 static func _validate_motion(data: Dictionary, poses: Dictionary) -> PackedStringArray:
 	var errors := PackedStringArray()
@@ -278,11 +326,23 @@ static func _validate_motion(data: Dictionary, poses: Dictionary) -> PackedStrin
 		for key in LIGHT_KEYS:
 			if not _number(light.get(key)) or float(light.get(key)) < 0.0:
 				errors.append("heroine.json: light.%s must be 0 or more" % key)
-		for key in ["radius_px", "wave_px"]:
-			if not _positive(light.get(key)):
-				errors.append("heroine.json: light.%s must be above 0" % key)
-		if _number(light.get("wave_width")) and float(light.get("wave_width")) > 1.0:
-			errors.append("heroine.json: light.wave_width must be at most 1")
+		if not _positive(light.get("radius_px")):
+			errors.append("heroine.json: light.radius_px must be above 0")
+		if _number(light.get("tint")) and float(light.get("tint")) > 1.0:
+			errors.append("heroine.json: light.tint must be at most 1")
+		var spec: Variant = light.get("motes")
+		if not spec is Dictionary:
+			errors.append("heroine.json: light.motes must be an object")
+		else:
+			for key in MOTE_KEYS:
+				if not _positive(spec.get(key)):
+					errors.append("heroine.json: light.motes.%s must be above 0" % key)
+			if errors.is_empty() and float(spec["from_min_px"]) > float(spec["from_max_px"]):
+				errors.append("heroine.json: light.motes.from_min_px must be at most from_max_px")
+			if errors.is_empty() and float(spec["size_min_px"]) > float(spec["size_max_px"]):
+				errors.append("heroine.json: light.motes.size_min_px must be at most size_max_px")
+			if _number(spec.get("seed")) == false:
+				errors.append("heroine.json: light.motes.seed must be a number")
 	return errors
 
 

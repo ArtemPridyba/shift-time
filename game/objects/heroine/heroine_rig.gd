@@ -11,10 +11,11 @@ extends Node2D
 ## short overlays (press, land) turn only the parts they name; the walk out of
 ## the doorway bows her and brings her out of the dark. The gauntlet lights only
 ## her own body (`heroine_light.gdshader`): weak forward, stronger under Shift,
-## with waves that run over her into the gauntlet. She never reads world time
+## with an even glow of the time colour and motes of time that spiral into the gauntlet (D80.1). She never reads world time
 ## herself: the time device tells her through `set_time_light`.
 
 const LIGHT_SHADER := preload("res://objects/heroine/heroine_light.gdshader")
+const LOOK_SHADER := preload("res://objects/heroine/heroine_look.gdshader")
 
 var _data: Dictionary = {}
 ## Joint node of each part: rotates the part around its pivot.
@@ -43,15 +44,27 @@ var _overlay_time := 0.0
 var _overlay_pin := -1.0
 var _exit := 0.0
 var _material: ShaderMaterial
+## The material of the whole doll: her brightness (D81).
+var _look: ShaderMaterial
+## [picture, part, scale]: every picture in the group and the joint it follows.
+var _flat: Array = []
 var _accent := Color("#7FE8FF")
 var _glow := 1.0
 var _rewind := 0.0
-var _wave_phase := 0.0
+## Her own time for the motes, in seconds: it always runs forward.
+var _mote_time := 0.0
+## The motes of time drawn over the doll (D80.1).
+var _motes: Node2D
+var _mote_list: Array[Dictionary] = []
 
 
 ## The showcase sets this before adding the rig: the parts at sheet size from
-## `parts_dir/full`, sharp when the doll is drawn large.
+## `parts_dir/full`, sharp when the doll is drawn large. `sheet_parts` of
+## heroine.json does the same for the game (D84).
 var full_size := false
+## True while the parts come from `parts_dir/full`, drawn with mipmaps and
+## smoothing, so she stays sharp at any zoom of the camera (D84).
+var _full := false
 
 
 func _ready() -> void:
@@ -65,7 +78,13 @@ func build(data: Dictionary) -> void:
 	_data = data
 	_joints.clear()
 	_sprites.clear()
-	_body = Node2D.new()
+	_full = full_size or bool(data.get("sheet_parts", false))
+	# One group, so the look shader draws her as one picture (D81).
+	var group := CanvasGroup.new()
+	_look = ShaderMaterial.new()
+	_look.shader = LOOK_SHADER
+	group.material = _look
+	_body = group
 	_body.name = "Body"
 	var scale_px := float(data.get("scale", 1.0))
 	_body.scale = Vector2(scale_px, scale_px)
@@ -73,7 +92,7 @@ func build(data: Dictionary) -> void:
 	var parts: Dictionary = data.get("parts", {})
 	var dir := _parts_dir(data)
 	var far_tint := Color.from_string(String(data.get("far_tint", "#ffffff")), Color.WHITE)
-	var bakes := {} if full_size else HeroineData.bake_factors(data)
+	var bakes := {} if _full else HeroineData.bake_factors(data)
 	var colors: Dictionary = Content.time_hud().get("colors", {})
 	_accent = Color.from_string(String(colors.get("accent", "#7FE8FF")), Color.CYAN)
 	_material = ShaderMaterial.new()
@@ -94,18 +113,31 @@ func build(data: Dictionary) -> void:
 		var size := float(part.get("size", 1.0))
 		joint.scale = Vector2(size, size)
 		var sprite := _picture(dir, String(part.get("texture", "")), _vec(part.get("pivot")), bakes)
-		sprite.name = "Picture"
+		sprite.name = "Picture_" + name
 		if bool(part.get("far", false)):
 			sprite.modulate = far_tint
 		sprite.material = _material
-		joint.add_child(sprite)
 		_joints[name] = joint
 		_sprites[name] = sprite
-	# Drawing order: z of each part relative to the rig, whatever its depth.
+	# The pictures are not children of their joints: they lie flat in the
+	# group, in the order of their z, and follow their joints (`_sync`). Parts
+	# with their own z_index would be drawn outside the group (D81).
+	var order: Array = []
 	for name: String in _sprites:
-		(_sprites[name] as Sprite2D).z_index = int((parts[name] as Dictionary).get("z", 0))
-	_build_strip(data)
-	_build_cable(data)
+		order.append([int((parts[name] as Dictionary).get("z", 0)), order.size(), _sprites[name], name])
+	_build_strip(data, order)
+	_build_cable(data, order)
+	order.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0] or (a[0] == b[0] and a[1] < b[1]))
+	_flat.clear()
+	for entry: Array in order:
+		_body.add_child(entry[2] as Node2D)
+		if entry[3] != "":
+			_flat.append([entry[2], entry[3], (entry[2] as Node2D).scale])
+	_mote_list = HeroineData.motes(data.get("light", {}))
+	_motes = Node2D.new()
+	_motes.name = "Motes"
+	_motes.draw.connect(_draw_motes)
+	add_child(_motes)
 	_pose = ""
 	_overlay = ""
 	_exit = 0.0
@@ -230,27 +262,65 @@ func light_strength() -> float:
 	return lerpf(float(light.get("forward", 0.0)), float(light.get("rewind", 0.0)), _rewind) * _glow
 
 
-## The strength of the waves over her body: 0 in forward time.
-func wave_strength() -> float:
-	return float((_data.get("light", {}) as Dictionary).get("wave_strength", 0.0)) * _rewind
+## The even glow of the time colour over her body: 0 in forward time (D80.1).
+func tint_strength() -> float:
+	return float((_data.get("light", {}) as Dictionary).get("tint", 0.0)) * _rewind
 
 
 func _update_light(delta: float) -> void:
 	if _material == null:
 		return
 	var light: Dictionary = _data.get("light", {})
-	if _rewind > 0.0:
-		_wave_phase = fposmod(_wave_phase + delta * float(light.get("wave_hz", 0.0)), 1.0)
+	_mote_time += delta
+	if _motes != null:
+		_motes.queue_redraw()
 	var to_canvas := get_global_transform() if is_inside_tree() else transform
 	var scale_px := absf(to_canvas.get_scale().y)
 	_material.set_shader_parameter("light_pos", to_canvas * device_point())
 	_material.set_shader_parameter("radius", float(light.get("radius_px", 1.0)) * scale_px)
 	_material.set_shader_parameter("light", light_strength())
 	_material.set_shader_parameter("accent", _accent)
-	_material.set_shader_parameter("waves", wave_strength())
-	_material.set_shader_parameter("wave_px", float(light.get("wave_px", 1.0)) * scale_px)
-	_material.set_shader_parameter("wave_phase", _wave_phase)
-	_material.set_shader_parameter("wave_width", float(light.get("wave_width", 0.25)))
+	_update_look()
+
+
+## Brightness of `look` in heroine.json (D81): she is never a black cut-out.
+func _update_look() -> void:
+	if _look == null:
+		return
+	var look: Dictionary = _data.get("look", {})
+	_look.set_shader_parameter("gain", float(look.get("gain", 1.0)))
+	_look.set_shader_parameter("gamma", float(look.get("gamma", 1.0)))
+	_look.set_shader_parameter("accent", _accent)
+	_look.set_shader_parameter("tint", tint_strength())
+
+
+## A shader uniform of the whole doll's look, for tests.
+func look_parameter(parameter: StringName) -> Variant:
+	return _look.get_shader_parameter(parameter)
+
+
+## The motes of time now, as offsets from the gauntlet and how bright each is
+## (0..1); empty in forward time (D80.1).
+func motes_now() -> Array[Dictionary]:
+	var now: Array[Dictionary] = []
+	if _rewind <= 0.0:
+		return now
+	var light: Dictionary = _data.get("light", {})
+	for mote in _mote_list:
+		var at := HeroineData.mote_at(light, mote, _mote_time)
+		now.append({"offset": at["offset"], "alpha": float(at["along"]) * _rewind, "size": mote["size"]})
+	return now
+
+
+## Under Shift small motes of the time colour spiral in from all around and
+## vanish in the gauntlet: the device takes time from the world. They light
+## nothing (D76).
+func _draw_motes() -> void:
+	var centre := device_point()
+	for mote in motes_now():
+		var alpha := float(mote["alpha"])
+		if alpha > 0.0:
+			_motes.draw_circle(centre + (mote["offset"] as Vector2), float(mote["size"]), Color(_accent, alpha), true, -1.0, true)
 
 
 ## A shader uniform of the light, for tests.
@@ -401,13 +471,13 @@ func _picture(dir: String, texture: String, pivot: Vector2, bakes: Dictionary) -
 	sprite.centered = false
 	sprite.offset = -pivot * bake
 	sprite.scale = Vector2.ONE / bake
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR if full_size else CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS if _full else CanvasItem.TEXTURE_FILTER_NEAREST
 	return sprite
 
 
 ## The indicator strip: a white mask of the strip cut from the gauntlet, laid
 ## exactly over the gauntlet's picture and tinted with the time colour.
-func _build_strip(data: Dictionary) -> void:
+func _build_strip(data: Dictionary, order: Array) -> void:
 	var strip_data: Dictionary = data.get("strip", {})
 	var part := String(strip_data.get("part", ""))
 	if not _joints.has(part):
@@ -420,13 +490,14 @@ func _build_strip(data: Dictionary) -> void:
 	_strip.offset = under.offset
 	_strip.scale = under.scale
 	_strip.texture_filter = under.texture_filter
-	_strip.z_index = under.z_index
 	var colors: Dictionary = Content.time_hud().get("colors", {})
 	_strip.color = Color.from_string(String(colors.get("accent", "#7FE8FF")), Color.CYAN)
-	(_joints[part] as Node2D).add_child(_strip)
+	# Right above the gauntlet's picture.
+	var z := int((data["parts"][part] as Dictionary).get("z", 0))
+	order.append([z, order.size(), _strip, part])
 
 
-func _build_cable(data: Dictionary) -> void:
+func _build_cable(data: Dictionary, order: Array) -> void:
 	var cable: Dictionary = data.get("cable", {})
 	if cable.is_empty():
 		return
@@ -438,12 +509,23 @@ func _build_cable(data: Dictionary) -> void:
 	_cable.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	_cable.end_cap_mode = Line2D.LINE_CAP_ROUND
 	_cable.antialiased = true
-	_cable.z_index = int(cable.get("z", 0))
-	_body.add_child(_cable)
+	order.append([int(cable.get("z", 0)), order.size(), _cable, ""])
+
+
+## Every picture onto its joint, in the body's pixels.
+func _sync() -> void:
+	for entry: Array in _flat:
+		var to_body := Transform2D.IDENTITY
+		var walk: Node = _joints[entry[1]]
+		while walk != null and walk != _body:
+			to_body = (walk as Node2D).transform * to_body
+			walk = walk.get_parent()
+		(entry[0] as Node2D).transform = to_body.scaled_local(entry[2] as Vector2)
 
 
 ## The cable hangs between its two ends as a parabola `sag` part pixels deep.
 func _update_cable() -> void:
+	_sync()
 	if _cable == null:
 		return
 	var cable: Dictionary = _data.get("cable", {})
@@ -474,7 +556,7 @@ func _part_point(part: String, pixel: Vector2) -> Vector2:
 
 func _parts_dir(data: Dictionary) -> String:
 	var dir := String(data.get("parts_dir", ""))
-	return dir + "/full" if full_size else dir
+	return dir + "/full" if _full else dir
 
 
 static func _vec(value: Variant) -> Vector2:

@@ -250,6 +250,63 @@ func test_finish_level_needs_a_running_level() -> void:
 		check(str(loader.get("current_id")).is_empty() and not bool(loader.call("finish_level")), "finish_level without a running level changes nothing")
 
 
+## D82 (20.11.2026): the door and the entrance doorway are about 120 px next
+## to the 94 px heroine, the door's body as tall as its doorway.
+func test_level_01_door_is_about_120_px_and_she_fits_under_it() -> void:
+	var room := await _load()
+	var door: Door = room.get_node("Door")
+	var shape := (door.get_node("CollisionShape2D") as CollisionShape2D).shape as RectangleShape2D
+	check(shape.size.y >= 110.0 and shape.size.y <= 140.0, "the door is %.0f px tall, it should be about 120" % shape.size.y)
+	check(is_equal_approx(door.travel, shape.size.y), "the door opens by its own height")
+	var player_shape := (room.get_node("Player/CollisionShape2D") as CollisionShape2D).shape as RectangleShape2D
+	check(shape.size.y > player_shape.size.y, "the hero fits under the door")
+	var entrance := room.get_node("Entrance") as Node2D
+	var size: Vector2 = entrance.get("size")
+	check(size.y >= 110.0 and size.y <= 140.0, "the entrance is %.0f px tall" % size.y)
+	await _free(room)
+
+
+## D83 (20.11.2026): the level opens on the whole room, then the camera comes
+## close behind the heroine; the overview key shows the room again.
+func test_level_01_camera_shows_the_room_then_comes_close() -> void:
+	var room := await _load()
+	var camera: PlayerCamera = room.get_node("Player/Camera2D")
+	var blocks: TileMapLayer = room.get_node("Blocks")
+	var size := Vector2(blocks.get_used_rect().size * blocks.tile_set.tile_size)
+	var screen := Vector2(int(ProjectSettings.get_setting("display/window/size/viewport_width")), int(ProjectSettings.get_setting("display/window/size/viewport_height")))
+	check(camera.overview_amount() == 1.0, "the level starts on the whole room")
+	check(size.x * camera.zoom.x <= screen.x + 1.0 and size.y * camera.zoom.y <= screen.y + 1.0, "the whole room fits on the screen, zoom %.2f" % camera.zoom.x)
+	var params := Content.camera()
+	var per_second := float(Content.time()["physics_ticks_per_second"])
+	await _ticks(int((float(params["overview_start_seconds"]) + float(params["overview_blend_seconds"])) * per_second) + 5)
+	check(camera.overview_amount() == 0.0, "after the start the camera is close")
+	check(is_equal_approx(camera.zoom.x, float(params["zoom"])), "close zoom is %.2f, data says %.2f" % [camera.zoom.x, float(params["zoom"])])
+	Input.action_press("overview")
+	await _ticks(int(float(params["overview_blend_seconds"]) * per_second) + 2)
+	check(camera.overview_amount() == 1.0, "holding the overview key shows the whole room")
+	Input.action_release("overview")
+	await _free(room)
+
+
+## The overview is centred on the room along the side where the screen sees
+## more than the room (D83).
+func test_camera_overview_math() -> void:
+	var room := Rect2(0, 0, 3072, 1088)
+	var screen := Vector2(1920, 1080)
+	var zoom := CameraView.overview_zoom(room, screen, 2.0)
+	check(is_equal_approx(zoom, 0.625), "a wide room fits by its width, zoom %.3f" % zoom)
+	var limits := CameraView.limits(room, screen, zoom)
+	check(limits.position.x == 0 and limits.end.x == 3072, "the width stays the room's")
+	check(limits.position.y < 0 and absi(limits.position.y + limits.end.y - 1088) <= 1, "the height grows evenly on both ends")
+	check(CameraView.limits(room, screen, 2.0) == Rect2i(room), "close up the limits are the room")
+	check(is_equal_approx(CameraView.overview_zoom(Rect2(0, 0, 800, 400), screen, 2.0), 2.0), "a small room is never shown closer than the close view")
+	check(is_equal_approx(CameraView.blend_zoom(2.0, 0.5, 0.5), 1.0), "half way the zoom is even in scale")
+	check(not Content.validate_camera({}).is_empty() and Content.validate_camera({}).size() == Content.CAMERA_KEYS.size(), "an empty camera.json must report every key")
+	var broken := Content.camera().duplicate()
+	broken["zoom"] = 0.5
+	check(not Content.validate_camera(broken).is_empty(), "a close zoom below 1 must be reported")
+
+
 func _load() -> Node:
 	Input.action_release("rewind")
 	_reset_time()

@@ -66,7 +66,9 @@ func test_strip_is_drawn_in_the_time_colour_from_data() -> void:
 	check(rig.strip() != null, "the gauntlet must have the indicator strip")
 	if rig.strip() != null:
 		check(rig.strip().color.is_equal_approx(Color.from_string(accent, Color.BLACK)), "the strip must use the time colour of time_hud.json")
-		check(rig.strip().get_parent() == rig.joint("gauntlet"), "the strip must move with the gauntlet")
+		rig.set_pose("run")
+		var gauntlet := rig.joint("gauntlet").global_transform
+		check(rig.strip().global_position.is_equal_approx(gauntlet.origin) and is_equal_approx(rig.strip().global_rotation, gauntlet.get_rotation()), "the strip must move with the gauntlet")
 	rig.free()
 
 
@@ -222,10 +224,7 @@ func test_gauntlet_light_falls_on_her_body_from_the_strip() -> void:
 	rig.set_time_light(1.0, 1.0)
 	rig._process(0.1)
 	check(rig.light_strength() > forward * 2.0, "under Shift the light must be clearly stronger")
-	check(float(rig.light_parameter("waves")) > 0.0, "under Shift the waves must show")
-	var phase := float(rig.light_parameter("wave_phase"))
-	rig._process(0.1)
-	check(not is_equal_approx(float(rig.light_parameter("wave_phase")), phase), "the waves must move")
+	check(float(rig.look_parameter("tint")) > 0.0, "under Shift her figure takes on the time colour")
 	rig.queue_free()
 
 
@@ -237,6 +236,66 @@ func test_player_scene_carries_the_doll() -> void:
 	if rig != null:
 		check(rig.pose() == "idle", "standing still, she must take the idle pose")
 	player.free()
+
+
+## D81, D84 (20.11.2026): the parts at sheet size with mipmaps, and the look
+## of the whole doll from data, checked by the data check.
+func test_parts_come_at_sheet_size_with_mipmaps_and_the_look_from_data() -> void:
+	var data := HeroineData.load_data()
+	var rig := _rig()
+	var head := rig.joint("head")
+	var picture: Sprite2D = null
+	for child in rig.get_node("Body").get_children():
+		if child.name == "Picture_head":
+			picture = child
+	check(picture != null, "the head's picture lies in the doll's group")
+	if picture != null and bool(data.get("sheet_parts", false)):
+		check(picture.texture_filter == CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS, "sheet-size parts are smoothed with mipmaps")
+		check(picture.texture.resource_path.contains("/full/"), "sheet-size parts come from parts_dir/full")
+		check(picture.global_position.is_equal_approx(head.global_position), "the picture follows its joint")
+	check(rig.get_node("Body") is CanvasGroup, "the doll is one group, brightened as one picture")
+	var look: Dictionary = data["look"]
+	check(is_equal_approx(float(rig.look_parameter("gain")), float(look["gain"])), "the gain comes from look in heroine.json")
+	var broken: Dictionary = data.duplicate(true)
+	broken["look"]["gain"] = 0
+	check(not HeroineData.validate(broken).is_empty(), "gain 0 must be reported")
+	broken = data.duplicate(true)
+	broken["sheet_parts"] = "yes"
+	check(not HeroineData.validate(broken).is_empty(), "sheet_parts that is no true or false must be reported")
+	rig.free()
+
+
+## D80.1 (20.11.2026): under Shift motes of time spiral in from around her
+## and vanish in the gauntlet, faint far away and bright near it; none in
+## forward time. As the 4th heroine of the "Night shop" mock-up.
+func test_motes_spiral_into_the_gauntlet_under_shift_only() -> void:
+	var data := HeroineData.load_data()
+	var light: Dictionary = data["light"]
+	var spec: Dictionary = light["motes"]
+	var list := HeroineData.motes(light)
+	check(list.size() == int(spec["count"]), "%d motes, data says %d" % [list.size(), int(spec["count"])])
+	check(HeroineData.motes(light) == list, "the motes are the same every run")
+	var mote := list[0]
+	var start := 0.05
+	var before := HeroineData.mote_at(light, mote, start)
+	var after := HeroineData.mote_at(light, mote, start + 0.1)
+	if float(after["along"]) > float(before["along"]):
+		check((after["offset"] as Vector2).length() < (before["offset"] as Vector2).length(), "a mote closes in on the gauntlet")
+	for each in list:
+		var spot := HeroineData.mote_at(light, each, 1.3)
+		check((spot["offset"] as Vector2).length() <= float(spec["from_max_px"]) + 0.01, "no mote starts farther than from_max_px")
+	var rig := _rig()
+	rig.set_time_light(1.0, 0.0)
+	check(rig.motes_now().is_empty() and rig.tint_strength() == 0.0, "no motes and no glow in forward time")
+	rig.set_time_light(1.0, 1.0)
+	check(rig.motes_now().size() == list.size() and rig.tint_strength() > 0.0, "motes and glow under Shift")
+	var broken: Dictionary = data.duplicate(true)
+	broken["light"]["motes"]["from_min_px"] = 500
+	check(not HeroineData.validate(broken).is_empty(), "motes that start nearer than their minimum must be reported")
+	broken = data.duplicate(true)
+	broken["light"]["tint"] = 2
+	check(not HeroineData.validate(broken).is_empty(), "tint above 1 must be reported")
+	rig.free()
 
 
 func _rig() -> HeroineRig:
