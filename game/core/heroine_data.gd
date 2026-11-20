@@ -354,6 +354,27 @@ static func _validate_motion(data: Dictionary, poses: Dictionary) -> PackedStrin
 			if _number(spec.get("seed")) == false:
 				errors.append("heroine.json: light.motes.seed must be a number")
 		errors.append_array(_validate_threads(light))
+		errors.append_array(_validate_far_motes(light))
+	return errors
+
+
+## `light.far_motes` (D85.6, a trial): optional; `"enabled": false` or no
+## section turns them off.
+static func _validate_far_motes(light: Dictionary) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not light.has("far_motes"):
+		return errors
+	var spec: Variant = light["far_motes"]
+	if not spec is Dictionary:
+		errors.append("heroine.json: light.far_motes must be an object")
+		return errors
+	if not spec.get("enabled") is bool:
+		errors.append("heroine.json: light.far_motes.enabled must be true or false")
+	for key in ["count", "hz", "size_min_px", "size_max_px", "edge_scale", "shrink_until", "edge_alpha", "alpha", "swirl", "curl", "pull", "margin_px"]:
+		if not _positive(spec.get(key)):
+			errors.append("heroine.json: light.far_motes.%s must be above 0" % key)
+	if errors.is_empty() and float(spec["size_min_px"]) > float(spec["size_max_px"]):
+		errors.append("heroine.json: light.far_motes.size_min_px must be at most size_max_px")
 	return errors
 
 

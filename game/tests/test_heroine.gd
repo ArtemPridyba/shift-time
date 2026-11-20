@@ -412,3 +412,27 @@ func test_strip_breathes_in_forward_time_and_glows_under_shift() -> void:
 	check(rig.strip().color.is_equal_approx(core), "under Shift the strip shows the light core, got %s" % rig.strip().color.to_html())
 	check(not accent.is_equal_approx(core), "the time colour and its core must differ")
 	rig.free()
+
+
+## D85.6 (20.11.2026, a trial): far motes come in from the screen edge, big
+## and faint there, small and bright near the gauntlet; one switch turns them off.
+func test_far_motes_shrink_on_their_way_and_can_be_turned_off() -> void:
+	var data := HeroineData.load_data()
+	var far: Dictionary = data["light"]["far_motes"]
+	var mote := {"phase": 0.0, "size": float(far["size_max_px"])}
+	check(FarMotes.size_px(far, mote, 0.0) >= 20.0, "a far mote is big at the screen edge, got %.1f px" % FarMotes.size_px(far, mote, 0.0))
+	check(is_equal_approx(FarMotes.size_px(far, mote, 1.0), float(far["size_max_px"])), "a far mote has its own size at the gauntlet")
+	check(FarMotes.alpha(far, 0.0) < FarMotes.alpha(far, 0.8) * 0.5, "a far mote is faint at the edge and bright near the gauntlet")
+	check(FarMotes.alpha(far, 1.0) < 0.01, "a far mote is gone in the gauntlet's centre")
+	check(FarMotes.list(far).size() == int(far["count"]) and FarMotes.list(far) == FarMotes.list(far), "the far motes are the same every run")
+	var off: Dictionary = data.duplicate(true)
+	off["light"]["far_motes"]["enabled"] = false
+	var quiet := HeroineRig.new()
+	quiet.build(off)
+	quiet.set_time_light(1.0, 1.0)
+	check(quiet.far_motes_now().is_empty(), "enabled false turns the far motes off")
+	quiet.free()
+	var broken: Dictionary = data.duplicate(true)
+	broken["light"]["far_motes"]["enabled"] = "yes"
+	check(not HeroineData.validate(broken).is_empty(), "enabled must be true or false")
+

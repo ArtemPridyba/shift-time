@@ -62,6 +62,9 @@ var _mote_time := 0.0
 ## The motes of time drawn over the doll (D80.1).
 var _motes: Node2D
 var _mote_list: Array[Dictionary] = []
+## The trial far motes (D85.6) and the turn chosen for each of their trips.
+var _far_list: Array[Dictionary] = []
+var _far_swirls := {}
 ## The threads of time drawn under the motes (D85), and how long Shift has
 ## been held, in her seconds: the threads build up with it.
 var _threads: Node2D
@@ -148,6 +151,8 @@ func build(data: Dictionary) -> void:
 		if entry[3] != "":
 			_flat.append([entry[2], entry[3], (entry[2] as Node2D).scale])
 	_mote_list = HeroineData.motes(data.get("light", {}))
+	var far: Dictionary = (data.get("light", {}) as Dictionary).get("far_motes", {})
+	_far_list = FarMotes.list(far) if bool(far.get("enabled", false)) else ([] as Array[Dictionary])
 	_threads = Node2D.new()
 	_threads.name = "Threads"
 	_threads.draw.connect(_draw_threads)
@@ -367,6 +372,37 @@ func motes_now() -> Array[Dictionary]:
 	return now
 
 
+## The trial far motes now (D85.6): where each is in the rig's pixels, its
+## radius there and how bright it is. Empty in forward time or when disabled.
+func far_motes_now() -> Array[Dictionary]:
+	var now: Array[Dictionary] = []
+	if _rewind <= 0.0 or _far_list.is_empty() or _motes == null or not _motes.is_inside_tree():
+		return now
+	var spec: Dictionary = (_data.get("light", {}) as Dictionary).get("far_motes", {})
+	var to_screen := _motes.get_global_transform_with_canvas()
+	var back := to_screen.affine_inverse()
+	var per_px := 1.0 / maxf(absf(to_screen.get_scale().y), 0.0001)
+	var screen := _motes.get_viewport().get_visible_rect()
+	var gauntlet := to_screen * device_point()
+	var used := {}
+	for i in _far_list.size():
+		var mote := _far_list[i]
+		var trip := FarMotes.trip(spec, i, mote, _mote_time)
+		var start := TimeThreads.start_point(screen, float(trip["edge"]), float(spec.get("margin_px", 30.0))) - gauntlet
+		var key := "%d:%d" % [i, int(trip["cycle"])]
+		if not _far_swirls.has(key):
+			_far_swirls[key] = TimeThreads.choose_swirl(spec, start, gauntlet, screen)
+		used[key] = _far_swirls[key]
+		var along := float(trip["along"])
+		now.append({
+			"at": back * (gauntlet + TimeThreads.offset(spec, start, along, float(_far_swirls[key]))),
+			"radius": FarMotes.size_px(spec, mote, along) * per_px,
+			"alpha": FarMotes.alpha(spec, along) * _rewind,
+		})
+	_far_swirls = used
+	return now
+
+
 ## Under Shift small motes of the time colour spiral in from all around and
 ## vanish in the gauntlet: the device takes time from the world. They light
 ## nothing (D76).
@@ -378,6 +414,12 @@ func _draw_motes() -> void:
 			var at := centre + (mote["offset"] as Vector2)
 			_motes.draw_circle(at, float(mote["size"]) * 1.9, Color(_accent, alpha * 0.45), true, -1.0, true)
 			_motes.draw_circle(at, float(mote["size"]) * 0.8, Color(_core, alpha), true, -1.0, true)
+	# The trial far motes (D85.6): a soft wide disc and a brighter middle.
+	for far in far_motes_now():
+		var alpha := float(far["alpha"])
+		if alpha > 0.004:
+			_motes.draw_circle(far["at"] as Vector2, float(far["radius"]), Color(_accent, alpha * 0.45), true, -1.0, true)
+			_motes.draw_circle(far["at"] as Vector2, float(far["radius"]) * 0.45, Color(_core, alpha), true, -1.0, true)
 
 
 ## The threads out now (D85): the head of each on its way in (0..1), how far it
