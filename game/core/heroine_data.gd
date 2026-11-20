@@ -256,8 +256,9 @@ static func _validate_look(look: Variant) -> PackedStringArray:
 ## The motes of time (D80.1, as the 4th heroine of the "Night shop" mock-up):
 ## `count` motes, each with its own angle, start distance, phase and size,
 ## the same every run (`seed`).
-static func motes(light: Dictionary) -> Array[Dictionary]:
-	var spec: Dictionary = light.get("motes", {})
+## `key` "far_motes" gives the trial far motes (D85.6) the same way.
+static func motes(light: Dictionary, key := "motes") -> Array[Dictionary]:
+	var spec: Dictionary = light.get(key, {})
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(spec.get("seed", 77))
 	var list: Array[Dictionary] = []
@@ -275,8 +276,8 @@ static func motes(light: Dictionary) -> Array[Dictionary]:
 ## offset from the gauntlet, and how far along its way it is (0..1). Every mote
 ## spirals in from its start distance and vanishes in the gauntlet, faint far
 ## away and bright near it; then it starts again from afar.
-static func mote_at(light: Dictionary, mote: Dictionary, t: float) -> Dictionary:
-	var spec: Dictionary = light.get("motes", {})
+static func mote_at(light: Dictionary, mote: Dictionary, t: float, key := "motes") -> Dictionary:
+	var spec: Dictionary = light.get(key, {})
 	var along := fposmod(t * float(spec.get("hz", 0.7)) + float(mote["phase"]), 1.0)
 	return {"offset": spiral(spec, float(mote["angle"]), float(mote["from"]), along), "along": along}
 
@@ -354,6 +355,27 @@ static func _validate_motion(data: Dictionary, poses: Dictionary) -> PackedStrin
 			if _number(spec.get("seed")) == false:
 				errors.append("heroine.json: light.motes.seed must be a number")
 		errors.append_array(_validate_threads(light))
+		errors.append_array(_validate_far_motes(light))
+	return errors
+
+
+## `light.far_motes` (D85.6, a trial): optional; `enabled` false or no section
+## turns them off.
+static func _validate_far_motes(light: Dictionary) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not light.has("far_motes"):
+		return errors
+	var spec: Variant = light["far_motes"]
+	if not spec is Dictionary:
+		errors.append("heroine.json: light.far_motes must be an object")
+		return errors
+	if not spec.get("enabled") is bool:
+		errors.append("heroine.json: light.far_motes.enabled must be true or false")
+	for key in MOTE_KEYS + ["alpha"]:
+		if not _positive(spec.get(key)):
+			errors.append("heroine.json: light.far_motes.%s must be above 0" % key)
+	if errors.is_empty() and float(spec["from_min_px"]) > float(spec["from_max_px"]):
+		errors.append("heroine.json: light.far_motes.from_min_px must be at most from_max_px")
 	return errors
 
 
