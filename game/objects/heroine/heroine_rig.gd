@@ -5,6 +5,16 @@ extends Node2D
 ## between her feet; `set_facing(-1)` mirrors her. The indicator strip on the
 ## gauntlet is drawn by code in the time colour (D76), the cable from the
 ## battery to the gauntlet is a `Line2D` that sags.
+##
+## Motion: on the floor she stands or runs (the run by the distance walked), in
+## the air she blends from the rise to the fall pose by her vertical speed;
+## short overlays (press, land) turn only the parts they name; the walk out of
+## the doorway bows her and brings her out of the dark. The gauntlet lights only
+## her own body (`heroine_light.gdshader`): weak forward, stronger under Shift,
+## with waves that run over her into the gauntlet. She never reads world time
+## herself: the time device tells her through `set_time_light`.
+
+const LIGHT_SHADER := preload("res://objects/heroine/heroine_light.gdshader")
 
 var _data: Dictionary = {}
 ## Joint node of each part: rotates the part around its pivot.
@@ -18,6 +28,25 @@ var _pose := ""
 var _angles: Dictionary = {}
 var _lift := 0.0
 var _distance := 0.0
+## 1 while the lowest sole stands on the floor, 0 while the pelvis keeps its
+## idle height in the air; blends like the angles.
+var _ground := 1.0
+## The lowest sole in the idle pose with the pelvis at its joint: the height the
+## pelvis keeps in the air.
+var _idle_sole := 0.0
+var _was_on_floor := true
+var _air_speed := 0.0
+## The overlay that plays now ("" for none), how long it has played, and a
+## weight that pins it for showcases (negative: by the clock).
+var _overlay := ""
+var _overlay_time := 0.0
+var _overlay_pin := -1.0
+var _exit := 0.0
+var _material: ShaderMaterial
+var _accent := Color("#7FE8FF")
+var _glow := 1.0
+var _rewind := 0.0
+var _wave_phase := 0.0
 
 
 ## The showcase sets this before adding the rig: the parts at sheet size from
@@ -45,6 +74,10 @@ func build(data: Dictionary) -> void:
 	var dir := _parts_dir(data)
 	var far_tint := Color.from_string(String(data.get("far_tint", "#ffffff")), Color.WHITE)
 	var bakes := {} if full_size else HeroineData.bake_factors(data)
+	var colors: Dictionary = Content.time_hud().get("colors", {})
+	_accent = Color.from_string(String(colors.get("accent", "#7FE8FF")), Color.CYAN)
+	_material = ShaderMaterial.new()
+	_material.shader = LIGHT_SHADER
 	for name in HeroineData.build_order(parts):
 		var part: Dictionary = parts[name]
 		var parent := String(part.get("parent", ""))
@@ -64,6 +97,7 @@ func build(data: Dictionary) -> void:
 		sprite.name = "Picture"
 		if bool(part.get("far", false)):
 			sprite.modulate = far_tint
+		sprite.material = _material
 		joint.add_child(sprite)
 		_joints[name] = joint
 		_sprites[name] = sprite
@@ -73,43 +107,174 @@ func build(data: Dictionary) -> void:
 	_build_strip(data)
 	_build_cable(data)
 	_pose = ""
+	_overlay = ""
+	_exit = 0.0
+	_angles = HeroineData.pose_angles(_data, "idle").duplicate()
+	_lift = 0.0
+	_ground = 1.0
+	_apply_angles(_angles)
+	_idle_sole = _sole_with_root_at_joint()
 	set_pose("idle")
+	_update_light(0.0)
 
 
 func set_facing(facing: float) -> void:
+	if _body == null:
+		build(HeroineData.load_data())
 	_body.scale.x = absf(_body.scale.y) * (-1.0 if facing < 0.0 else 1.0)
 	_update_cable()
 
 
+## Shows a pose at once, without blending: for showcases. The air poses keep
+## the pelvis at its idle height, as in a jump.
 func set_pose(pose: String) -> void:
 	_pose = pose
 	_angles = HeroineData.pose_angles(_data, pose).duplicate()
 	_lift = HeroineData.pose_lift(_data, pose)
+	var air: Dictionary = _data.get("air", {})
+	_ground = 0.0 if pose in [String(air.get("rise", "")), String(air.get("fall", ""))] else 1.0
 	_apply()
 
 
-## Moves her by how she moves in the game: `speed_px` is the real speed along
-## the floor in px/s. Running, the pose follows the distance walked, so the
-## feet do not slide; standing or in the air she takes the idle pose. Poses
-## blend over `run.blend_seconds`.
-func step(speed_px: float, on_floor: bool, delta: float) -> void:
+## Moves her by how she moves in the game: `velocity` is her real velocity in
+## px/s. Running, the pose follows the distance walked, so the feet do not
+## slide; standing she takes the idle pose, in the air the rise or the fall by
+## her vertical speed. Poses blend over `run.blend_seconds`. Touching down after
+## a fast fall plays the land overlay.
+func step(velocity: Vector2, on_floor: bool, delta: float) -> void:
 	var run: Dictionary = _data.get("run", {})
 	var target_angles: Dictionary
 	var target_lift: float
-	if on_floor and absf(speed_px) >= float(run.get("min_speed_px", 1.0)):
-		_distance += absf(speed_px) * delta
+	var target_ground := 1.0
+	if on_floor and absf(velocity.x) >= float(run.get("min_speed_px", 1.0)):
+		_distance += absf(velocity.x) * delta
 		var key := HeroineData.run_pose(_data, _distance / float(run.get("cycle_px", 1.0)))
 		target_angles = key["angles"]
 		target_lift = float(key["lift"])
 		_pose = "run"
-	else:
+	elif on_floor:
 		target_angles = HeroineData.pose_angles(_data, "idle")
 		target_lift = HeroineData.pose_lift(_data, "idle")
 		_pose = "idle"
+	else:
+		var air := HeroineData.air_pose(_data, velocity.y)
+		target_angles = air["angles"]
+		target_lift = float(air["lift"])
+		target_ground = 0.0
+		_pose = "fall" if float(air["fall"]) > 0.5 else "jump"
+		_air_speed = velocity.y
+	if on_floor and not _was_on_floor:
+		var land: Dictionary = (_data.get("overlays", {}) as Dictionary).get("land", {})
+		if _air_speed >= float(land.get("min_speed_px", 0.0)):
+			play("land")
+	_was_on_floor = on_floor
 	var blend := float(run.get("blend_seconds", 0.0))
 	var k := 1.0 if blend <= 0.0 else 1.0 - exp(-delta / blend)
 	_angles = HeroineData.blend_angles(_angles, target_angles, k)
 	_lift = lerpf(_lift, target_lift, k)
+	_ground = lerpf(_ground, target_ground, k)
+	if _overlay != "" and _overlay_pin < 0.0:
+		_overlay_time += delta
+		if _overlay_time >= float(((_data.get("overlays", {}) as Dictionary).get(_overlay, {}) as Dictionary).get("seconds", 0.0)):
+			_overlay = ""
+	_apply()
+
+
+## Starts a short overlay pose from `overlays` (press, land).
+func play(overlay: String) -> void:
+	if not (_data.get("overlays", {}) as Dictionary).has(overlay):
+		return
+	_overlay = overlay
+	_overlay_time = 0.0
+	_overlay_pin = -1.0
+	_apply()
+
+
+## Shows an overlay at a fixed weight (0..1), for showcases; "" clears it.
+func set_overlay(overlay: String, weight: float) -> void:
+	_overlay = overlay
+	_overlay_time = 0.0
+	_overlay_pin = weight
+	_apply()
+
+
+## The overlay that plays now, "" for none.
+func overlay() -> String:
+	return _overlay
+
+
+## The walk out of the doorway: 1 as she steps out, 0 once she is out. Bows
+## her by the exit pose and brings her from the dark tint to her own colours.
+func set_exit(amount: float) -> void:
+	_exit = clampf(amount, 0.0, 1.0)
+	var dark := Color.from_string(String((_data.get("exit", {}) as Dictionary).get("dark", "#000000")), Color.BLACK)
+	modulate = Color.WHITE.lerp(dark, smoothstep(0.0, 1.0, _exit))
+	_apply()
+
+
+## The gauntlet's light on her body: `glow` is the device's brightness (it
+## flickers in rewind), `rewind` 0 in forward time and 1 under Shift (it fades
+## in and out with the edges of the screen).
+func set_time_light(glow: float, rewind: float) -> void:
+	_glow = glow
+	_rewind = clampf(rewind, 0.0, 1.0)
+
+
+func _process(delta: float) -> void:
+	_update_light(delta)
+
+
+## The light's strength now: between `light.forward` and `light.rewind`.
+func light_strength() -> float:
+	var light: Dictionary = _data.get("light", {})
+	return lerpf(float(light.get("forward", 0.0)), float(light.get("rewind", 0.0)), _rewind) * _glow
+
+
+## The strength of the waves over her body: 0 in forward time.
+func wave_strength() -> float:
+	return float((_data.get("light", {}) as Dictionary).get("wave_strength", 0.0)) * _rewind
+
+
+func _update_light(delta: float) -> void:
+	if _material == null:
+		return
+	var light: Dictionary = _data.get("light", {})
+	if _rewind > 0.0:
+		_wave_phase = fposmod(_wave_phase + delta * float(light.get("wave_hz", 0.0)), 1.0)
+	var to_canvas := get_global_transform() if is_inside_tree() else transform
+	var scale_px := absf(to_canvas.get_scale().y)
+	_material.set_shader_parameter("light_pos", to_canvas * device_point())
+	_material.set_shader_parameter("radius", float(light.get("radius_px", 1.0)) * scale_px)
+	_material.set_shader_parameter("light", light_strength())
+	_material.set_shader_parameter("accent", _accent)
+	_material.set_shader_parameter("waves", wave_strength())
+	_material.set_shader_parameter("wave_px", float(light.get("wave_px", 1.0)) * scale_px)
+	_material.set_shader_parameter("wave_phase", _wave_phase)
+	_material.set_shader_parameter("wave_width", float(light.get("wave_width", 0.25)))
+
+
+## A shader uniform of the light, for tests.
+func light_parameter(parameter: StringName) -> Variant:
+	return _material.get_shader_parameter(parameter)
+
+
+## The center of the gauntlet's strip in the rig's pixels: the time device
+## draws its indicator there.
+func device_point() -> Vector2:
+	var strip_data: Dictionary = _data.get("strip", {})
+	var part := String(strip_data.get("part", ""))
+	if _body == null or not _joints.has(part):
+		return Vector2.ZERO
+	return _body.transform * _part_point(part, _vec(strip_data.get("center")))
+
+
+## Shows the air pose at vertical speed `speed_y` at once: for showcases.
+func set_air(speed_y: float) -> void:
+	var air := HeroineData.air_pose(_data, speed_y)
+	_angles = air["angles"]
+	_lift = float(air["lift"])
+	_ground = 0.0
+	_pose = "fall" if float(air["fall"]) > 0.5 else "jump"
 	_apply()
 
 
@@ -118,6 +283,7 @@ func set_run_phase(phase: float) -> void:
 	var key := HeroineData.run_pose(_data, phase)
 	_angles = key["angles"]
 	_lift = float(key["lift"])
+	_ground = 1.0
 	_pose = "run"
 	_apply()
 
@@ -133,19 +299,47 @@ func sole_y() -> float:
 
 
 func _apply() -> void:
+	var angles := _angles
+	if _overlay != "":
+		var weight := _overlay_pin if _overlay_pin >= 0.0 else HeroineData.overlay_weight(_data, _overlay, _overlay_time)
+		var entry: Dictionary = (_data.get("overlays", {}) as Dictionary).get(_overlay, {})
+		angles = HeroineData.lay_over(_data, angles, String(entry.get("pose", _overlay)), weight)
+	if _exit > 0.0:
+		angles = HeroineData.lay_over(_data, angles, String((_data.get("exit", {}) as Dictionary).get("pose", "exit")), _exit)
+	_apply_angles(angles)
+	# On the floor the lowest sole stands on it, whatever the pose does to the
+	# legs; in the air the pelvis keeps its idle height, the legs swing free.
+	var sole := _sole_with_root_at_joint()
+	if (_data.get("soles", {}) as Dictionary).is_empty():
+		sole = 0.0
+		_idle_sole = 0.0
+	var root_joint := _root_joint()
+	root_joint.position.y -= _lift + lerpf(_idle_sole, sole, _ground)
+	_update_cable()
+
+
+func _apply_angles(angles: Dictionary) -> void:
 	for name: String in _joints:
-		(_joints[name] as Node2D).rotation_degrees = float(_angles.get(name, 0.0))
+		(_joints[name] as Node2D).rotation_degrees = float(angles.get(name, 0.0))
+
+
+func _root_joint() -> Node2D:
 	var parts: Dictionary = _data.get("parts", {})
-	var root := ""
 	for name: String in parts:
 		if String((parts[name] as Dictionary).get("parent", "")) == "":
-			root = name
-	var root_joint: Node2D = _joints[root]
-	root_joint.position = _vec((parts[root] as Dictionary).get("at")) - Vector2(0, _lift)
-	# The lowest sole stands on the floor, whatever the pose does to the legs.
-	if not (_data.get("soles", {}) as Dictionary).is_empty():
-		root_joint.position.y -= _lowest_sole() + _lift
-	_update_cable()
+			return _joints[name]
+	return null
+
+
+## The lowest sole with the root part at its joint (no lift): puts the root
+## there and measures.
+func _sole_with_root_at_joint() -> float:
+	var parts: Dictionary = _data.get("parts", {})
+	var root_joint := _root_joint()
+	root_joint.position = _vec((parts[String(root_joint.name)] as Dictionary).get("at"))
+	if (_data.get("soles", {}) as Dictionary).is_empty():
+		return 0.0
+	return _lowest_sole()
 
 
 func _lowest_sole() -> float:

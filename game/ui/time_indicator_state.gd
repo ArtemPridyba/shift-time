@@ -60,7 +60,7 @@ func is_rewinding() -> bool:
 	return direction == BACKWARD
 
 
-## The arrows on the plate.
+## The arrows on the gauntlet.
 func glyph() -> String:
 	return GLYPH_REWIND if direction == BACKWARD else GLYPH_FORWARD
 
@@ -96,7 +96,7 @@ func streaks_active() -> bool:
 
 
 ## One streak: `progress` from 0 (far left) to 1 (far right) across the device,
-## the height of its lane from 0 (next to the plate) to 1 (the outermost) and its
+## the height of its lane from 0 (next to the arrows) to 1 (the outermost) and its
 ## opacity, which is zero at both ends. The phase shrinks in rewind, so the
 ## progress falls and the streak runs to the left.
 func streak(index: int) -> Dictionary:

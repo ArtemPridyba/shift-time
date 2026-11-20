@@ -1,38 +1,36 @@
 class_name TimeHud
 extends Node2D
-## The wrist device with the time-direction indicator (task 1.5). A plate pinned
-## to the hero with two pins; on it two arrows, `>>` in forward time and `<<`
+## The time device's indicator (task 1.5, moved onto the gauntlet in Д5): two
+## arrows on the strip of the heroine's gauntlet, `>>` in forward time and `<<`
 ## while Shift is held. In rewind the light sweeps along the arrows from right
 ## to left, the device flickers, thin streaks run left above and below it, and
 ## the edges of the screen glow with the same light and the same streaks.
 ## Forward time has none of this. The direction never reads from color alone.
 ##
-## It is a child of the player, so the device goes where the hero goes. The
-## state lives in `TimeIndicatorState`; this node only draws it. All colors and
-## numbers are in `data/time_hud.json`: the palette can change without code.
-## It replaces the temporary label `ui/debug_time_label.gd` from task 1.4.
+## It is a child of the player and sits where the player's `device_point()`
+## says, so it follows her arm; it is never mirrored, so the arrows point the
+## way time runs whichever way she faces. It lights only her body, through the
+## player's `show_time_light` (D76): no halo on the room. The state lives in
+## `TimeIndicatorState`; this node only draws it. All colors and numbers are in
+## `data/time_hud.json`: the palette can change without code.
 
+## Above every part of the doll (their z goes up to about 15).
 const EDGE_LAYER := 60
-const GLOW_TEXTURE_SIZE := 128
-const PIN_RADIUS := 2.2
-const PIN_INSET := 4.0
-const LANE_GAP_PX := 4.0
+const DRAW_Z := 40
+const LANE_GAP_PX := 2.0
 
 var state: TimeIndicatorState
 var sound: TimeSound
 
 var _accent := Color("#7FE8FF")
-var _plate_color := Color("#3A3D42")
-var _pin_color := Color("#9AA0A8")
-var _plate := Vector2(34.0, 20.0)
+var _glyph_color := Color("#FFFFFF")
 var _offset := Vector2(22.0, -58.0)
-var _glyph_height := 10.0
-var _glow_alpha := 0.55
+var _glyph_height := 5.0
+var _stroke := 1.0
 var _spread := 36.0
 var _streak_width := 1.5
 var _dash := 9.0
 var _lane := 14.0
-var _glow: Sprite2D
 var _edges: ColorRect
 var _edge_material: ShaderMaterial
 
@@ -41,7 +39,7 @@ func _ready() -> void:
 	var config := Content.time_hud()
 	state = TimeIndicatorState.new(config)
 	_read_config(config)
-	_build_glow()
+	z_index = DRAW_Z
 	_build_edges(config)
 	sound = TimeSound.new(config)
 	add_child(sound)
@@ -57,12 +55,16 @@ func _process(delta: float) -> void:
 	if manager != null:
 		state.speed = float(manager.rewind_speed)
 	state.step(delta)
-	var facing := 1.0
 	var parent := get_parent()
-	if parent != null and parent.has_method("facing"):
-		facing = float(parent.call("facing"))
-	position = Vector2(_offset.x * facing, _offset.y)
-	_glow.modulate = Color(_accent, _glow_alpha * state.glow())
+	if parent != null and parent.has_method("device_point"):
+		position = parent.call("device_point")
+	else:
+		var facing := 1.0
+		if parent != null and parent.has_method("facing"):
+			facing = float(parent.call("facing"))
+		position = Vector2(_offset.x * facing, _offset.y)
+	if parent != null and parent.has_method("show_time_light"):
+		parent.call("show_time_light", state.glow(), state.edge_amount)
 	_edge_material.set_shader_parameter("amount", state.edge_amount)
 	_edge_material.set_shader_parameter("phase", state.particle_phase)
 	_edges.visible = state.edge_amount > 0.001
@@ -70,12 +72,6 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	var half := _plate / 2.0
-	draw_rect(Rect2(-half, _plate), _plate_color)
-	draw_rect(Rect2(-half, _plate), _pin_color, false, 1.5)
-	for pin: Vector2 in [Vector2(-half.x + PIN_INSET, -half.y + PIN_INSET), Vector2(half.x - PIN_INSET, half.y - PIN_INSET)]:
-		draw_circle(pin, PIN_RADIUS, _pin_color)
-		draw_circle(pin, PIN_RADIUS * 0.4, _plate_color.darkened(0.5))
 	_draw_arrows()
 	_draw_streaks()
 
@@ -107,7 +103,7 @@ func _draw_arrows() -> void:
 		if rewinding:
 			var along := (x + depth / 2.0 - left) / total
 			alpha = 0.3 + 0.7 * clampf(1.0 - absf(along - sweep) * 2.0, 0.0, 1.0)
-		draw_polyline(points, Color(_accent, alpha * glow), 2.5, true)
+		draw_polyline(points, Color(_glyph_color, alpha * glow), _stroke, true)
 
 
 ## Thin horizontal streaks above and below the plate, only in rewind: they run
@@ -119,7 +115,7 @@ func _draw_streaks() -> void:
 		var streak := state.streak(i)
 		var progress := float(streak["progress"])
 		var side := 1.0 if i % 2 == 0 else -1.0
-		var y := side * (_plate.y / 2.0 + LANE_GAP_PX + float(streak["lane"]) * _lane)
+		var y := side * (_glyph_height / 2.0 + LANE_GAP_PX + float(streak["lane"]) * _lane)
 		var x := lerpf(-_spread, _spread, progress)
 		draw_line(Vector2(x, y), Vector2(x + _dash, y), Color(_accent, float(streak["alpha"]) * 0.9), _streak_width)
 
@@ -127,43 +123,16 @@ func _draw_streaks() -> void:
 func _read_config(config: Dictionary) -> void:
 	var colors := config.get("colors", {}) as Dictionary
 	_accent = Color.html(str(colors.get("accent", "#7FE8FF")))
-	_plate_color = Color.html(str(colors.get("plate", "#3A3D42")))
-	_pin_color = Color.html(str(colors.get("pin", "#9AA0A8")))
+	_glyph_color = Color.html(str(colors.get("glyph", "#FFFFFF")))
 	var device := config.get("device", {}) as Dictionary
-	_plate = Vector2(float(device.get("plate_width_px", 34.0)), float(device.get("plate_height_px", 20.0)))
 	_offset = Vector2(float(device.get("offset_x_px", 22.0)), float(device.get("offset_y_px", -58.0)))
-	_glyph_height = float(device.get("glyph_height_px", 10.0))
-	_glow_alpha = float(device.get("glow_alpha", 0.55))
+	_glyph_height = float(device.get("glyph_height_px", 5.0))
+	_stroke = float(device.get("stroke_px", 1.0))
 	var particles := config.get("particles", {}) as Dictionary
 	_spread = float(particles.get("spread_px", 44.0))
 	_streak_width = float(particles.get("size_px", 1.5))
 	_dash = float(particles.get("dash_px", 9.0))
 	_lane = float(particles.get("lane_px", 14.0))
-
-
-## A soft round halo behind the plate, drawn with additive blending (cheap in
-## the web build, no post-processing).
-func _build_glow() -> void:
-	var gradient := Gradient.new()
-	gradient.offsets = PackedFloat32Array([0.0, 1.0])
-	gradient.colors = PackedColorArray([Color(1.0, 1.0, 1.0, 1.0), Color(1.0, 1.0, 1.0, 0.0)])
-	var texture := GradientTexture2D.new()
-	texture.gradient = gradient
-	texture.width = GLOW_TEXTURE_SIZE
-	texture.height = GLOW_TEXTURE_SIZE
-	texture.fill = GradientTexture2D.FILL_RADIAL
-	texture.fill_from = Vector2(0.5, 0.5)
-	texture.fill_to = Vector2(1.0, 0.5)
-	_glow = Sprite2D.new()
-	_glow.name = "Glow"
-	_glow.texture = texture
-	_glow.show_behind_parent = true
-	var radius := float((Content.time_hud().get("device", {}) as Dictionary).get("glow_radius_px", 46.0))
-	_glow.scale = Vector2.ONE * (radius * 2.0 / float(GLOW_TEXTURE_SIZE))
-	var material := CanvasItemMaterial.new()
-	material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	_glow.material = material
-	add_child(_glow)
 
 
 ## The glow and the streaks along the screen edges: a full-screen layer above

@@ -29,6 +29,9 @@ extends SceneTree
 ##   --from T --to T   only save frames in this range of ticks
 ##   --past N          keep playing N ticks after the exit is reached (default 30)
 ##   --scale F         scale the saved frames (default 1.0; 0.5 saves tokens)
+##   --follow W,H      crop every frame to W x H screen pixels around the
+##                     player (group `player`), before --scale: for close
+##                     looks at the heroine's animations (`--follow 240,160 --scale 3`)
 ##   --out DIR         absolute folder for the frames (default build/shots/NAME)
 ##
 ## Frame names: `t00120_fwd.png` / `t00120_rev.png` — the tick and the
@@ -105,10 +108,26 @@ func _run() -> void:
 
 func _save(out_dir: String, tick: int, manager: Node, scale: float) -> void:
 	var image := root.get_viewport().get_texture().get_image()
+	if _args.has("follow"):
+		image = _follow(image)
 	if not is_equal_approx(scale, 1.0):
 		image.resize(int(image.get_width() * scale), int(image.get_height() * scale), Image.INTERPOLATE_LANCZOS)
 	var reverse := manager != null and bool(manager.call("is_rewinding"))
 	image.save_png(out_dir.path_join("t%05d_%s.png" % [tick, "rev" if reverse else "fwd"]))
+
+
+## The part of the frame around the player, kept inside the frame.
+func _follow(image: Image) -> Image:
+	var size := str(_args["follow"]).split(",")
+	var crop := Vector2i(int(size[0]), int(size[1]) if size.size() > 1 else int(size[0]))
+	var player := get_first_node_in_group("player") as Node2D
+	if player == null:
+		return image
+	var screen := player.get_global_transform_with_canvas().origin + Vector2(0, -46)
+	var corner := Vector2i(screen) - crop / 2
+	corner.x = clampi(corner.x, 0, maxi(0, image.get_width() - crop.x))
+	corner.y = clampi(corner.y, 0, maxi(0, image.get_height() - crop.y))
+	return image.get_region(Rect2i(corner, crop))
 
 
 func _load_input() -> Dictionary:

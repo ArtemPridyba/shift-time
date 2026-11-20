@@ -56,7 +56,8 @@ func _physics_process(delta: float) -> void:
 	var water := water_contact()
 	velocity = _motion.step(velocity, axis, jump, is_on_floor(), delta, water)
 	move_and_slide()
-	_rig.step(get_real_velocity().x, is_on_floor(), delta)
+	_rig.set_exit(float(_intro_left) / float(_intro_total) if _intro_left > 0 else 0.0)
+	_rig.step(get_real_velocity(), is_on_floor(), delta)
 	if axis != 0.0 and signf(axis) != _facing:
 		_facing = signf(axis)
 		_rig.set_facing(_facing)
@@ -69,6 +70,7 @@ func _physics_process(delta: float) -> void:
 	if _scorch.step(_in_fire, delta):
 		burned.emit()
 	if Input.is_action_just_pressed("interact"):
+		_rig.play("press")
 		_try_interact()
 
 
@@ -82,6 +84,23 @@ func set_camera_limits(rect: Rect2i) -> void:
 ## +1 while the hero faces right, -1 while left; the wrist device follows it.
 func facing() -> float:
 	return _facing
+
+
+## Where the time device draws its indicator: the strip of the gauntlet, in
+## the player's pixels. It moves with her arm and goes to the other side when
+## she turns, but the device itself is never mirrored.
+func device_point() -> Vector2:
+	return _rig.transform * _rig.device_point()
+
+
+## The time device lights her body (D76): only her, never the room.
+func show_time_light(glow: float, rewind: float) -> void:
+	_rig.set_time_light(glow, rewind)
+
+
+## The heroine's doll, for tests and showcases.
+func rig() -> HeroineRig:
+	return _rig
 
 
 ## The player's body in the parent's coordinates (the origin is at the feet).
@@ -136,6 +155,7 @@ func respawn(at: Vector2) -> void:
 	velocity = Vector2.ZERO
 	_intro_left = 0
 	modulate.a = 1.0
+	_rig.set_exit(0.0)
 	_motion.reset()
 	if _breath != null:
 		_breath.reset()

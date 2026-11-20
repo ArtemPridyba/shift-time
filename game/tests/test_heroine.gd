@@ -111,18 +111,122 @@ func test_run_phase_follows_the_distance_not_the_time() -> void:
 	var fast := _rig()
 	var slow := _rig()
 	for i in 60:
-		fast.step(360.0, true, 1.0 / 60.0)
+		fast.step(Vector2(360.0, 0.0), true, 1.0 / 60.0)
 	for i in 120:
-		slow.step(180.0, true, 1.0 / 60.0)
+		slow.step(Vector2(180.0, 0.0), true, 1.0 / 60.0)
 	check(fast.pose() == "run" and slow.pose() == "run", "moving on the floor she must run")
 	check(is_equal_approx(fast.distance(), slow.distance()), "the same distance must give the same phase of the run, %.1f and %.1f" % [fast.distance(), slow.distance()])
-	fast.step(0.0, true, 1.0 / 60.0)
+	fast.step(Vector2.ZERO, true, 1.0 / 60.0)
 	check(fast.pose() == "idle", "standing she must take the idle pose")
-	slow.step(360.0, false, 1.0 / 60.0)
-	check(slow.pose() == "idle", "in the air she must not run")
+	slow.step(Vector2(360.0, 0.0), false, 1.0 / 60.0)
+	check(slow.pose() != "run", "in the air she must not run")
 	check(is_equal_approx(slow.distance(), 360.0), "in the air the run must not advance")
 	fast.free()
 	slow.free()
+
+
+func test_air_blends_from_rise_to_fall_by_vertical_speed() -> void:
+	var data := HeroineData.load_data()
+	var reach := float(data["air"]["blend_speed_px"])
+	var rise := HeroineData.air_pose(data, -reach * 2.0)
+	var fall := HeroineData.air_pose(data, reach * 2.0)
+	var top := HeroineData.air_pose(data, 0.0)
+	for part: String in HeroineData.pose_angles(data, "jump"):
+		check(is_equal_approx(float(rise["angles"][part]), float(HeroineData.pose_angles(data, "jump")[part])), "going up fast she takes the jump pose, %s differs" % part)
+	for part: String in HeroineData.pose_angles(data, "fall"):
+		check(is_equal_approx(float(fall["angles"][part]), float(HeroineData.pose_angles(data, "fall")[part])), "coming down fast she takes the fall pose, %s differs" % part)
+	check(is_equal_approx(float(top["fall"]), 0.5), "at the top of the jump she is halfway between the poses")
+	var rig := _rig()
+	for i in 30:
+		rig.step(Vector2(0, -700), false, 1.0 / 60.0)
+	check(rig.pose() == "jump", "going up she must take the jump pose, got %s" % rig.pose())
+	for i in 30:
+		rig.step(Vector2(0, 700), false, 1.0 / 60.0)
+	check(rig.pose() == "fall", "coming down she must take the fall pose, got %s" % rig.pose())
+	rig.free()
+
+
+func test_in_the_air_the_body_keeps_its_height_and_fits_the_hitbox() -> void:
+	var rig := _rig()
+	var idle := rig.body_rect()
+	for pose in ["jump", "fall"]:
+		rig.set_pose(pose)
+		var box := rig.body_rect()
+		check(absf(box.position.y - idle.position.y) < 6.0, "in the %s pose her head must stay near its idle height: %.1f against %.1f" % [pose, box.position.y, idle.position.y])
+		check(box.end.y <= 0.5, "in the %s pose her feet must not hang below the hitbox: %.1f" % [pose, box.end.y])
+		check(box.position.y >= -100.0, "in the %s pose she must not rise far over the hitbox: %.1f" % [pose, box.position.y])
+	rig.free()
+
+
+func test_landing_after_a_fall_plays_the_land_overlay_once() -> void:
+	var data := HeroineData.load_data()
+	var rig := _rig()
+	for i in 20:
+		rig.step(Vector2(0, 900), false, 1.0 / 60.0)
+	rig.step(Vector2.ZERO, true, 1.0 / 60.0)
+	check(rig.overlay() == "land", "touching down after a fall she must land, got '%s'" % rig.overlay())
+	var seconds := float(data["overlays"]["land"]["seconds"])
+	for i in int(ceil(seconds * 60.0)) + 1:
+		rig.step(Vector2.ZERO, true, 1.0 / 60.0)
+	check(rig.overlay() == "", "the landing must end after %.2f s" % seconds)
+	check(absf(rig.sole_y()) < 0.01, "after landing she must stand on the floor, got %.2f" % rig.sole_y())
+	var hop := _rig()
+	hop.step(Vector2(0, 50), false, 1.0 / 60.0)
+	hop.step(Vector2.ZERO, true, 1.0 / 60.0)
+	check(hop.overlay() == "", "a step down slower than min_speed_px must not play the landing")
+	rig.free()
+	hop.free()
+
+
+func test_press_reaches_with_the_near_arm_and_ends() -> void:
+	var data := HeroineData.load_data()
+	var rig := _rig()
+	var rest := rig.joint("sleeve_near").rotation_degrees
+	rig.play("press")
+	var seconds := float(data["overlays"]["press"]["seconds"])
+	var reach := 0.0
+	for i in int(ceil(seconds * 60.0)) + 1:
+		rig.step(Vector2.ZERO, true, 1.0 / 60.0)
+		reach = minf(reach, rig.joint("sleeve_near").rotation_degrees - rest)
+	check(reach < -45.0, "pressing, the near arm must swing forward, got %.1f degrees" % reach)
+	check(rig.overlay() == "", "the press must end after %.2f s" % seconds)
+	check(absf(rig.joint("sleeve_near").rotation_degrees - rest) < 1.0, "after the press the arm must come back")
+	check(is_equal_approx(HeroineData.overlay_weight(data, "press", 0.0), 0.0), "the press must blend in, not jump")
+	check(is_equal_approx(HeroineData.overlay_weight(data, "press", seconds / 2.0), 1.0), "halfway the press must be full")
+	rig.free()
+
+
+func test_walk_out_of_the_doorway_bows_her_and_brings_her_out_of_the_dark() -> void:
+	var rig := _rig()
+	var idle_torso := rig.joint("torso").rotation_degrees
+	rig.set_exit(1.0)
+	var dark := Color.from_string(String(HeroineData.load_data()["exit"]["dark"]), Color.BLACK)
+	check(rig.modulate.is_equal_approx(dark), "stepping out of the doorway she is in the dark")
+	check(rig.joint("torso").rotation_degrees > idle_torso + 5.0, "stepping out she bows through the opening")
+	rig.set_exit(0.0)
+	check(rig.modulate.is_equal_approx(Color.WHITE), "once out she has her own colours")
+	check(is_equal_approx(rig.joint("torso").rotation_degrees, idle_torso), "once out she stands straight")
+	rig.free()
+
+
+func test_gauntlet_light_falls_on_her_body_from_the_strip() -> void:
+	var rig := _rig()
+	_tree.root.add_child(rig)
+	rig.position = Vector2(100, 200)
+	rig._process(0.0)
+	var point: Vector2 = rig.light_parameter("light_pos")
+	check(point.distance_to(rig.get_global_transform() * rig.device_point()) < 0.01, "the light must come from the strip")
+	var box := rig.body_rect()
+	check(box.has_point(rig.device_point()), "the strip must be on her body")
+	var forward := rig.light_strength()
+	rig.set_time_light(1.0, 1.0)
+	rig._process(0.1)
+	check(rig.light_strength() > forward * 2.0, "under Shift the light must be clearly stronger")
+	check(float(rig.light_parameter("waves")) > 0.0, "under Shift the waves must show")
+	var phase := float(rig.light_parameter("wave_phase"))
+	rig._process(0.1)
+	check(not is_equal_approx(float(rig.light_parameter("wave_phase")), phase), "the waves must move")
+	rig.queue_free()
 
 
 func test_player_scene_carries_the_doll() -> void:
