@@ -209,6 +209,8 @@ func test_hud_follows_time_manager_in_the_room() -> void:
 	check(early > float(vignette["forward"]), "under Shift the frame's edges must start to darken, got %f" % early)
 	check(early < lerpf(float(vignette["forward"]), float(vignette["rewind"]), 0.2), "the dark must come slowly, not at once, got %f" % early)
 	check(float(vignette["rewind"]) > float(vignette["forward"]) and float(vignette["forward"]) > 0.0, "the frame is always a little dark at the edges and darker under Shift")
+	check(float(vignette["rewind"]) >= 0.6 and float(vignette["ramp_seconds"]) >= 15.0, "under a long Shift the dark keeps deepening, far, over a long time (D85.8)")
+	check(float(vignette["inner_rewind"]) < float(vignette["inner"]), "the deepening dark creeps in toward the middle")
 	check(float(hud.fade_parameter("amount")) > 0.0, "the world fade must be on in rewind")
 	var saturation := float(hud.fade_parameter("saturation"))
 	check(saturation > 0.0 and saturation < 1.0, "the world must lose some colour, not all, got %f" % saturation)

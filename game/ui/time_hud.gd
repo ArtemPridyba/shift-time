@@ -187,7 +187,8 @@ func _update_fade() -> void:
 
 ## A soft dark around the edges of the frame (D87; Boris, 20.11: "not enough
 ## darkening near the edges"). Under Shift it deepens slowly, the longer Shift
-## is held, up to `rewind` after `ramp_seconds`, and eases back over
+## is held, up to `rewind` after `ramp_seconds`, and creeps in toward the
+## middle (`inner` to `inner_rewind`, D85.8); it eases back over
 ## `release_seconds` after the release (D85.4): never switched on at once.
 ## Numbers: `vignette` in time_hud.json.
 func _build_vignette(config: Dictionary) -> void:
@@ -226,6 +227,8 @@ func _update_vignette(delta: float) -> void:
 	else:
 		_vignette_now = move_toward(_vignette_now, target, absf(high - low) * delta / maxf(float(_vignette.get("release_seconds", 1.0)), 0.001))
 	_vignette_material.set_shader_parameter("strength", _vignette_now)
+	var depth := 0.0 if is_equal_approx(high, low) else clampf((_vignette_now - low) / (high - low), 0.0, 1.0)
+	_vignette_material.set_shader_parameter("inner", lerpf(float(_vignette.get("inner", 0.5)), float(_vignette.get("inner_rewind", 0.5)), depth))
 
 
 ## How far the world has faded (0..1): it comes in slowly over

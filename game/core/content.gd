@@ -588,8 +588,9 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 	_check_range(errors, vignette, "vignette", "ramp_seconds", 0.0, 120.0, true)
 	_check_range(errors, vignette, "vignette", "release_seconds", 0.0, 60.0, true)
 	_check_range(errors, vignette, "vignette", "inner", 0.0, 2.0)
+	_check_range(errors, vignette, "vignette", "inner_rewind", 0.0, 2.0)
 	_check_range(errors, vignette, "vignette", "outer", 0.0, 3.0, true)
-	if errors.is_empty() and float(vignette["outer"]) <= float(vignette["inner"]):
+	if errors.is_empty() and float(vignette["outer"]) <= maxf(float(vignette["inner"]), float(vignette["inner_rewind"])):
 		errors.append("time_hud.json: 'vignette.outer' must be above 'vignette.inner'")
 	var audio: Dictionary = data["audio"]
 	for key: String in ["forward", "rewind"]:
