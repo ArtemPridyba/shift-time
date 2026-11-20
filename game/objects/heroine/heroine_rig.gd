@@ -412,28 +412,37 @@ func _local_view(to_screen: Transform2D) -> Rect2:
 	return box
 
 
-## Under Shift thin pale threads come in from beyond the screen edge and spiral
-## into the gauntlet: thick at the edge, normal near it, a light core over a
-## dark edge. They light nothing (D76).
+## Under Shift soft pale threads come in from beyond the screen edge and
+## curl into the gauntlet: thick at the edge, normal near it. Each is a wide
+## faint glow, a body and a dim core, so it has no hard edge to catch the eye
+## (D85.2). They light nothing (D76).
 func _draw_threads() -> void:
 	var light: Dictionary = _data.get("light", {})
 	var spec: Dictionary = light.get("threads", {})
 	var motes: Dictionary = light.get("motes", {})
 	var centre := device_point()
-	var core := _accent.lerp(_core, 0.75)
+	var layers := [
+		[float(spec.get("glow_px", 8.0)), _accent, 0.18],
+		[float(spec.get("edge_px", 3.0)), _accent.lerp(_core, 0.3), 0.3],
+		[float(spec.get("core_px", 1.0)), _core, 0.2],
+	]
 	for thread in threads_now():
 		var head := float(thread["head"])
 		var per_px := float(thread["per_px"])
-		var points := TimeThreads.trail(spec, motes, float(thread["angle"]), float(thread["from"]), head)
-		for layer in 2:
-			var base := float(spec.get("edge_px" if layer == 0 else "core_px", 1.0)) * per_px
-			for j in range(1, points.size()):
-				var a := TimeThreads.alpha(spec, head, float(points[j]["trail"])) * float(thread["fade"])
-				if a <= 0.004:
-					continue
-				var colour := Color(_edge, a * 0.5) if layer == 0 else Color(core, a * 0.75)
-				var width := base * TimeThreads.width_scale(spec, float(points[j]["along"]))
-				_threads.draw_line(centre + (points[j - 1]["offset"] as Vector2), centre + (points[j]["offset"] as Vector2), colour, width, true)
+		var points := TimeThreads.trail(spec, float(motes.get("flatten", 0.8)), float(thread["angle"]), float(thread["from"]), head)
+		# One line per layer, so no beads where pieces would overlap; its width
+		# is the one at the middle of the trail.
+		var line := PackedVector2Array()
+		var strength := PackedFloat32Array()
+		for point in points:
+			line.append(centre + (point["offset"] as Vector2))
+			strength.append(TimeThreads.alpha(spec, head, float(point["trail"])) * float(thread["fade"]))
+		var middle := float(points[points.size() / 2]["along"])
+		for layer: Array in layers:
+			var colours := PackedColorArray()
+			for a in strength:
+				colours.append(Color(layer[1] as Color, a * float(layer[2])))
+			_threads.draw_polyline_colors(line, colours, float(layer[0]) * per_px * TimeThreads.width_scale(spec, middle), true)
 
 
 ## A shader uniform of the light, for tests.

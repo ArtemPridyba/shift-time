@@ -53,6 +53,9 @@ func test_data_check_reports_broken_time_hud_data() -> void:
 	var bright_world: Dictionary = good.duplicate(true)
 	bright_world["rewind"]["world_saturation"] = 1.5
 	check(not Content.validate_time_hud(bright_world).is_empty(), "a world saturation above 1 must be reported")
+	var flat_vignette: Dictionary = good.duplicate(true)
+	flat_vignette["vignette"]["outer"] = 0.1
+	check(not Content.validate_time_hud(flat_vignette).is_empty(), "a vignette that ends before it starts must be reported")
 	var no_fade: Dictionary = good.duplicate(true)
 	no_fade["rewind"]["fade_seconds"] = 0
 	check(not Content.validate_time_hud(no_fade).is_empty(), "a zero fade time must be reported")
@@ -200,6 +203,9 @@ func test_hud_follows_time_manager_in_the_room() -> void:
 	check(hud.get_node_or_null("Edges") == null, "the glow along the screen edges must be gone (D85)")
 	await _ticks(10)
 	check(hud.world_faded(), "the world must fade under Shift (D86)")
+	var vignette: Dictionary = Content.time_hud()["vignette"]
+	check(hud.vignette_strength() > float(vignette["forward"]), "under Shift the frame's edges must darken toward vignette.rewind, got %f" % hud.vignette_strength())
+	check(float(vignette["rewind"]) > float(vignette["forward"]) and float(vignette["forward"]) > 0.0, "the frame is always a little dark at the edges and darker under Shift")
 	check(float(hud.fade_parameter("amount")) > 0.0, "the world fade must be on in rewind")
 	var saturation := float(hud.fade_parameter("saturation"))
 	check(saturation > 0.0 and saturation < 1.0, "the world must lose some colour, not all, got %f" % saturation)

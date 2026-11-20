@@ -21,6 +21,9 @@ const DRAW_Z := 40
 ## The faded world is drawn at this z, above the room (z 0 and below) and under
 ## the player (z 2 in player.tscn), so she never fades: she lives forward.
 const FADE_Z := 1
+## The dark around the frame lies over the room and the heroine, under the
+## breath vignette (layer 1 is the default) and the darkness of dark rooms.
+const VIGNETTE_LAYER := 40
 const LANE_GAP_PX := 2.0
 
 var state: TimeIndicatorState
@@ -38,6 +41,8 @@ var _lane := 14.0
 var _fade: Node2D
 var _fade_rect: ColorRect
 var _fade_material: ShaderMaterial
+var _vignette_material: ShaderMaterial
+var _vignette := {}
 
 
 func _ready() -> void:
@@ -46,6 +51,7 @@ func _ready() -> void:
 	_read_config(config)
 	z_index = DRAW_Z
 	_build_fade(config)
+	_build_vignette(config)
 	sound = TimeSound.new(config)
 	add_child(sound)
 	var manager := get_node_or_null("/root/TimeManager")
@@ -71,6 +77,7 @@ func _process(delta: float) -> void:
 	if parent != null and parent.has_method("show_time_light"):
 		parent.call("show_time_light", state.glow(), state.rewind_amount)
 	_update_fade()
+	_vignette_material.set_shader_parameter("strength", vignette_strength())
 	queue_redraw()
 
 
@@ -169,6 +176,33 @@ func _update_fade() -> void:
 		_fade.global_transform = get_viewport().get_canvas_transform().affine_inverse()
 		_fade_rect.position = screen.position
 		_fade_rect.size = screen.size
+
+
+## A soft dark around the edges of the frame (D87; Boris, 20.11: "not enough
+## darkening near the edges"); a little deeper under Shift, so the threads
+## come out of the dark. Numbers: `vignette` in time_hud.json.
+func _build_vignette(config: Dictionary) -> void:
+	_vignette = config.get("vignette", {}) as Dictionary
+	var layer := CanvasLayer.new()
+	layer.name = "FrameVignette"
+	layer.layer = VIGNETTE_LAYER
+	add_child(layer)
+	_vignette_material = ShaderMaterial.new()
+	_vignette_material.shader = load("res://ui/frame_vignette.gdshader") as Shader
+	_vignette_material.set_shader_parameter("inner", float(_vignette.get("inner", 0.5)))
+	_vignette_material.set_shader_parameter("outer", float(_vignette.get("outer", 1.1)))
+	_vignette_material.set_shader_parameter("strength", vignette_strength())
+	var rect := ColorRect.new()
+	rect.material = _vignette_material
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(rect)
+
+
+## How dark the corners of the frame are now (0..1).
+func vignette_strength() -> float:
+	var amount := state.rewind_amount if state != null else 0.0
+	return lerpf(float(_vignette.get("forward", 0.0)), float(_vignette.get("rewind", 0.0)), amount)
 
 
 ## A parameter of the world fade, for tests.

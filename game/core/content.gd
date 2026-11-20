@@ -553,7 +553,7 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 	if not data is Dictionary:
 		errors.append("time_hud.json: expected an object")
 		return errors
-	for section_name: String in ["colors", "device", "rewind", "particles", "audio"]:
+	for section_name: String in ["colors", "device", "rewind", "particles", "vignette", "audio"]:
 		if not data.get(section_name) is Dictionary:
 			errors.append("time_hud.json: missing section '%s'" % section_name)
 	if not errors.is_empty():
@@ -581,6 +581,13 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 	_check_range(errors, particles, "particles", "size_px", 0.0, 100.0, true)
 	_check_range(errors, particles, "particles", "dash_px", 0.0, 200.0, true)
 	_check_range(errors, particles, "particles", "lane_px", 0.0, 200.0, true)
+	var vignette: Dictionary = data["vignette"]
+	_check_range(errors, vignette, "vignette", "forward", 0.0, 1.0)
+	_check_range(errors, vignette, "vignette", "rewind", 0.0, 1.0)
+	_check_range(errors, vignette, "vignette", "inner", 0.0, 2.0)
+	_check_range(errors, vignette, "vignette", "outer", 0.0, 3.0, true)
+	if errors.is_empty() and float(vignette["outer"]) <= float(vignette["inner"]):
+		errors.append("time_hud.json: 'vignette.outer' must be above 'vignette.inner'")
 	var audio: Dictionary = data["audio"]
 	for key: String in ["forward", "rewind"]:
 		if not audio.get(key) is String:

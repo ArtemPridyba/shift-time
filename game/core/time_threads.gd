@@ -1,9 +1,11 @@
 class_name TimeThreads
 extends RefCounted
-## Threads "wind into the glove" (D85, Д5.1, 20.11.2026): under Shift thin pale
-## lines come in from beyond the edge of the screen and spiral into the
-## gauntlet by the same law as the motes (`HeroineData.spiral`). They replace
-## the glow and the streaks along the screen edges.
+## Threads "wind into the glove" (D85, Д5.1, 20.11.2026): under Shift soft pale
+## lines come in from beyond the edge of the screen into the gauntlet. They
+## replace the glow and the streaks along the screen edges. Unlike the motes
+## they do not circle: each comes nearly straight in from the dark at the edge
+## and curls only as it reaches the gauntlet (`offset`, D85.2), so they read
+## as coming out from behind the screen, not flying round it.
 ##
 ## They build up while Shift is held (Boris, 20.11): none for `start_seconds`,
 ## then `first` threads, then one more every `every_seconds`, never more than
@@ -54,7 +56,7 @@ static func trip(spec: Dictionary, index: int, t: float) -> Dictionary:
 
 ## How far from the gauntlet a thread at `angle` must start to come from
 ## beyond the edge of `view` (both in the same pixels as `origin`), plus
-## `margin`. The spiral is flattened like the motes.
+## `margin`. The way in is flattened like the motes' spiral.
 static func start_distance(origin: Vector2, angle: float, flatten: float, view: Rect2, margin: float) -> float:
 	var dir := Vector2(cos(angle), sin(angle) * flatten)
 	var reach := INF
@@ -82,15 +84,26 @@ static func width_scale(spec: Dictionary, along: float) -> float:
 ## The trail of a thread whose head is at `head`: points from the tail to the
 ## head as offsets from the gauntlet, each with its `along` and `trail` (0 at
 ## the tail, 1 at the head).
-static func trail(spec: Dictionary, motes: Dictionary, angle: float, from: float, head: float) -> Array[Dictionary]:
+static func trail(spec: Dictionary, flatten: float, angle: float, from: float, head: float) -> Array[Dictionary]:
 	var points: Array[Dictionary] = []
 	var segments := maxi(int(spec.get("segments", 20)), 1)
 	var length := float(spec.get("trail", 0.2))
 	for i in segments + 1:
 		var k := float(i) / float(segments)
 		var along := maxf(head - length * (1.0 - k), 0.0)
-		points.append({"offset": HeroineData.spiral(motes, angle, from, along, float(spec.get("pull", 1.2))), "along": along, "trail": k})
+		points.append({"offset": offset(spec, flatten, angle, from, along), "along": along, "trail": k})
 	return points
+
+
+## Where a thread is at `along` (0..1) as an offset from the gauntlet: from
+## `from` away at `angle`, closing in by `pull` (below 1: it lingers at the edge
+## and rushes in at the end) and turning by `swirl` only near the end
+## (`curl`: the higher, the later it turns), flattened in height by `flatten`.
+static func offset(spec: Dictionary, flatten: float, angle: float, from: float, along: float) -> Vector2:
+	var k := clampf(along, 0.0, 1.0)
+	var distance := from * pow(1.0 - k, float(spec.get("pull", 0.6)))
+	var turned := angle + float(spec.get("swirl", 1.2)) * pow(k, float(spec.get("curl", 3.0)))
+	return Vector2(cos(turned) * distance, sin(turned) * distance * flatten)
 
 
 ## How bright a thread is at a point of its trail: fading toward the tail,

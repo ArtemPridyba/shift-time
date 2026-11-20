@@ -27,6 +27,12 @@
 		"dash_px": 5,
 		"lane_px": 4
 	},
+	"vignette": {
+		"forward": 0.35,
+		"rewind": 0.55,
+		"inner": 0.5,
+		"outer": 1.1
+	},
 	"audio": {
 		"forward": "",
 		"rewind": ""

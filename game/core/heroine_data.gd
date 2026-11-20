@@ -11,7 +11,7 @@ const LIGHT_KEYS: Array[String] = ["forward", "rewind", "radius_px", "tint"]
 ## Numbers of `light.motes` (D80.1), each above 0.
 const MOTE_KEYS: Array[String] = ["count", "from_min_px", "from_max_px", "size_min_px", "size_max_px", "hz", "swirl", "flatten"]
 ## Numbers of `light.threads` (D85, Д5.1), each above 0.
-const THREAD_KEYS: Array[String] = ["first", "max", "start_seconds", "every_seconds", "fade_in_seconds", "period_seconds", "travel_seconds", "trail", "pull", "segments", "margin_px", "core_px", "edge_px", "edge_scale", "shrink_until", "alpha"]
+const THREAD_KEYS: Array[String] = ["first", "max", "start_seconds", "every_seconds", "fade_in_seconds", "period_seconds", "travel_seconds", "trail", "pull", "swirl", "curl", "segments", "margin_px", "core_px", "edge_px", "glow_px", "edge_scale", "shrink_until", "alpha"]
 ## Numbers of `light.breath` (D86): the strip breathes in forward time.
 const BREATH_KEYS: Array[String] = ["seconds", "low"]
 
@@ -281,13 +281,11 @@ static func mote_at(light: Dictionary, mote: Dictionary, t: float) -> Dictionary
 	return {"offset": spiral(spec, float(mote["angle"]), float(mote["from"]), along), "along": along}
 
 
-## The way into the gauntlet shared by the motes and the threads (D85): from
-## `from` pixels away at `angle`, turning by `swirl` on the way, flattened in
-## height by `flatten`. `along` runs 0..1. `pull` shapes the pace: above 1 it
-## closes in fast at first (the motes), below 1 it lingers far away and rushes
-## in at the end (the threads, so they are seen at the screen edge).
-static func spiral(motes: Dictionary, angle: float, from: float, along: float, pull := 1.2) -> Vector2:
-	var distance := from * pow(1.0 - clampf(along, 0.0, 1.0), pull)
+## The motes' way into the gauntlet: from `from` pixels away at `angle`,
+## closing in faster at first, turning by `swirl` on the way, flattened in
+## height by `flatten`. `along` runs 0..1.
+static func spiral(motes: Dictionary, angle: float, from: float, along: float) -> Vector2:
+	var distance := from * pow(1.0 - clampf(along, 0.0, 1.0), 1.2)
 	var turned := angle + along * float(motes.get("swirl", 2.4))
 	return Vector2(cos(turned) * distance, sin(turned) * distance * float(motes.get("flatten", 0.8)))
 
