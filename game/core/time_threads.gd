@@ -6,9 +6,10 @@ extends RefCounted
 ##
 ## Each trip starts from its own point just beyond the screen edge, spread
 ## evenly round the whole edge by the golden ratio, wherever the heroine
-## stands, and fixed on the screen for the whole trip; it flies straight at
-## the gauntlet and hooks in only at the very end (D85.3, Boris 20.11: no
-## turns on the way, as many from the right as from the left).
+## stands, and fixed on the screen for the whole trip (D85.3: as many from the
+## right as from the left). It swirls into the gauntlet (D85.4: the whirl is
+## the point), turning the way that keeps it on the screen: a thread that has
+## come in never goes out and back in (`choose_swirl`).
 ##
 ## They build up while Shift is held: none for `start_seconds`, then `first`
 ## threads, then one more every `every_seconds`, never more than `max`. Each
@@ -52,7 +53,7 @@ static func trip(spec: Dictionary, index: int, t: float) -> Dictionary:
 	var local := (u - float(cycle)) * period
 	# Every trip of every thread takes the next place round the edge.
 	var edge := fposmod(float(spec.get("start_edge", 0.13)) + GOLDEN_RATIO * float(index * 7 + cycle * 61), 1.0)
-	return {"along": local / travel if local <= travel else -1.0, "edge": edge}
+	return {"along": local / travel if local <= travel else -1.0, "edge": edge, "cycle": cycle}
 
 
 ## The point `edge` (0..1) round the edge of `screen`, clockwise from the top
@@ -74,13 +75,39 @@ static func start_point(screen: Rect2, edge: float, margin: float) -> Vector2:
 
 
 ## Where a thread is at `along` (0..1) as an offset from the gauntlet, when its
-## trip starts at offset `start`: straight in, lingering at the edge and
-## rushing in at the end (`pull` below 1), turning by `swirl` radians only at
-## the very end (`curl`: the higher, the later).
-static func offset(spec: Dictionary, start: Vector2, along: float) -> Vector2:
+## trip starts at offset `start`: closing in by `pull` (below 1: lingering at
+## the edge and rushing in at the end) and turning round the gauntlet by
+## `swirl` radians on the way (`curl` above 1: more of the turn near the end).
+static func offset(spec: Dictionary, start: Vector2, along: float, swirl: float) -> Vector2:
 	var k := clampf(along, 0.0, 1.0)
 	var closer := start * pow(1.0 - k, float(spec.get("pull", 0.6)))
-	return closer.rotated(float(spec.get("swirl", 0.0)) * pow(k, float(spec.get("curl", 4.0))))
+	return closer.rotated(swirl * pow(k, float(spec.get("curl", 1.0))))
+
+
+## The turn for a trip from `start` (offset from the gauntlet at `gauntlet`,
+## both in screen pixels): `swirl` of the data, clockwise or anticlockwise,
+## whichever keeps the thread on `screen` once it is in; if neither does, a
+## smaller turn. Chosen once per trip, so a thread never changes its way.
+static func choose_swirl(spec: Dictionary, start: Vector2, gauntlet: Vector2, screen: Rect2) -> float:
+	var swirl := float(spec.get("swirl", 2.0))
+	for attempt in 5:
+		for sign in [1.0, -1.0]:
+			if stays_on_screen(spec, start, gauntlet, screen, swirl * sign):
+				return swirl * sign
+		swirl *= 0.6
+	return 0.0
+
+
+## True when a trip, once it has come onto `screen`, never leaves it again.
+static func stays_on_screen(spec: Dictionary, start: Vector2, gauntlet: Vector2, screen: Rect2, swirl: float) -> bool:
+	var inside := false
+	for s in range(1, 49):
+		var on := screen.has_point(gauntlet + offset(spec, start, float(s) / 48.0, swirl))
+		if on:
+			inside = true
+		elif inside:
+			return false
+	return true
 
 
 ## Width of a thread at `along` as a multiple of its normal width: `edge_scale`
@@ -94,14 +121,14 @@ static func width_scale(spec: Dictionary, along: float) -> float:
 ## The trail of a thread whose head is at `head`: points from the tail to the
 ## head as offsets from the gauntlet, each with its `along` and `trail` (0 at
 ## the tail, 1 at the head).
-static func trail(spec: Dictionary, start: Vector2, head: float) -> Array[Dictionary]:
+static func trail(spec: Dictionary, start: Vector2, head: float, swirl: float) -> Array[Dictionary]:
 	var points: Array[Dictionary] = []
 	var segments := maxi(int(spec.get("segments", 20)), 1)
 	var length := float(spec.get("trail", 0.4))
 	for i in segments + 1:
 		var k := float(i) / float(segments)
 		var along := maxf(head - length * (1.0 - k), 0.0)
-		points.append({"offset": offset(spec, start, along), "along": along, "trail": k})
+		points.append({"offset": offset(spec, start, along, swirl), "along": along, "trail": k})
 	return points
 
 
@@ -110,8 +137,11 @@ static func trail(spec: Dictionary, start: Vector2, head: float) -> Array[Dictio
 ## gauntlet, fading toward the tail, gone as its head enters the gauntlet.
 static func alpha(spec: Dictionary, along: float, head: float, trail_k: float) -> float:
 	var gone := 1.0 - smoothstep(0.86, 1.0, head)
-	var near := lerpf(float(spec.get("edge_alpha", 0.3)), 1.0, sharpness(spec, along))
-	return float(spec.get("alpha", 0.7)) * trail_k * near * gone
+	var sharp := sharpness(spec, along)
+	var near := lerpf(float(spec.get("edge_alpha", 0.3)), 1.0, sharp)
+	# A wide soft thread melts at its head too, so it never ends in a blunt cut.
+	var tip := 1.0 - (1.0 - sharp) * 0.8 * smoothstep(0.75, 1.0, trail_k)
+	return float(spec.get("alpha", 0.7)) * trail_k * near * tip * gone
 
 
 ## How sharp a thread is `along` its way: 0 at the screen edge (only a soft

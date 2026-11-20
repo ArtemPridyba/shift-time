@@ -204,7 +204,9 @@ func test_hud_follows_time_manager_in_the_room() -> void:
 	await _ticks(10)
 	check(hud.world_faded(), "the world must fade under Shift (D86)")
 	var vignette: Dictionary = Content.time_hud()["vignette"]
-	check(hud.vignette_strength() > float(vignette["forward"]), "under Shift the frame's edges must darken toward vignette.rewind, got %f" % hud.vignette_strength())
+	var early := hud.vignette_strength()
+	check(early > float(vignette["forward"]), "under Shift the frame's edges must start to darken, got %f" % early)
+	check(early < lerpf(float(vignette["forward"]), float(vignette["rewind"]), 0.2), "the dark must come slowly, not at once, got %f" % early)
 	check(float(vignette["rewind"]) > float(vignette["forward"]) and float(vignette["forward"]) > 0.0, "the frame is always a little dark at the edges and darker under Shift")
 	check(float(hud.fade_parameter("amount")) > 0.0, "the world fade must be on in rewind")
 	var saturation := float(hud.fade_parameter("saturation"))

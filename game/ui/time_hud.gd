@@ -43,6 +43,9 @@ var _fade_rect: ColorRect
 var _fade_material: ShaderMaterial
 var _vignette_material: ShaderMaterial
 var _vignette := {}
+## How dark the frame's edges are now, and how long Shift has been held.
+var _vignette_now := 0.0
+var _rewind_held := 0.0
 
 
 func _ready() -> void:
@@ -77,7 +80,7 @@ func _process(delta: float) -> void:
 	if parent != null and parent.has_method("show_time_light"):
 		parent.call("show_time_light", state.glow(), state.rewind_amount)
 	_update_fade()
-	_vignette_material.set_shader_parameter("strength", vignette_strength())
+	_update_vignette(delta)
 	queue_redraw()
 
 
@@ -179,10 +182,13 @@ func _update_fade() -> void:
 
 
 ## A soft dark around the edges of the frame (D87; Boris, 20.11: "not enough
-## darkening near the edges"); a little deeper under Shift, so the threads
-## come out of the dark. Numbers: `vignette` in time_hud.json.
+## darkening near the edges"). Under Shift it deepens slowly, the longer Shift
+## is held, up to `rewind` after `ramp_seconds`, and eases back over
+## `release_seconds` after the release (D85.4): never switched on at once.
+## Numbers: `vignette` in time_hud.json.
 func _build_vignette(config: Dictionary) -> void:
 	_vignette = config.get("vignette", {}) as Dictionary
+	_vignette_now = float(_vignette.get("forward", 0.0))
 	var layer := CanvasLayer.new()
 	layer.name = "FrameVignette"
 	layer.layer = VIGNETTE_LAYER
@@ -201,8 +207,19 @@ func _build_vignette(config: Dictionary) -> void:
 
 ## How dark the corners of the frame are now (0..1).
 func vignette_strength() -> float:
-	var amount := state.rewind_amount if state != null else 0.0
-	return lerpf(float(_vignette.get("forward", 0.0)), float(_vignette.get("rewind", 0.0)), amount)
+	return _vignette_now
+
+
+func _update_vignette(delta: float) -> void:
+	var low := float(_vignette.get("forward", 0.0))
+	var high := float(_vignette.get("rewind", 0.0))
+	_rewind_held = _rewind_held + delta if state.is_rewinding() else 0.0
+	var target := lerpf(low, high, clampf(_rewind_held / maxf(float(_vignette.get("ramp_seconds", 10.0)), 0.001), 0.0, 1.0))
+	if target >= _vignette_now:
+		_vignette_now = target
+	else:
+		_vignette_now = move_toward(_vignette_now, target, absf(high - low) * delta / maxf(float(_vignette.get("release_seconds", 1.0)), 0.001))
+	_vignette_material.set_shader_parameter("strength", _vignette_now)
 
 
 ## A parameter of the world fade, for tests.

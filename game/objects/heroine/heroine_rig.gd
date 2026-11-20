@@ -66,6 +66,8 @@ var _mote_list: Array[Dictionary] = []
 ## been held, in her seconds: the threads build up with it.
 var _threads: Node2D
 var _held := 0.0
+## The turn chosen for each trip ("thread:trip"), so it never changes mid-way.
+var _swirls := {}
 
 
 ## The showcase sets this before adding the rig: the parts at sheet size from
@@ -388,13 +390,19 @@ func threads_now() -> Array[Dictionary]:
 	var spec: Dictionary = (_data.get("light", {}) as Dictionary).get("threads", {})
 	var screen := _threads.get_viewport().get_visible_rect()
 	var gauntlet := _threads.get_global_transform_with_canvas() * device_point()
+	var used := {}
 	for i in TimeThreads.count(spec, _held):
 		var trip := TimeThreads.trip(spec, i, _mote_time)
 		var fade := TimeThreads.fade_in(spec, i, _held) * _rewind
 		if float(trip["along"]) < 0.0 or fade <= 0.0:
 			continue
 		var start := TimeThreads.start_point(screen, float(trip["edge"]), float(spec.get("margin_px", 40.0))) - gauntlet
-		now.append({"head": trip["along"], "fade": fade, "start": start})
+		var key := "%d:%d" % [i, int(trip["cycle"])]
+		if not _swirls.has(key):
+			_swirls[key] = TimeThreads.choose_swirl(spec, start, gauntlet, screen)
+		used[key] = _swirls[key]
+		now.append({"head": trip["along"], "fade": fade, "start": start, "swirl": _swirls[key]})
+	_swirls = used
 	return now
 
 
@@ -412,7 +420,7 @@ func _draw_threads() -> void:
 	var body := _accent.lerp(_core, 0.3)
 	for thread in threads_now():
 		var head := float(thread["head"])
-		var points := TimeThreads.trail(spec, thread["start"] as Vector2, head)
+		var points := TimeThreads.trail(spec, thread["start"] as Vector2, head, float(thread["swirl"]))
 		var line := PackedVector2Array()
 		var glow := PackedColorArray()
 		var mid := PackedColorArray()
@@ -422,7 +430,7 @@ func _draw_threads() -> void:
 			var along := float(point["along"])
 			var a := TimeThreads.alpha(spec, along, head, float(point["trail"])) * float(thread["fade"])
 			var sharp := TimeThreads.sharpness(spec, along)
-			glow.append(Color(_accent, a * 0.16))
+			glow.append(Color(_accent, a * 0.3))
 			mid.append(Color(body, a * (0.12 + 0.3 * sharp)))
 			core.append(Color(_core, a * 0.45 * sharp))
 		# One width per line, the one at the middle of the trail.

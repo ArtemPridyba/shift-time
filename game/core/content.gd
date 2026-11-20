@@ -584,6 +584,8 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 	var vignette: Dictionary = data["vignette"]
 	_check_range(errors, vignette, "vignette", "forward", 0.0, 1.0)
 	_check_range(errors, vignette, "vignette", "rewind", 0.0, 1.0)
+	_check_range(errors, vignette, "vignette", "ramp_seconds", 0.0, 120.0, true)
+	_check_range(errors, vignette, "vignette", "release_seconds", 0.0, 60.0, true)
 	_check_range(errors, vignette, "vignette", "inner", 0.0, 2.0)
 	_check_range(errors, vignette, "vignette", "outer", 0.0, 3.0, true)
 	if errors.is_empty() and float(vignette["outer"]) <= float(vignette["inner"]):

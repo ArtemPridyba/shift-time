@@ -340,33 +340,29 @@ func test_threads_come_from_beyond_the_screen_edge_thick_and_thin_out() -> void:
 			else:
 				right += 1
 	check(absi(left - right) <= 16, "threads must come evenly from both sides: %d left, %d right" % [left, right])
-	for gauntlet in [Vector2(300, 700), Vector2(1600, 800), Vector2(960, 540)]:
+	for gauntlet in [Vector2(300, 700), Vector2(1600, 800), Vector2(960, 540), Vector2(120, 950)]:
+		var turned := 0
 		for i in 12:
 			var trip := TimeThreads.trip(spec, i, 0.7 * float(i))
 			var from: Vector2 = TimeThreads.start_point(screen, float(trip["edge"]), 40.0) - gauntlet
-			check(TimeThreads.offset(spec, from, 1.0).length() < 0.001, "thread %d must end in the gauntlet" % i)
-			# Straight in: it only closes in, never turns back, never leaves the screen once in.
+			var swirl := TimeThreads.choose_swirl(spec, from, gauntlet, screen)
+			if absf(swirl) > 1.0:
+				turned += 1
+			check(TimeThreads.offset(spec, from, 1.0, swirl).length() < 0.001, "thread %d must end in the gauntlet" % i)
+			# A whirl into the gauntlet (D85.4) that closes in and never leaves the screen once in.
+			check(TimeThreads.stays_on_screen(spec, from, gauntlet, screen, swirl), "thread %d from %s must not leave the screen once it is in" % [i, from])
 			var last := INF
-			var inside := false
-			var direction := from.normalized()
 			for s in range(1, 41):
-				var at := TimeThreads.offset(spec, from, float(s) / 40.0)
+				var at := TimeThreads.offset(spec, from, float(s) / 40.0, swirl)
 				check(at.length() <= last + 0.001, "thread %d must only close in on the gauntlet" % i)
 				last = at.length()
-				if s < 30:
-					check(at.normalized().dot(direction) > 0.99, "thread %d must fly straight until the very end" % i)
-				var on_screen: bool = screen.has_point(gauntlet + at)
-				if on_screen:
-					inside = true
-				elif inside:
-					check(false, "thread %d must not leave the screen once it is in" % i)
-					break
+		check(turned >= 8, "most threads must whirl in, not fly straight: %d of 12 at %s" % [turned, gauntlet])
 	check(is_equal_approx(TimeThreads.width_scale(spec, 0.0), float(spec["edge_scale"])), "at the screen edge a thread is edge_scale times wider")
 	check(is_equal_approx(TimeThreads.width_scale(spec, 1.0), 1.0), "near the gauntlet a thread has its normal width")
 	check(TimeThreads.width_scale(spec, 0.3) < TimeThreads.width_scale(spec, 0.1), "a thread narrows on its way in")
 	check(TimeThreads.alpha(spec, 0.0, 0.5, 1.0) < TimeThreads.alpha(spec, 0.8, 0.5, 1.0) * 0.5, "a thread is nearly clear at the edge and bright near the gauntlet")
 	check(TimeThreads.sharpness(spec, 0.0) == 0.0 and TimeThreads.sharpness(spec, 1.0) == 1.0, "a thread is soft at the edge and sharp near the gauntlet")
-	var trail := TimeThreads.trail(spec, Vector2(800, 0), 0.5)
+	var trail := TimeThreads.trail(spec, Vector2(800, 0), 0.5, 2.0)
 	check(trail.size() == int(spec["segments"]) + 1, "a trail has segments + 1 points")
 	check(TimeThreads.alpha(spec, 0.5, 0.5, 1.0) > TimeThreads.alpha(spec, 0.5, 0.5, 0.2), "a thread fades toward its tail")
 	check(TimeThreads.alpha(spec, 1.0, 1.0, 1.0) < 0.01, "a thread is gone once it enters the gauntlet")
