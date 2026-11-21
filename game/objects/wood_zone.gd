@@ -11,7 +11,8 @@ extends StaticBody2D
 ## The look (task 2.7А) is decoration from `FireLook`, drawn from world time
 ## (the group `world_clock`) and the recorded state: a wood shader that chars
 ## from the top with an ember edge, a flame shader, a warm glow, sparks, smoke,
-## the ash of a zone that burns out and the steam of a fire put out. Under
+## the ash and the falling planks of a zone that burns out and the steam of a
+## fire put out. Under
 ## Shift it all plays backwards: the tongues flow down, sparks fall back, the
 ## ash flies back up into the plank; at frame 0 the fire stands still. The
 ## glow does not light dark rooms (D55).
@@ -313,6 +314,11 @@ func _draw_front() -> void:
 	var shot := _shot()
 	for spark: Vector3 in shot["sparks"]:
 		_front.draw_circle(Vector2(spark.x, spark.y), 2.0, Color(SPARK_COLOR, spark.z))
+	for plank: Vector4 in shot["planks"]:
+		_front.draw_set_transform(Vector2(plank.x, plank.y), plank.z)
+		_front.draw_rect(Rect2(-plank.w / 2.0, -size.y / 2.0, plank.w, size.y), CHAR_COLOR)
+		_front.draw_rect(Rect2(-plank.w / 2.0, -size.y / 2.0, plank.w, 3.0), EMBER_COLOR)
+	_front.draw_set_transform(Vector2.ZERO)
 	for piece: Vector4 in shot["ash"]:
 		var color := ASH_COLOR.lerp(EMBER_COLOR, piece.w)
 		_front.draw_rect(Rect2(Vector2(piece.x, piece.y) - Vector2.ONE * piece.z / 2.0, Vector2.ONE * piece.z), color)

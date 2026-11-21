@@ -81,6 +81,9 @@
     "ash_pieces": 24,
     "ash_seconds": 1.4,
     "ash_gravity_px": 700,
+    "plank_pieces": 6,
+    "plank_seconds": 1.6,
+    "plank_gravity_px": 1400,
     "glow_radius_px": 150,
     "glow_alpha": 0.35,
     "jet_speed_px": 420

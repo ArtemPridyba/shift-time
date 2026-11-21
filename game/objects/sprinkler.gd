@@ -11,6 +11,12 @@ extends Node2D
 ## (full rain) in `spin_up_seconds` while `powered`, and back while not; the
 ## rain wets only at full flow.
 ##
+## A level can make it automatic (level 04, part two: the hall's fire system):
+## `start_seconds` in the level's `objects` entry (`apply_settings`) holds the
+## rain back until that world frame, so a sprinkler powered from the start
+## opens on its own a moment into the room's history, in every branch the
+## same. A lever that unpowers it before then keeps it shut.
+##
 ## State recorded: { "powered": bool, "flow": int }
 ##
 ## The look is decoration from world time: drops fall from the nozzles, and
@@ -35,6 +41,8 @@ var _drop_speed := 600.0
 var _drops := 3
 var _per_second := 60.0
 var _world_tick := 0
+## The first world frame the rain may run on; 0 for a plain sprinkler.
+var _start_tick := 0
 
 
 func _init() -> void:
@@ -48,6 +56,16 @@ func configure(data: Dictionary, time_data: Dictionary) -> void:
 	_nozzle_spacing = float(data.get("nozzle_spacing_px", 64))
 	_drop_speed = float(data.get("drop_speed_px", 600))
 	_drops = int(data.get("drops_per_nozzle", 3))
+
+
+func apply_settings(settings: Dictionary) -> void:
+	if settings.has("start_seconds"):
+		_start_tick = maxi(int(round(float(settings["start_seconds"]) * _per_second)), 0)
+
+
+## The first world frame the rain may run on.
+func start_tick() -> int:
+	return _start_tick
 
 
 func _ready() -> void:
@@ -67,8 +85,8 @@ func restore_state(state: Dictionary) -> void:
 	queue_redraw()
 
 
-func simulate_tick(_tick: int) -> void:
-	if powered:
+func simulate_tick(tick: int) -> void:
+	if powered and tick >= _start_tick:
 		flow = mini(flow + _step, FLOW_MAX)
 	else:
 		flow = maxi(flow - _step, 0)
