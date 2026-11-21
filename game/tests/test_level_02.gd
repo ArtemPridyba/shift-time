@@ -1,23 +1,26 @@
 extends RefCounted
 ## Tests of what level 02 «Поток» needs (task 3.1, 17.11.2026; reworked after
-## the playtests 21.11.2026, D97 and D98): the hero walks out of the doorway
+## the playtests 21.11.2026, D97, D98 and D100): the hero walks out of the doorway
 ## onto the ledge, the well runs into the pool (full and empty at the start of
 ## the history, each at its own pace), the well float carries him up to the wall
 ## under Shift, the pool float carries him up to the landing on the replay (rule
-## «А») and the gate the full pool holds shut opens only when Shift sends the
-## pool back down. The solutions themselves (with and without Shift, waiting on
-## the wall, waiting at the gate) are in `tests/solutions/` and run by
-## test_solutions.gd.
+## «А») and the tunnel to the exit, which fills with the pool, is crossed only
+## when Shift sends both down again (D100). The solutions themselves (with and
+## without Shift, waiting on the wall, swimming the flooded tunnel) are in
+## `tests/solutions/` and run by test_solutions.gd.
 
 const LEVEL_PATH := "res://levels/level_02.tscn"
 const BUTTONS_ROOM := "res://levels/test_room_buttons.tscn"
 const CELL := 64
 const WELL_FLOOR_ROW := 15
 const POOL_FLOOR_ROW := 10
-## The landing beyond the pool starts here; the gate stands in the mouth of the
-## way out at GATE_COLUMN, rows 4-5.
+## The landing beyond the pool: columns 28-32 on the line. The way out (D100):
+## a shaft at SHAFT_COLUMN down to the pool's depth, a tunnel under rock in
+## columns 34-44 (rows 8-9), steps up in columns 46-49, the exit beyond.
 const LANDING_COLUMN := 28
-const GATE_COLUMN := 32
+const SHAFT_COLUMN := 33
+const TUNNEL_COLUMNS := Vector2i(34, 45)
+const STEPS_COLUMN := 46
 
 var failures: Array[String] = []
 var _tree: SceneTree
@@ -122,8 +125,9 @@ func test_level_02_water_and_float_after_the_prelude() -> void:
 	var spawn: Marker2D = room.get_node("SpawnPoint")
 	check(well.surface_global_y() > spawn.global_position.y + 8.0, "the ledge is dry when the hero comes: the surface is at %.0f, the ledge at %.0f" % [well.surface_global_y(), spawn.global_position.y])
 	check(well.level > 0 and well.flow == -1, "the well is still draining, level %d" % well.level)
-	var gate: WaterGate = room.get_node("Gate")
-	check(pool.level == Water.LEVEL_MAX and gate.open == 0, "the hero comes to a full pool and a shut gate: level %d, gate %d" % [pool.level, gate.open])
+	var tunnel: Water = room.get_node("Tunnel")
+	check(pool.level > Water.LEVEL_MAX / 2 and pool.flow == 1, "the hero comes to a pool still filling: level %d" % pool.level)
+	check(tunnel.level == pool.level and tunnel.flow == 1, "the tunnel fills with the pool: %d and %d" % [tunnel.level, pool.level])
 	check(not player.is_head_under_water(), "the hero does not start in water")
 	var rect := well.float_rect_at(float_body, well.level)
 	var surface_y := well.surface_global_y()
@@ -137,7 +141,9 @@ func test_level_02_water_and_float_after_the_prelude() -> void:
 	var top := well.float_rect_at(float_body, well.level).position.y
 	check(top < line + 4.0 and top > line - 48.0, "the full float carries the hero to the top of the wall: its top at %.0f, the wall at %.0f" % [top, line])
 	check(is_equal_approx(pool.float_rect_at(pool_float, pool.level).end.y, pool.global_position.y), "the pool float lies on the pool floor")
-	check(gate.open == Door.OPEN_MAX, "at the start of the history the empty pool leaves the gate open, open %d" % gate.open)
+	check(tunnel.level == 0, "at the start of the history the tunnel is dry: %d" % tunnel.level)
+	tunnel.level = Water.LEVEL_MAX
+	check(is_equal_approx(tunnel.surface_global_y(), line), "the full tunnel stands on the same line: %.0f" % tunnel.surface_global_y())
 	pool.level = Water.LEVEL_MAX
 	check(is_equal_approx(pool.surface_global_y(), line), "the full pool stands on the same line: %.0f" % pool.surface_global_y())
 	await _free(room)
@@ -179,21 +185,34 @@ func test_level_02_geometry_follows_the_sketch() -> void:
 	check(blocks.get_cell_source_id(Vector2i(4, 16)) != -1, "the foot of the ledge is solid")
 	var grate_x := well.position.x - well.size.x / 2.0 + well.look.outlet_inset_px
 	check(grate_x < well.position.x + float_body.position.x - float_body.body_size().x / 2.0 and grate_x > 5.0 * CELL, "the grate is on the well floor left of the float, x %.0f" % grate_x)
-	# Beyond the pool a dry landing on the full line, then the way out: a passage
-	# two cells high (D82) with rock above it and the gate in its mouth.
-	for column in range(LANDING_COLUMN, GATE_COLUMN):
+	# Beyond the pool a dry landing on the full line, then the way out (D100):
+	# a shaft down to the pool's depth, a tunnel under rock, steps up to the exit.
+	for column in range(LANDING_COLUMN, SHAFT_COLUMN):
 		check(blocks.get_cell_source_id(Vector2i(column, 6)) != -1 and blocks.get_cell_source_id(Vector2i(column, 5)) == -1, "the landing is dry ground on the line at column %d" % column)
-	for column in range(GATE_COLUMN, 40):
-		for row in [4, 5]:
-			check(blocks.get_cell_source_id(Vector2i(column, row)) == -1, "the way out is open at column %d, row %d" % [column, row])
-		check(blocks.get_cell_source_id(Vector2i(column, 3)) != -1 and blocks.get_cell_source_id(Vector2i(column, 6)) != -1, "the way out has rock above it and its floor on the line, column %d" % column)
-	var gate: WaterGate = room.get_node("Gate")
-	var shut := gate.rect_at(0)
-	check(gate.watch_id == "pool", "the gate watches the pool, not %s" % gate.watch_id)
-	check(shut.position.x >= float(GATE_COLUMN * CELL) - 1.0 and shut.position.x < float((GATE_COLUMN + 1) * CELL), "the gate stands in the mouth of the way out, x %.0f" % shut.position.x)
-	check(is_equal_approx(shut.size.y, 2.0 * CELL) and is_equal_approx(shut.position.y, 4.0 * CELL), "the shut gate fills the passage: %s" % [shut])
+	var tunnel: Water = room.get_node("Tunnel")
+	var tank := tunnel.tank_global_rect()
+	check(is_equal_approx(tank.position.y, pool.tank_global_rect().position.y) and is_equal_approx(tank.end.y, pool.tank_global_rect().end.y), "the tunnel tank is as deep as the pool, so both stand equally high: %s and %s" % [tank, pool.tank_global_rect()])
+	check(is_equal_approx(tank.position.x, float(SHAFT_COLUMN * CELL)) and tank.end.x >= float(STEPS_COLUMN * CELL), "the tunnel tank covers the shaft, the tunnel and the steps: %s" % [tank])
+	for row in range(4, POOL_FLOOR_ROW):
+		var walls := row < 6 or blocks.get_cell_source_id(Vector2i(SHAFT_COLUMN - 1, row)) != -1
+		walls = walls and (row >= 8 or blocks.get_cell_source_id(Vector2i(SHAFT_COLUMN + 1, row)) != -1)
+		check(blocks.get_cell_source_id(Vector2i(SHAFT_COLUMN, row)) == -1 and walls, "the shaft is one cell wide down to the tunnel, row %d" % row)
+	for column in range(TUNNEL_COLUMNS.x, TUNNEL_COLUMNS.y):
+		check(blocks.get_cell_source_id(Vector2i(column, POOL_FLOOR_ROW)) != -1, "the tunnel floor is whole at column %d" % column)
+		for row in [8, 9]:
+			check(blocks.get_cell_source_id(Vector2i(column, row)) == -1, "the tunnel is open at column %d, row %d" % [column, row])
+		for row in range(4, 8):
+			check(blocks.get_cell_source_id(Vector2i(column, row)) != -1, "rock over the tunnel at column %d, row %d: no way over it" % [column, row])
+	check(float(POOL_FLOOR_ROW * CELL) - 6.0 * CELL > jump_height + 32.0, "from the tunnel the hero cannot climb back up the shaft")
+	for column in range(STEPS_COLUMN, STEPS_COLUMN + 4):
+		var top := -1
+		for row in range(4, POOL_FLOOR_ROW + 1):
+			if blocks.get_cell_source_id(Vector2i(column, row)) != -1:
+				top = row
+				break
+		check(top == POOL_FLOOR_ROW - 1 - (column - STEPS_COLUMN), "steps of one cell climb to the line: column %d has its top on row %d" % [column, top])
 	var exit := room.get_node("Exit") as Node2D
-	check(exit.global_position.x > float((GATE_COLUMN + 1) * CELL) and exit.global_position.y < float(wall_top * CELL), "the exit lies behind the gate, at %s" % [exit.global_position])
+	check(exit.global_position.x > float((STEPS_COLUMN + 3) * CELL) and exit.global_position.y < float(wall_top * CELL), "the exit lies beyond the steps, at %s" % [exit.global_position])
 	await _free(room)
 
 
@@ -386,52 +405,125 @@ func test_level_02_the_filling_pool_carries_the_hero_only_on_its_float() -> void
 		lowest = minf(lowest, player.breath_fraction())
 	check(not drowned[0] and lowest > 0.99, "on the float the hero keeps his breath: it fell to %.2f" % lowest)
 	check(player.global_position.y < float(6 * CELL), "the float carried him up to the landing, y %.0f" % player.global_position.y)
-	Input.action_press("move_right")
-	await _ticks(90)
-	Input.action_release("move_right")
-	check(not bool(room.get("is_completed")), "the full pool keeps the gate shut: the hero must not walk out")
-	check(player.global_position.x < float(GATE_COLUMN * CELL) and player.global_position.y < float(6 * CELL) + 1.0, "he stops on the landing before the gate, at %s" % [player.global_position])
+	var tunnel: Water = room.get_node("Tunnel")
+	check(pool.level == Water.LEVEL_MAX and tunnel.level == Water.LEVEL_MAX, "the full pool has flooded the tunnel too: %d and %d" % [pool.level, tunnel.level])
 	await _free(room)
 
 
-## The same water works the other way at the end (D98): the pool that carried
-## the hero up holds the gate shut, waiting on the landing keeps it shut, and
-## Shift sends the pool down and lifts the gate smoothly so he walks out.
-func test_level_02_the_pool_holds_the_gate_and_shift_opens_it() -> void:
+## The same water works the other way at the end (D100): the pool that
+## carried the hero up has flooded the tunnel to the exit; under Shift both go
+## down, the world stands at the start of the history with the tunnel dry, and
+## the hero walks out with Shift held.
+func test_level_02_the_full_pool_floods_the_tunnel_and_shift_drains_it() -> void:
 	var room := await _load(LEVEL_PATH)
 	var pool: Water = room.get_node("Pool")
-	var gate: WaterGate = room.get_node("Gate")
+	var tunnel: Water = room.get_node("Tunnel")
 	var player: Player = room.get_node("Player")
 	var landing := Vector2((LANDING_COLUMN + 2) * CELL, 6 * CELL)
 	player.respawn(landing)
 	await _ticks(300)
-	check(pool.level == Water.LEVEL_MAX and gate.open == 0, "waiting on the landing keeps the gate shut: pool %d, gate %d" % [pool.level, gate.open])
+	check(pool.level == Water.LEVEL_MAX and tunnel.level == Water.LEVEL_MAX, "waiting on the landing keeps the tunnel flooded: pool %d, tunnel %d" % [pool.level, tunnel.level])
 	check(not player.is_head_under_water() and absf(player.global_position.y - landing.y) < 2.0, "the landing is dry and holds the hero, at %s" % [player.global_position])
 	Input.action_press("rewind")
-	var last := gate.open
+	var last := tunnel.level
 	var worst := 0
-	var opened_at := -1
 	for i in 600:
 		await _ticks(1)
-		worst = maxi(worst, absi(gate.open - last))
-		last = gate.open
-		if gate.open == Door.OPEN_MAX and opened_at < 0:
-			opened_at = i
-	check(opened_at >= 0, "under Shift the pool goes down and the gate opens")
-	check(worst <= Door.OPEN_MAX / 20, "the gate rises smoothly, at least 20 frames from shut to open: the largest step %d" % worst)
-	check(absf(player.global_position.y - landing.y) < 2.0, "the hero stays on the landing while the pool goes down, at %s" % [player.global_position])
-	Input.action_press("move_right")
-	for i in 120:
-		await _ticks(1)
-		if bool(room.get("is_completed")):
-			break
-	Input.action_release("move_right")
+		worst = maxi(worst, absi(tunnel.level - last))
+		last = tunnel.level
+	check(tunnel.level == 0, "under Shift the tunnel runs dry with the pool: %d" % tunnel.level)
+	check(worst <= Water.LEVEL_MAX / 20, "the tunnel goes down smoothly: the largest step %d" % worst)
+	await _walk_out(room, 300)
+	check(bool(room.get("is_completed")), "through the dry tunnel the hero walks out under Shift, he stopped at %s" % [player.global_position])
+	check(player.breath_fraction() > 0.99, "the dry tunnel costs no air: %.2f" % player.breath_fraction())
+	await _free(room)
+
+## In the flooded tunnel (D100): without Shift the hero, who cannot climb back
+## up the shaft, runs out of air before the steps even going straight on;
+## Shift sends the water down before the air runs out, and he walks out.
+func test_level_02_in_the_flooded_tunnel_shift_saves_the_hero() -> void:
+	for use_shift in [false, true]:
+		var room := await _load(LEVEL_PATH)
+		var player: Player = room.get_node("Player")
+		var tunnel: Water = room.get_node("Tunnel")
+		var drowned := [false]
+		player.drowned.connect(func() -> void: drowned[0] = true)
+		# As in the game: the pool has just carried him up, he dives at once.
+		player.respawn(Vector2((LANDING_COLUMN + 2) * CELL, 6 * CELL))
+		await _ticks(60)
+		player.respawn(Vector2(SHAFT_COLUMN * CELL + CELL / 2.0, 6 * CELL - 8))
+		await _ticks(45)
+		check(player.is_head_under_water() and tunnel.level == Water.LEVEL_MAX, "the hero drops into the flooded shaft, at %s" % [player.global_position])
+		if not use_shift:
+			await _walk_out(room, 420, false, drowned)
+			check(drowned[0] and not bool(room.get("is_completed")), "without Shift the tunnel is too long for one breath")
+			await _free(room)
+			continue
+		await _ticks(60)
+		Input.action_press("rewind")
+		var lowest := 1.0
+		for i in 240:
+			await _ticks(1)
+			lowest = minf(lowest, player.breath_fraction())
+		check(not drowned[0] and lowest > 0.15, "Shift sends the water down in time: the breath fell to %.2f" % lowest)
+		check(not player.is_head_under_water() and tunnel.level == 0, "the tunnel is dry under Shift: %d" % tunnel.level)
+		await _walk_out(room, 300)
+		check(bool(room.get("is_completed")), "out of the tunnel the hero walks out, he stopped at %s" % [player.global_position])
+		await _free(room)
+
+## The events come one after another (D99, D100): the well drains first, the
+## pipe starts the pool and the tunnel a little later; the tunnel always stands
+## exactly as high as the pool, on the way forward and back.
+func test_level_02_the_tunnel_stands_as_high_as_the_pool() -> void:
+	var room := await _load(LEVEL_PATH)
+	var time: RoomTime = room.get_node("RoomTime")
+	var player: Player = room.get_node("Player")
+	var well: Water = room.get_node("Well")
+	var pool: Water = room.get_node("Pool")
+	var tunnel: Water = room.get_node("Tunnel")
+	player.respawn(Vector2((LANDING_COLUMN + 2) * CELL, 6 * CELL))
+	await _rewind_to_start(time)
 	Input.action_release("rewind")
-	check(bool(room.get("is_completed")), "with the gate up the hero walks out, he stopped at %s" % [player.global_position])
+	var well_at := -1
+	var pool_at := -1
+	var apart := 0
+	for i in 420:
+		await _ticks(1)
+		if well_at < 0 and well.level < Water.LEVEL_MAX:
+			well_at = i
+		if pool_at < 0 and pool.level > 0:
+			pool_at = i
+		if not is_equal_approx(pool.surface_global_y(), tunnel.surface_global_y()):
+			apart += 1
+	Input.action_press("rewind")
+	for i in 420:
+		await _ticks(1)
+		if not is_equal_approx(pool.surface_global_y(), tunnel.surface_global_y()):
+			apart += 1
+	check(pool.level == Water.LEVEL_MAX or pool.level == 0, "the run covered the whole fill")
+	check(well_at >= 0 and pool_at > well_at + 12, "the pipe starts after the well with a pause: well %d, pool %d" % [well_at, pool_at])
+	check(apart == 0, "the tunnel and the pool stand apart on %d ticks" % apart)
 	await _free(room)
 
 
-# --- the water does not carry the hero ------------------------------------
+## Walks right for at most `ticks`, hopping every 20 ticks to take the steps,
+## with Shift held or not; stops when the room is completed or the hero drowned.
+func _walk_out(room: Node, ticks: int, rewind := true, drowned: Array = [false]) -> void:
+	if rewind:
+		Input.action_press("rewind")
+	else:
+		Input.action_release("rewind")
+	Input.action_press("move_right")
+	for i in ticks:
+		await _ticks(1)
+		if bool(room.get("is_completed")) or bool(drowned[0]):
+			break
+		if i % 20 == 0:
+			Input.action_press("jump")
+		elif i % 20 == 4:
+			Input.action_release("jump")
+	Input.action_release("jump")
+	Input.action_release("move_right")
 
 ## Rising water of this level does not lift the hero (task 3.1, 17.11.2026):
 ## only the float does. A hero left on the well floor stays there while the
@@ -492,7 +584,7 @@ func test_level_02_is_wider_than_one_screen_and_the_camera_follows() -> void:
 	var width := int(ProjectSettings.get_setting("display/window/size/viewport_width"))
 	check(size.x > width + width / 5 and size.x <= 3 * width, "the room is %d px wide, the screen %d: it should be wider, up to 3 screens" % [size.x, width])
 	var camera: Camera2D = room.get_node("Player/Camera2D")
-	check(camera.limit_right == size.x and camera.limit_left == 0, "the camera limits are %d..%d, the room is %d wide" % [camera.limit_left, camera.limit_right, size.x])
+	check(absi(camera.limit_right - size.x) <= 1 and absi(camera.limit_left) <= 1, "the camera limits are %d..%d, the room is %d wide" % [camera.limit_left, camera.limit_right, size.x])
 	await _free(room)
 
 
