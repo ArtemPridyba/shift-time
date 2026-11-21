@@ -1,7 +1,7 @@
 extends SceneTree
 ## Builds level 02 `levels/level_02.tscn` (task 3.1, 17.11.2026; reworked after
-## Artem's playtests 21.11.2026, D97 and D98, card docs/levels/02.md): a room of
-## 41x17 cells, about 1.4 screens wide, the camera follows the hero. He walks out
+## Artem's playtests 21.11.2026, D97, D98 and D99, card docs/levels/02.md): a
+## room of 48x17 cells, about 1.6 screens wide, the camera follows the hero. He walks out
 ## of a doorway onto a ledge at mid height. Right of it is a well with a float and
 ## a grate on its floor, beyond that a wall as high as the full water line,
 ## behind the wall a small pool with its own float by the far wall and, beyond
@@ -10,9 +10,15 @@ extends SceneTree
 ## through its grate into the pool: at the start of the history the well is full
 ## and the pool empty, then the well drains and the pool fills. The full pool
 ## carries the hero up to the landing, the empty pool opens the gate: the same
-## water once forward, once back. The timing (prelude, walk-in, drain and fill
-## times, the gate's level) lives in data/levels.json, the water line is the same
-## height over everything.
+## water once forward, once back. Right behind the gate the floor drops into a
+## flooded sump (D99): full at the start of the history, it drains later, and a
+## sluice in its far wall opens only once the sump has run low. Under Shift the
+## gate is open but the sump is full: the hero dives in and has to let go of
+## Shift, so the sump drains before the air runs out. The events come one after
+## another (D99): the well drains, the pipe starts, the gate shuts, the sump
+## drains, the sluice opens. The timing (prelude, walk-in, drain and fill times,
+## when the pipe and the sump start, the gates' levels) lives in
+## data/levels.json, the water line is the same height over everything.
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
 ##   godot --headless --path game --script $PWD/tools/build_level_02.gd
@@ -25,23 +31,23 @@ const TILESET_RES := "res://levels/blockout/blockout_tileset.tres"
 const SCENE_PATH := "res://levels/level_02.tscn"
 
 const MAP := [
-	"#########################################",
-	"#...............................#########",
-	"#...............................#########",
-	"#...............................#########",
-	"#....................................EE.#",
-	"#....................................EE.#",
-	"#...............##..........#############",
-	"#...............##..........#############",
-	"#...............##..........#############",
-	"#...............##..........#############",
-	"#S..............#########################",
-	"#####...........#########################",
-	"#####...........#########################",
-	"#####...........#########################",
-	"#####...........#########################",
-	"#########################################",
-	"#########################################",
+	"################################################",
+	"#...............................################",
+	"#...............................################",
+	"#...............................################",
+	"#.......................................#....EE#",
+	"#.......................................#....EE#",
+	"#...............##..........#####.......#...####",
+	"#...............##..........#####..........#####",
+	"#...............##..........#####.........######",
+	"#...............##..........####################",
+	"#S..............################################",
+	"#####...........################################",
+	"#####...........################################",
+	"#####...........################################",
+	"#####...........################################",
+	"################################################",
+	"################################################",
 ]
 
 ## The doorway the hero walks out of (decoration only), in cells: two cells,
@@ -69,11 +75,21 @@ const FLOAT_CENTRE_COLUMN := 11.5
 const POOL_FLOAT_CENTRE_COLUMN := 26.0
 ## The landing beyond the pool is columns 28-31 on the full line; the passage
 ## to the way out starts at column 32, rows 4-5, and the gate stands in its
-## mouth. The gate watches the pool: open while the pool is low, shut while it
-## stands high (its level in levels.json).
+## mouth, at the right edge of its column: there is no ground behind it to
+## wait on, the next step falls into the sump. The gate watches the pool: open
+## while the pool is low, shut while it stands high (its level in levels.json).
 const GATE_COLUMN := 32
 const GATE_ROWS := Vector2i(4, 6)
 const GATE_WIDTH := 32.0
+## The sump behind the gate: columns 33-39, its floor 3 cells under the line
+## (row 9), more than a jump, so the hero who dropped in cannot climb back. Its
+## tank runs from the line to the floor.
+const SUMP_COLUMNS := Vector2i(33, 40)
+const SUMP_FLOOR_ROW := 9
+## The sluice in the sump's far wall: column 40, rows 7-8 (128 px, D82), at
+## the bottom of the sump. Behind it steps of one cell climb to the way out.
+const SLUICE_COLUMN := 40
+const SLUICE_ROWS := Vector2i(7, 9)
 
 
 func _initialize() -> void:
@@ -110,24 +126,23 @@ func _initialize() -> void:
 	_own(root, entrance)
 
 	# The well starts full and drains through its grate from the first tick
-	# (`powered`); the pool starts empty and fills from the pipe in the wall the
-	# well runs into, each at its own pace from levels.json.
-	var well := _add_water(root, "well", WELL_COLUMNS, WELL_FLOOR_ROW, Water.LEVEL_MAX, -1)
+	# (`powered`); the pool starts empty and still, the pipe in the wall the
+	# well runs into starts it a little later, and the sump starts full and still
+	# until its grate opens later again: prelude events in levels.json, each
+	# water at its own pace from there.
+	var well := _add_water(root, "well", WELL_COLUMNS, WELL_FLOOR_ROW, Water.LEVEL_MAX, -1, true)
 	_add_float(root, well, "Float", FLOAT_CENTRE_COLUMN)
-	var pool := _add_water(root, "pool", POOL_COLUMNS, POOL_FLOOR_ROW, 0, 1)
+	var pool := _add_water(root, "pool", POOL_COLUMNS, POOL_FLOOR_ROW, 0, 1, false)
 	_add_float(root, pool, "Float", POOL_FLOAT_CENTRE_COLUMN)
+	_add_water(root, "sump", SUMP_COLUMNS, SUMP_FLOOR_ROW, Water.LEVEL_MAX, -1, false)
 
 	# The gate in the mouth of the way out: the pool holds it shut while it
 	# stands high, so the hero who rode the full pool up has to send the pool
 	# back down under Shift to pass.
-	var gate: WaterGate = (load("res://objects/water_gate.tscn") as PackedScene).instantiate()
-	gate.name = "Gate"
-	gate.watch_id = "pool"
-	gate.linked_id = "pool"
-	gate.height = float((GATE_ROWS.y - GATE_ROWS.x) * CELL)
-	gate.travel = gate.height
-	gate.position = Vector2(GATE_COLUMN * CELL + GATE_WIDTH / 2.0, (GATE_ROWS.x + GATE_ROWS.y) / 2.0 * CELL)
-	_own(root, gate)
+	_add_gate(root, "Gate", "gate", "pool", GATE_ROWS, GATE_COLUMN * CELL + CELL - GATE_WIDTH / 2.0)
+	# The sluice at the bottom of the sump: the sump holds it shut while it
+	# stands high, so the hero who dived in under Shift has to let go of it.
+	_add_gate(root, "Sluice", "sluice", "sump", SLUICE_ROWS, SLUICE_COLUMN * CELL + GATE_WIDTH / 2.0)
 
 	var exit: ExitZone = (load("res://objects/exit_zone.tscn") as PackedScene).instantiate()
 	exit.size = Vector2(exit_cells.size * CELL)
@@ -149,10 +164,25 @@ func _initialize() -> void:
 	quit()
 
 
+## A water gate `id` in a passage of `rows` `[from, to)`, centred on `x`, that
+## watches the tank `watch_id`.
+func _add_gate(root: Node, node_name: String, id: String, watch_id: String, rows: Vector2i, x: float) -> void:
+	var gate: WaterGate = (load("res://objects/water_gate.tscn") as PackedScene).instantiate()
+	gate.name = node_name
+	gate.object_id = id
+	gate.watch_id = watch_id
+	gate.linked_id = watch_id
+	gate.height = float((rows.y - rows.x) * CELL)
+	gate.travel = gate.height
+	gate.position = Vector2(x, (rows.x + rows.y) / 2.0 * CELL)
+	_own(root, gate)
+
+
 ## A tank from the full water line down to `floor_row`, over the columns
 ## `[from, to)`, at `level`, running (`flow` -1 drains, +1 fills) from the
-## first tick; its node at the bottom centre. The grate or pipe is on the left.
-func _add_water(root: Node, id: String, columns: Vector2i, floor_row: int, level: int, flow: int) -> Water:
+## first tick when `powered`; its node at the bottom centre. The grate or pipe
+## is on the left.
+func _add_water(root: Node, id: String, columns: Vector2i, floor_row: int, level: int, flow: int, powered: bool) -> Water:
 	var water: Water = (load("res://objects/water.tscn") as PackedScene).instantiate()
 	water.name = id.to_pascal_case()
 	water.object_id = id
@@ -163,7 +193,7 @@ func _add_water(root: Node, id: String, columns: Vector2i, floor_row: int, level
 	water.position = Vector2((left + right) / 2.0, bottom)
 	water.size = Vector2(right - left, bottom - top)
 	water.level = level
-	water.powered = true
+	water.powered = powered
 	water.open_flow = flow
 	water.outlet_side = -1
 	_own(root, water)

@@ -1,13 +1,15 @@
 extends RefCounted
 ## Tests of what level 02 «Поток» needs (task 3.1, 17.11.2026; reworked after
-## the playtests 21.11.2026, D97 and D98): the hero walks out of the doorway
+## the playtests 21.11.2026, D97, D98 and D99): the hero walks out of the doorway
 ## onto the ledge, the well runs into the pool (full and empty at the start of
 ## the history, each at its own pace), the well float carries him up to the wall
 ## under Shift, the pool float carries him up to the landing on the replay (rule
 ## «А») and the gate the full pool holds shut opens only when Shift sends the
-## pool back down. The solutions themselves (with and without Shift, waiting on
-## the wall, waiting at the gate) are in `tests/solutions/` and run by
-## test_solutions.gd.
+## pool back down. Behind the gate the flooded sump (D99) lets the hero out
+## only when he lets go of Shift under water, and the events of the history
+## come one after another. The solutions themselves (with and without Shift,
+## waiting on the wall, waiting at the gate, holding Shift in the sump) are in
+## `tests/solutions/` and run by test_solutions.gd.
 
 const LEVEL_PATH := "res://levels/level_02.tscn"
 const BUTTONS_ROOM := "res://levels/test_room_buttons.tscn"
@@ -18,6 +20,11 @@ const POOL_FLOOR_ROW := 10
 ## way out at GATE_COLUMN, rows 4-5.
 const LANDING_COLUMN := 28
 const GATE_COLUMN := 32
+## The sump behind the gate: columns 33-39, floor on row 9; the sluice at the
+## bottom of its far wall, column 40, rows 7-8.
+const SUMP_COLUMNS := Vector2i(33, 40)
+const SUMP_FLOOR_ROW := 9
+const SLUICE_COLUMN := 40
 
 var failures: Array[String] = []
 var _tree: SceneTree
@@ -123,7 +130,10 @@ func test_level_02_water_and_float_after_the_prelude() -> void:
 	check(well.surface_global_y() > spawn.global_position.y + 8.0, "the ledge is dry when the hero comes: the surface is at %.0f, the ledge at %.0f" % [well.surface_global_y(), spawn.global_position.y])
 	check(well.level > 0 and well.flow == -1, "the well is still draining, level %d" % well.level)
 	var gate: WaterGate = room.get_node("Gate")
-	check(pool.level == Water.LEVEL_MAX and gate.open == 0, "the hero comes to a full pool and a shut gate: level %d, gate %d" % [pool.level, gate.open])
+	check(pool.level > Water.LEVEL_MAX / 2 and pool.flow == 1 and gate.open == 0, "the hero comes to a pool still filling and a shut gate: level %d, gate %d" % [pool.level, gate.open])
+	var sump: Water = room.get_node("Sump")
+	var sluice: WaterGate = room.get_node("Sluice")
+	check(sump.level < Water.LEVEL_MAX / 4 and sluice.powered, "behind the gate the sump has run low and the sluice is opening: level %d" % sump.level)
 	check(not player.is_head_under_water(), "the hero does not start in water")
 	var rect := well.float_rect_at(float_body, well.level)
 	var surface_y := well.surface_global_y()
@@ -138,6 +148,8 @@ func test_level_02_water_and_float_after_the_prelude() -> void:
 	check(top < line + 4.0 and top > line - 48.0, "the full float carries the hero to the top of the wall: its top at %.0f, the wall at %.0f" % [top, line])
 	check(is_equal_approx(pool.float_rect_at(pool_float, pool.level).end.y, pool.global_position.y), "the pool float lies on the pool floor")
 	check(gate.open == Door.OPEN_MAX, "at the start of the history the empty pool leaves the gate open, open %d" % gate.open)
+	check(sump.level == Water.LEVEL_MAX and sluice.open == 0, "at the start of the history the sump is full and holds the sluice shut: %d, %d" % [sump.level, sluice.open])
+	check(is_equal_approx(sump.surface_global_y(), line), "the full sump stands on the same line: %.0f" % sump.surface_global_y())
 	pool.level = Water.LEVEL_MAX
 	check(is_equal_approx(pool.surface_global_y(), line), "the full pool stands on the same line: %.0f" % pool.surface_global_y())
 	await _free(room)
@@ -179,21 +191,39 @@ func test_level_02_geometry_follows_the_sketch() -> void:
 	check(blocks.get_cell_source_id(Vector2i(4, 16)) != -1, "the foot of the ledge is solid")
 	var grate_x := well.position.x - well.size.x / 2.0 + well.look.outlet_inset_px
 	check(grate_x < well.position.x + float_body.position.x - float_body.body_size().x / 2.0 and grate_x > 5.0 * CELL, "the grate is on the well floor left of the float, x %.0f" % grate_x)
-	# Beyond the pool a dry landing on the full line, then the way out: a passage
-	# two cells high (D82) with rock above it and the gate in its mouth.
-	for column in range(LANDING_COLUMN, GATE_COLUMN):
+	# Beyond the pool a dry landing on the full line, then the gate in the mouth
+	# of a passage two cells high (D82), and right behind it the sump (D99).
+	for column in range(LANDING_COLUMN, GATE_COLUMN + 1):
 		check(blocks.get_cell_source_id(Vector2i(column, 6)) != -1 and blocks.get_cell_source_id(Vector2i(column, 5)) == -1, "the landing is dry ground on the line at column %d" % column)
-	for column in range(GATE_COLUMN, 40):
-		for row in [4, 5]:
-			check(blocks.get_cell_source_id(Vector2i(column, row)) == -1, "the way out is open at column %d, row %d" % [column, row])
-		check(blocks.get_cell_source_id(Vector2i(column, 3)) != -1 and blocks.get_cell_source_id(Vector2i(column, 6)) != -1, "the way out has rock above it and its floor on the line, column %d" % column)
+		check(blocks.get_cell_source_id(Vector2i(column, 3)) != -1 or column < GATE_COLUMN, "rock above the gate's column %d" % column)
 	var gate: WaterGate = room.get_node("Gate")
 	var shut := gate.rect_at(0)
 	check(gate.watch_id == "pool", "the gate watches the pool, not %s" % gate.watch_id)
-	check(shut.position.x >= float(GATE_COLUMN * CELL) - 1.0 and shut.position.x < float((GATE_COLUMN + 1) * CELL), "the gate stands in the mouth of the way out, x %.0f" % shut.position.x)
+	check(is_equal_approx(shut.end.x, float((GATE_COLUMN + 1) * CELL)), "the gate stands at the right edge of its column, no ground behind it: it ends at %.0f" % shut.end.x)
 	check(is_equal_approx(shut.size.y, 2.0 * CELL) and is_equal_approx(shut.position.y, 4.0 * CELL), "the shut gate fills the passage: %s" % [shut])
+	var sump: Water = room.get_node("Sump")
+	var sump_rect := sump.tank_global_rect()
+	check(is_equal_approx(sump_rect.position.x, float(SUMP_COLUMNS.x * CELL)) and is_equal_approx(sump_rect.end.x, float(SUMP_COLUMNS.y * CELL)), "the sump fills columns %d-%d: %s" % [SUMP_COLUMNS.x, SUMP_COLUMNS.y - 1, sump_rect])
+	check(is_equal_approx(sump_rect.position.y, float(wall_top * CELL)) and is_equal_approx(sump_rect.end.y, float(SUMP_FLOOR_ROW * CELL)), "the sump runs from the line to its floor: %s" % [sump_rect])
+	check(sump_rect.size.y > jump_height + 32.0, "from the sump floor the hero cannot climb back: %.0f px up, a jump is %.0f" % [sump_rect.size.y, jump_height])
+	for column in range(SUMP_COLUMNS.x, SUMP_COLUMNS.y):
+		check(blocks.get_cell_source_id(Vector2i(column, SUMP_FLOOR_ROW)) != -1 and blocks.get_cell_source_id(Vector2i(column, SUMP_FLOOR_ROW - 1)) == -1, "the sump floor is whole at column %d" % column)
+	for row in range(1, 7):
+		check(blocks.get_cell_source_id(Vector2i(SLUICE_COLUMN, row)) != -1, "the sump's far wall is solid above the sluice, row %d" % row)
+	var sluice: WaterGate = room.get_node("Sluice")
+	var sluice_shut := sluice.rect_at(0)
+	check(sluice.watch_id == "sump", "the sluice watches the sump, not %s" % sluice.watch_id)
+	check(sluice_shut.position.x >= float(SLUICE_COLUMN * CELL) - 1.0 and sluice_shut.end.x <= float((SLUICE_COLUMN + 1) * CELL) + 1.0, "the sluice stands in the far wall, x %.0f" % sluice_shut.position.x)
+	check(is_equal_approx(sluice_shut.position.y, 7.0 * CELL) and is_equal_approx(sluice_shut.end.y, float(SUMP_FLOOR_ROW * CELL)), "the shut sluice fills the opening at the bottom of the sump: %s" % [sluice_shut])
+	for column in [SLUICE_COLUMN + 2, SLUICE_COLUMN + 3, SLUICE_COLUMN + 4]:
+		var top := -1
+		for row in range(4, 10):
+			if blocks.get_cell_source_id(Vector2i(column, row)) != -1:
+				top = row
+				break
+		check(top == SUMP_FLOOR_ROW - (column - SLUICE_COLUMN - 1), "behind the sluice steps of one cell climb to the line: column %d has its top on row %d" % [column, top])
 	var exit := room.get_node("Exit") as Node2D
-	check(exit.global_position.x > float((GATE_COLUMN + 1) * CELL) and exit.global_position.y < float(wall_top * CELL), "the exit lies behind the gate, at %s" % [exit.global_position])
+	check(exit.global_position.x > float((SLUICE_COLUMN + 4) * CELL) and exit.global_position.y < float(wall_top * CELL), "the exit lies behind the sluice and the steps, at %s" % [exit.global_position])
 	await _free(room)
 
 
@@ -390,7 +420,8 @@ func test_level_02_the_filling_pool_carries_the_hero_only_on_its_float() -> void
 	await _ticks(90)
 	Input.action_release("move_right")
 	check(not bool(room.get("is_completed")), "the full pool keeps the gate shut: the hero must not walk out")
-	check(player.global_position.x < float(GATE_COLUMN * CELL) and player.global_position.y < float(6 * CELL) + 1.0, "he stops on the landing before the gate, at %s" % [player.global_position])
+	var gate: WaterGate = room.get_node("Gate")
+	check(player.global_position.x < gate.rect_at(0).position.x and player.global_position.y < float(6 * CELL) + 1.0, "he stops on the landing before the gate, at %s" % [player.global_position])
 	await _free(room)
 
 
@@ -420,14 +451,107 @@ func test_level_02_the_pool_holds_the_gate_and_shift_opens_it() -> void:
 	check(opened_at >= 0, "under Shift the pool goes down and the gate opens")
 	check(worst <= Door.OPEN_MAX / 20, "the gate rises smoothly, at least 20 frames from shut to open: the largest step %d" % worst)
 	check(absf(player.global_position.y - landing.y) < 2.0, "the hero stays on the landing while the pool goes down, at %s" % [player.global_position])
+	# With the gate up, under Shift, the way leads into the full sump (D99).
+	var sump: Water = room.get_node("Sump")
+	var sluice: WaterGate = room.get_node("Sluice")
 	Input.action_press("move_right")
-	for i in 120:
-		await _ticks(1)
-		if bool(room.get("is_completed")):
-			break
-	Input.action_release("move_right")
+	await _ticks(120)
+	check(not bool(room.get("is_completed")), "under Shift the hero does not walk out")
+	check(player.global_position.x > gate.rect_at(0).end.x and player.global_position.y > float(6 * CELL) + 32.0, "past the gate he falls into the sump, at %s" % [player.global_position])
+	check(sump.level == Water.LEVEL_MAX and sluice.open == 0 and player.is_head_under_water(), "under Shift the sump is full and holds the sluice shut: sump %d, sluice %d" % [sump.level, sluice.open])
+	await _free(room)
+
+
+## Behind the gate (D99): under Shift the sump stays full and the hero, who
+## cannot climb back, drowns there; let go of Shift under water and the replay
+## drains the sump before the air runs out, the sluice opens and he walks out.
+func test_level_02_in_the_sump_letting_go_of_shift_saves_the_hero() -> void:
+	for let_go in [false, true]:
+		var room := await _load(LEVEL_PATH)
+		var time: RoomTime = room.get_node("RoomTime")
+		var player: Player = room.get_node("Player")
+		var sump: Water = room.get_node("Sump")
+		var drowned := [false]
+		player.drowned.connect(func() -> void: drowned[0] = true)
+		player.respawn(Vector2((LANDING_COLUMN + 2) * CELL, 6 * CELL))
+		await _rewind_to_start(time)
+		var dive := Vector2((SUMP_COLUMNS.x + 1) * CELL, 6 * CELL - 8)
+		player.respawn(dive)
+		await _ticks(90)
+		check(player.is_head_under_water() and player.global_position.y > float(SUMP_FLOOR_ROW * CELL) - 4.0, "under Shift the hero sinks to the floor of the full sump, at %s" % [player.global_position])
+		if let_go:
+			Input.action_release("rewind")
+		var lowest := 1.0
+		var head_out := -1
+		for i in 360:
+			await _ticks(1)
+			lowest = minf(lowest, player.breath_fraction())
+			if head_out < 0 and not player.is_head_under_water():
+				head_out = i
+			if drowned[0]:
+				break
+		if not let_go:
+			check(drowned[0], "holding Shift in the sump drowns the hero: the sump stays at %d" % sump.level)
+			await _free(room)
+			continue
+		check(not drowned[0] and lowest > 0.3, "the replay drains the sump in time: the breath fell to %.2f" % lowest)
+		check(head_out >= 0 and head_out < 180, "the head is out of the water %d ticks after letting go" % head_out)
+		Input.action_press("move_right")
+		for i in 240:
+			await _ticks(1)
+			if bool(room.get("is_completed")):
+				break
+			if i % 20 == 0:
+				Input.action_press("jump")
+			elif i % 20 == 4:
+				Input.action_release("jump")
+		Input.action_release("jump")
+		check(bool(room.get("is_completed")), "with the sump low the sluice is up and the hero climbs out, he stopped at %s" % [player.global_position])
+		await _free(room)
+
+
+## The events come one after another (D99): the well drains first, then the
+## pipe starts the pool, the gate shuts, the sump drains, the sluice opens.
+## And never both at once: while the gate is open enough to walk under, the
+## sump stands over the hero's head, so no timing lets him through dry.
+func test_level_02_events_come_in_order_and_the_gate_never_meets_a_dry_sump() -> void:
+	var room := await _load(LEVEL_PATH)
+	var time: RoomTime = room.get_node("RoomTime")
+	var player: Player = room.get_node("Player")
+	var well: Water = room.get_node("Well")
+	var pool: Water = room.get_node("Pool")
+	var sump: Water = room.get_node("Sump")
+	var gate: WaterGate = room.get_node("Gate")
+	var sluice: WaterGate = room.get_node("Sluice")
+	player.respawn(Vector2((LANDING_COLUMN + 2) * CELL, 6 * CELL))
+	await _rewind_to_start(time)
 	Input.action_release("rewind")
-	check(bool(room.get("is_completed")), "with the gate up the hero walks out, he stopped at %s" % [player.global_position])
+	var hero := player.body_rect().size.y
+	var head_level := int(ceil((hero - float(Content.player()["head_px"]) / 2.0) / sump.size.y * Water.LEVEL_MAX))
+	var passable := int(ceil(hero / gate.height * Door.OPEN_MAX))
+	var first := {}
+	var both := 0
+	for i in 600:
+		await _ticks(1)
+		for event: String in ["well", "pool", "gate", "sump", "sluice"]:
+			if first.has(event):
+				continue
+			var started := false
+			match event:
+				"well": started = well.level < Water.LEVEL_MAX
+				"pool": started = pool.level > 0
+				"gate": started = gate.open < Door.OPEN_MAX
+				"sump": started = sump.level < Water.LEVEL_MAX
+				"sluice": started = sluice.open > 0
+			if started:
+				first[event] = i
+		if gate.open >= passable and sump.level < head_level:
+			both += 1
+	check(first.size() == 5, "every event happens in 10 s: %s" % [first])
+	var order := ["well", "pool", "gate", "sump", "sluice"]
+	for k in range(1, order.size()):
+		check(int(first.get(order[k], -1)) > int(first.get(order[k - 1], 0)) + 12, "%s starts after %s with a pause: %s" % [order[k], order[k - 1], first])
+	check(both == 0, "the gate open for the hero (%d of %d) never meets a sump under his head (%d): %d ticks" % [passable, Door.OPEN_MAX, head_level, both])
 	await _free(room)
 
 
