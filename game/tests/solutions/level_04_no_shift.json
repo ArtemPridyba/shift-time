@@ -1,0 +1,11 @@
+{
+	"level": "level_04",
+	"expect": "no_exit",
+	"segments": [
+		{ "actions": ["move_right"], "ticks": 100 },
+		{ "actions": ["interact"], "ticks": 6 },
+		{ "actions": [], "ticks": 120 },
+		{ "actions": ["move_right"], "ticks": 30 },
+		{ "actions": ["move_right", "jump"], "ticks": 300 }
+	]
+}

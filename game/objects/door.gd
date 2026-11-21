@@ -15,7 +15,10 @@ extends AnimatableBody2D
 ## A level may change a door through `objects` of its entry in
 ## `data/levels.json` (`apply_settings`): other cycle seconds, and
 ## `"cycle": "once"` for a door that starts open, waits `hold_open_seconds`,
-## closes in `close_seconds` and then stays closed (level 01).
+## closes in `close_seconds` and then stays closed (level 01), and
+## `"cycle": "opens_once"` for a door that starts closed, waits `delay_seconds`,
+## opens in `open_seconds` and then stays open (the gate of level 04). Both run
+## by the door's own phase, so a new branch of history plays them again.
 ##
 ## The gauge beside the doorway shows how open the door is: a ring that fills
 ## as the door opens and empties as it closes, so it reads by shape.
@@ -28,6 +31,7 @@ const ACCENT_COLOR := Color("#7FE8FF")
 const OPEN_MAX := 1000
 const CYCLE_LOOP := "loop"
 const CYCLE_ONCE := "once"
+const CYCLE_OPENS_ONCE := "opens_once"
 const GAUGE_OFFSET := Vector2(-40.0, -28.0)
 const GAUGE_RADIUS := 12.0
 const GAUGE_WIDTH := 5.0
@@ -50,6 +54,8 @@ var phase := 0
 var powered := false
 ## True for a door that closes once and stays closed (`"cycle": "once"`).
 var once := false
+## True for a door that opens once and stays open (`"cycle": "opens_once"`).
+var opens_once := false
 ## +1 or -1, from TimeManager through TimeWorld; for looks and sound later.
 var time_direction := 1
 ## The bottom of the player's body this deep inside the door is riding it, not
@@ -63,6 +69,8 @@ var _open_ticks := 1
 var _hold_open_ticks := 1
 var _close_ticks := 1
 var _hold_closed_ticks := 1
+## Ticks an `opens_once` door waits closed before it opens.
+var _delay_ticks := 0
 
 
 func _init() -> void:
@@ -79,6 +87,7 @@ func configure(door_data: Dictionary, time_data: Dictionary) -> void:
 	_hold_open_ticks = maxi(int(round(float(door_data.get("hold_open_seconds", 4)) * ticks)), 1)
 	_close_ticks = maxi(int(round(float(door_data.get("close_seconds", 3)) * ticks)), 1)
 	_hold_closed_ticks = maxi(int(round(float(door_data.get("hold_closed_seconds", 4)) * ticks)), 1)
+	_delay_ticks = maxi(int(round(float(door_data.get("delay_seconds", 0)) * ticks)), 0)
 
 
 ## Settings of this door from the level's entry in `data/levels.json`: any of
@@ -89,6 +98,11 @@ func apply_settings(settings: Dictionary) -> void:
 	door_data.merge(settings, true)
 	configure(door_data, Content.time())
 	once = str(settings.get("cycle", CYCLE_LOOP)) == CYCLE_ONCE
+	opens_once = str(settings.get("cycle", CYCLE_LOOP)) == CYCLE_OPENS_ONCE
+	if opens_once:
+		phase = 0
+		open = 0
+		_apply()
 	if once:
 		phase = _open_ticks
 		open = OPEN_MAX
@@ -132,6 +146,11 @@ func simulate_tick(_tick: int) -> void:
 			open = maxi(open - step, 0)
 	else:
 		# Standalone cycle mode.
+		if opens_once:
+			phase = mini(phase + 1, _delay_ticks + _open_ticks)
+			open = opens_once_at(phase)
+			_apply()
+			return
 		if once:
 			phase = mini(phase + 1, cycle_ticks() - 1)
 		else:
@@ -157,6 +176,15 @@ func blocks_player_at(state: Dictionary, player_rect: Rect2) -> bool:
 
 func cycle_ticks() -> int:
 	return _open_ticks + _hold_open_ticks + _close_ticks + _hold_closed_ticks
+
+
+## How open an `opens_once` door is at a tick: closed for its delay, then
+## opening, then open for good.
+func opens_once_at(cycle_phase: int) -> int:
+	var p := cycle_phase - _delay_ticks
+	if p <= 0:
+		return 0
+	return int(round(float(OPEN_MAX) * mini(p, _open_ticks) / _open_ticks))
 
 
 ## How open the door is at a tick of its cycle: opening, open, closing, closed.

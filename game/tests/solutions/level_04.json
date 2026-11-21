@@ -1,0 +1,13 @@
+{
+	"level": "level_04",
+	"expect": "exit",
+	"segments": [
+		{ "actions": ["move_right"], "ticks": 100 },
+		{ "actions": [], "ticks": 20 },
+		{ "actions": ["rewind"], "ticks": 200 },
+		{ "actions": ["rewind", "interact"], "ticks": 6 },
+		{ "actions": ["rewind"], "ticks": 10 },
+		{ "actions": [], "ticks": 30 },
+		{ "actions": ["move_right"], "ticks": 300 }
+	]
+}
