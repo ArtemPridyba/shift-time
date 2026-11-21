@@ -55,6 +55,12 @@
     "flame_px": 40,
     "flame_side_px": 12
   },
+  "sprinkler": {
+    "spin_up_seconds": 0.6,
+    "nozzle_spacing_px": 64,
+    "drop_speed_px": 600,
+    "drops_per_nozzle": 3
+  },
   "steam": {
     "seconds": 2.5,
     "puffs": 10,

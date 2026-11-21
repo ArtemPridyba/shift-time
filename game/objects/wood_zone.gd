@@ -95,6 +95,13 @@ func _ready() -> void:
 	_apply()
 
 
+## Per-level settings from `objects` of the level's entry: `burn_seconds`
+## overrides objects.json for this zone (real seconds, like all fire).
+func apply_settings(settings: Dictionary) -> void:
+	if settings.has("burn_seconds"):
+		burn.burn_ticks = maxi(int(round(float(settings["burn_seconds"]) * _per_second)), 1)
+
+
 func capture_state() -> Dictionary:
 	return {"phase": int(burn.phase), "burn": burn.burn, "doused": doused, "burnt": burnt}
 
