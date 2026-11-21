@@ -30,11 +30,11 @@
 	{
 		"id": "level_04",
 		"scene": "res://levels/level_04.tscn",
-		"prelude_seconds": 4,
+		"prelude_seconds": 1.9,
 		"intro_seconds": 0.6,
 		"objects": {
-			"bridge": { "cycle": "once", "speed": 480, "delay_seconds": 0.6 },
-			"gate": { "cycle": "opens_once", "delay_seconds": 2.2, "open_seconds": 1.2 }
+			"bridge": { "burn_seconds": 3 },
+			"barricade": { "burn_seconds": 3.5 }
 		},
 		"title": "04 Interference"
 	},

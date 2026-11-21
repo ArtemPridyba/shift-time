@@ -83,7 +83,7 @@ Everything a step reads stays in the conversation and is read again by every lat
 - `game/` — the Godot project (`game/project.godot`).
 - `game/autoload/` — singletons (`time_manager.gd`, …): anything that must be a `Node` and global lives here, not in `core/`.
 - `game/core/` — rules in plain GDScript (`RefCounted`, no nodes, no UI): timeline, recorder, time world, live sources, time-direction logic. Must stay testable headless.
-- `game/objects/` — temporal objects as scenes plus scripts (mechanisms drawn by code in `objects/mech/`, particles that run backwards in `objects/fx/`, numbers in `data/look.json`), one scene per object: door, platform, crate, water, button, lever, valve, gear, wood zone, lamp, reverse items (flamethrower, trampoline).
+- `game/objects/` — temporal objects as scenes plus scripts (mechanisms drawn by code in `objects/mech/`, particles that run backwards in `objects/fx/`, numbers in `data/look.json`), one scene per object: door, platform, crate, water, button, lever, valve, gear, wood zone, lamp, sprinkler, reverse items (flamethrower, trampoline).
 - `game/levels/` — one scene per level, `level_01.tscn` … `level_10.tscn`. Two people never edit one level at once.
 - `game/ui/` — HUD, menus, time-direction indicator. Presentation only.
 - `game/data/` — numbers and settings as JSON (recording step, history length, burn time, player, level list, texts). The team edits these without code.

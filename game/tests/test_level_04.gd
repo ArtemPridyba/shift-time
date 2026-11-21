@@ -1,14 +1,14 @@
 extends RefCounted
-## Tests of level 04 «Interference» (task 3.3, card docs/levels/04.md, D57):
-## the bridge and the gate are never out and open together in the recorded
-## history; a latch thrown in the past holds the bridge in a new branch while
-## the gate opens on its own timer.
+## Tests of level 04 «Interference» (task 3.3, card docs/levels/04.md, D104):
+## a bridge and a barricade burn from the start; the bridge burns out first,
+## so the recorded history never has a standing bridge and an open way. A
+## lever thrown under Shift opens the sprinkler over the bridge while it still
+## burns, and in the new branch the bridge stays. Also the latch platform and
+## the door that opens once (D103), which the level no longer uses.
 
 const PLATFORM_PATH := "res://objects/platform.tscn"
 const DOOR_PATH := "res://objects/door.tscn"
 const LEVEL_PATH := "res://levels/level_04.tscn"
-## The latch stands here; the hero stops by it (x of her feet).
-const BY_THE_LATCH_TICKS := 100
 
 var failures: Array[String] = []
 var _tree: SceneTree
@@ -79,101 +79,152 @@ func test_door_opens_once_and_stays_open() -> void:
 	door.free()
 
 
-func test_level_04_starts_with_the_bridge_in_and_the_gate_open() -> void:
+func test_sprinkler_rains_only_at_full_flow_and_is_no_tank() -> void:
+	var sprinkler := Sprinkler.new()
+	sprinkler.size = Vector2(256, 200)
+	check(sprinkler.water_global_rect() == Rect2(), "a shut sprinkler wets nothing")
+	sprinkler.powered = true
+	var last := sprinkler.flow
+	var ticks := 0
+	while not sprinkler.is_raining() and ticks < 10 * 60:
+		sprinkler.simulate_tick(ticks)
+		check(sprinkler.flow - last <= int(Content.time()["max_state_step"]), "the flow jumps %d per tick" % (sprinkler.flow - last))
+		check(sprinkler.is_raining() or sprinkler.water_global_rect() == Rect2(), "the rain wets only at full flow")
+		last = sprinkler.flow
+		ticks += 1
+	var spin_up := float(Content.objects()["sprinkler"]["spin_up_seconds"]) * 60.0
+	check(absf(ticks - spin_up) <= 1.0, "the rain is full after spin_up_seconds, took %d ticks" % ticks)
+	check(sprinkler.water_global_rect().size == sprinkler.size, "full rain wets its whole rect")
+	check(not (sprinkler as Object) is Water, "a sprinkler is not a tank: the hero never wades in it")
+	sprinkler.powered = false
+	for i in 10 * 60:
+		sprinkler.simulate_tick(i)
+	check(sprinkler.flow == 0 and sprinkler.water_global_rect() == Rect2(), "a shut sprinkler runs dry")
+	sprinkler.free()
+
+
+func test_level_04_wood_takes_its_burn_time_from_the_level() -> void:
 	var room := await _load()
-	var bridge: MovingPlatform = room.get_node("Bridge")
-	var gate: Door = room.get_node("Gate")
-	check(not _bridge_out(bridge), "after the prelude the bridge is in its slot, is at %s" % [bridge.position])
-	check(gate.open == Door.OPEN_MAX, "after the prelude the gate is open, is %d" % gate.open)
+	var per_level: Dictionary = Content.level_for_scene(LEVEL_PATH)["objects"]
+	for id in ["bridge", "barricade"]:
+		var zone: WoodZone = room.get_node(id.capitalize())
+		var expected := int(round(float(per_level[id]["burn_seconds"]) * 60.0))
+		check(zone.burn.burn_ticks == expected, "%s burns %d ticks, not %d" % [id, zone.burn.burn_ticks, expected])
 	await _free(room)
 
 
-func test_level_04_history_never_has_the_bridge_out_and_the_gate_open() -> void:
+func test_level_04_starts_with_the_bridge_burning_and_the_lever_out_of_reach() -> void:
 	var room := await _load()
-	var bridge: MovingPlatform = room.get_node("Bridge")
-	var gate: Door = room.get_node("Gate")
-	var player: Player = room.get_node("Player")
+	var bridge: WoodZone = room.get_node("Bridge")
+	var barricade: WoodZone = room.get_node("Barricade")
+	check(bridge.burn.phase == WoodBurn.Phase.BURNING, "after the prelude the bridge still burns, the hero sees it fall")
+	check(barricade.burn.phase == WoodBurn.Phase.BURNING, "after the prelude the barricade burns")
+	check(bridge.burn.burn_ticks - bridge.burn.burn < barricade.burn.burn_ticks - barricade.burn.burn, "the bridge burns out before the barricade")
+	# The lever thrown now must come too late: even a straight walk from the
+	# spawn point to the lever takes longer than the bridge has left to burn,
+	# with the intro and the rain's spin-up.
+	var entry := Content.level_for_scene(LEVEL_PATH)
+	var left := float(bridge.burn.burn_ticks - bridge.burn.burn) / 60.0
+	var lever: Lever = room.get_node("Lever")
+	var spawn_x: float = (room.get_node("SpawnPoint") as Node2D).position.x
+	var walk := (lever.position.x - spawn_x) / float(Content.player()["walk_speed"])
+	var spin_up := float(Content.objects()["sprinkler"]["spin_up_seconds"])
+	check(float(entry["intro_seconds"]) + walk + spin_up > left + 1.0, "the lever is reachable %.1f s before the bridge burns out" % (left - walk - spin_up))
+	check(left >= 1.0, "the hero must see the bridge burn for a second at least, sees %.1f s" % left)
+	await _free(room)
+
+
+func test_level_04_history_never_has_the_bridge_whole_and_the_way_open() -> void:
+	var room := await _load()
+	var bridge: WoodZone = room.get_node("Bridge")
+	var barricade: WoodZone = room.get_node("Barricade")
 	var both := 0
-	var was_out := false
+	var bridge_back := false
+	await _ticks(5 * 60)
 	Input.action_press("rewind")
 	for i in 8 * 60:
 		await _ticks(1)
-		was_out = was_out or _bridge_out(bridge)
-		if _bridge_out(bridge) and _gate_passable(gate, player):
+		bridge_back = bridge_back or bridge.burn.is_solid()
+		if bridge.burn.is_solid() and not barricade.burn.is_solid():
 			both += 1
 	Input.action_release("rewind")
-	for i in 8 * 60:
+	for i in 6 * 60:
 		await _ticks(1)
-		if _bridge_out(bridge) and _gate_passable(gate, player):
+		if bridge.burn.is_solid() and not barricade.burn.is_solid():
 			both += 1
-	check(was_out, "under Shift the bridge comes back out")
-	check(both == 0, "bridge out and gate open together on %d ticks of the recorded history" % both)
-	check(not _bridge_out(bridge) and gate.open == Door.OPEN_MAX, "released Shift replays: bridge in, gate open")
+	check(bridge_back, "under Shift the bridge comes back from the ash")
+	check(both == 0, "a standing bridge and a burnt barricade together on %d ticks of the recorded history" % both)
+	check(bridge.burn.phase == WoodBurn.Phase.BURNT and barricade.burn.phase == WoodBurn.Phase.BURNT, "released Shift replays: both burn out again")
 	await _free(room)
 
 
-func test_level_04_latch_now_does_nothing() -> void:
+func test_level_04_lever_now_does_nothing() -> void:
 	var room := await _load()
-	var bridge: MovingPlatform = room.get_node("Bridge")
-	var latch: Lever = room.get_node("Latch")
-	await _walk_to_latch()
-	await _press("interact")
-	check(latch.on, "the hero by the latch throws it")
+	var bridge: WoodZone = room.get_node("Bridge")
+	var lever: Lever = room.get_node("Lever")
+	var sprinkler: Sprinkler = room.get_node("Sprinkler")
 	await _ticks(3 * 60)
-	var home := bridge.position_at(bridge.once_last_phase())
-	check(bridge.position.distance_to(home) < 1.0, "a latch thrown now never moves the bridge, it is at %s, not %s" % [bridge.position, home])
+	check(bridge.burn.phase == WoodBurn.Phase.BURNT, "the bridge has burnt out")
+	await _stand_by_lever(room)
+	await _press("interact")
+	check(lever.on, "the hero by the lever throws it")
+	await _ticks(2 * 60)
+	check(sprinkler.is_raining(), "the lever opens the sprinkler")
+	check(bridge.burn.phase == WoodBurn.Phase.BURNT, "rain on a burnt bridge brings nothing back")
 	await _free(room)
 
 
-func test_level_04_latch_in_the_past_branches_and_holds_the_bridge() -> void:
+func test_level_04_lever_in_the_past_puts_the_bridge_out_in_a_new_branch() -> void:
 	var room := await _load()
-	var bridge: MovingPlatform = room.get_node("Bridge")
-	var gate: Door = room.get_node("Gate")
-	await _walk_to_latch()
+	var bridge: WoodZone = room.get_node("Bridge")
+	var barricade: WoodZone = room.get_node("Barricade")
+	await _ticks(4 * 60)
+	await _stand_by_lever(room)
 	Input.action_press("rewind")
-	await _ticks(5 * 60)
-	check(_bridge_out(bridge) and gate.open == 0, "at the start of the history the bridge is out and the gate shut")
+	await _ticks(8 * 60)
+	check(int(room.get_node("RoomTime").call("cursor")) == 0, "Shift brings the world to the start of the history")
+	check(bridge.burn.phase == WoodBurn.Phase.BURNING, "at the start of the history the bridge burns")
 	await _press("interact")
 	Input.action_release("rewind")
-	await _ticks(5 * 60)
-	check(bridge.powered, "the latch holds the bridge")
-	check(_bridge_out(bridge), "in the new branch the bridge stays out, is at %s" % [bridge.position])
-	check(gate.open == Door.OPEN_MAX, "in the new branch the gate opens on its own timer, is %d" % gate.open)
+	await _ticks(2 * 60)
+	check(bridge.burn.phase == WoodBurn.Phase.WHOLE and bridge.doused >= 0, "the rain puts the bridge out")
+	check(barricade.burn.phase == WoodBurn.Phase.BURNING, "the rain never reaches the barricade")
+	await _ticks(3 * 60)
+	check(barricade.burn.phase == WoodBurn.Phase.BURNT, "the barricade burns through on its own")
+	check(bridge.burn.phase == WoodBurn.Phase.WHOLE, "the bridge stays in the new branch")
 	await _free(room)
 
 
-func test_level_04_has_no_ledge_before_the_gate_and_a_wide_pit() -> void:
+func test_level_04_geometry() -> void:
 	var room := await _load()
-	var bridge: MovingPlatform = room.get_node("Bridge")
-	var gate: Door = room.get_node("Gate")
+	var bridge: WoodZone = room.get_node("Bridge")
+	var barricade: WoodZone = room.get_node("Barricade")
+	var sprinkler: Sprinkler = room.get_node("Sprinkler")
 	var blocks: TileMapLayer = room.get_node("Blocks")
 	var cell := blocks.tile_set.tile_size.x
-	var row := int(bridge.position_at(0).y / cell)
-	var left := int(bridge.rect_at(bridge.position_at(0)).position.x / cell)
-	var right := int(gate.position.x / cell)
-	check(left + bridge.rect_at(bridge.position_at(0)).size.x / cell == right + 1, "the bridge runs under the gate to the corridor floor")
-	for x in range(left, right + 1):
-		for y in range(row, blocks.get_used_rect().end.y):
+	var rect := bridge.global_rect()
+	var left := int(rect.position.x / cell)
+	var right := int(rect.end.x / cell)
+	check(right - 1 == int(barricade.position.x / cell), "the bridge runs under the barricade to the corridor floor")
+	for x in range(left, right):
+		for y in range(int(rect.position.y / cell), blocks.get_used_rect().end.y):
 			check(blocks.get_cell_source_id(Vector2i(x, y)) == -1, "the pit under the bridge is open to the bottom, block at %d,%d" % [x, y])
 	var player := Content.player()
 	var reach := 2.0 * float(player["jump_velocity"]) / float(player["gravity"]) * float(player["walk_speed"])
-	check((right - left) * cell > reach + cell, "the pit (%d px) must be wider than a jump (%.0f px)" % [(right - left) * cell, reach])
+	check((right - left - 1) * cell > reach + cell, "the pit (%d px) must be wider than a jump (%.0f px)" % [(right - left - 1) * cell, reach])
+	sprinkler.flow = Sprinkler.FLOW_MAX
+	var rain := sprinkler.water_global_rect()
+	check(rain.intersects(rect), "the rain reaches the bridge")
+	check(not rain.intersects(barricade.global_rect()), "the rain never reaches the barricade")
 	await _free(room)
 
 
-func _bridge_out(bridge: MovingPlatform) -> bool:
-	return bridge.position.distance_to(bridge.position_at(0)) < 1.0
-
-
-func _gate_passable(gate: Door, player: Player) -> bool:
-	return gate.travel * gate.open / Door.OPEN_MAX >= player.body_rect().size.y
-
-
-func _walk_to_latch() -> void:
-	Input.action_press("move_right")
-	await _ticks(BY_THE_LATCH_TICKS)
-	Input.action_release("move_right")
-	await _ticks(20)
+## Puts the hero on the landing by the lever.
+func _stand_by_lever(room: Node) -> void:
+	var player: Player = room.get_node("Player")
+	var lever: Lever = room.get_node("Lever")
+	player.respawn(lever.global_position - Vector2(20.0, 0.0))
+	await _ticks(10)
 
 
 func _press(action: String) -> void:
