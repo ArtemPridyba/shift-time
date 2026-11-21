@@ -1,10 +1,12 @@
 extends RefCounted
-## Tests of level 04 «Interference» (task 3.3, card docs/levels/04.md, D104):
-## a bridge and a barricade burn from the start; the bridge burns out first,
-## so the recorded history never has a standing bridge and an open way. A
-## lever thrown under Shift opens the sprinkler over the bridge while it still
-## burns, and in the new branch the bridge stays. Also the latch platform and
-## the door that opens once (D103), which the level no longer uses.
+## Tests of level 04 «Interference» (task 3.3, card docs/levels/04.md, D104,
+## D105): a bridge and a barricade burn from the start; the bridge burns out,
+## and the hall's fire system puts the barricade out, so the recorded history
+## never has a standing bridge and an open way. A lever thrown under Shift
+## opens the sprinkler over the bridge while it still burns; a valve shut under
+## Shift keeps the fire system from opening, and the barricade burns through.
+## Both in the past make the way. Also the latch platform and the door that
+## opens once (D103), which the level no longer uses.
 
 const PLATFORM_PATH := "res://objects/platform.tscn"
 const DOOR_PATH := "res://objects/door.tscn"
@@ -103,6 +105,33 @@ func test_sprinkler_rains_only_at_full_flow_and_is_no_tank() -> void:
 	sprinkler.free()
 
 
+func test_sprinkler_with_a_start_holds_its_rain_until_then() -> void:
+	var sprinkler := Sprinkler.new()
+	sprinkler.apply_settings({"start_seconds": 1.0})
+	sprinkler.powered = true
+	for tick in range(1, 60):
+		sprinkler.simulate_tick(tick)
+	check(sprinkler.flow == 0, "a powered sprinkler stays dry before its start")
+	for tick in range(60, 120):
+		sprinkler.simulate_tick(tick)
+	check(sprinkler.is_raining(), "after its start it rains on its own")
+	sprinkler.powered = false
+	for tick in range(120, 180):
+		sprinkler.simulate_tick(tick)
+	check(sprinkler.flow == 0, "unpowered, it shuts")
+	sprinkler.free()
+
+
+func test_level_04_fire_system_takes_its_start_from_the_level() -> void:
+	var room := await _load()
+	var per_level: Dictionary = Content.level_for_scene(LEVEL_PATH)["objects"]
+	var system: Sprinkler = room.get_node("FireSystem")
+	var expected := int(round(float(per_level["fire_system"]["start_seconds"]) * 60.0))
+	check(system.start_tick() == expected, "the fire system starts on frame %d, not %d" % [system.start_tick(), expected])
+	check(system.powered and (room.get_node("Valve") as Lever).on, "the valve is open from the start")
+	await _free(room)
+
+
 func test_level_04_wood_takes_its_burn_time_from_the_level() -> void:
 	var room := await _load()
 	var per_level: Dictionary = Content.level_for_scene(LEVEL_PATH)["objects"]
@@ -125,9 +154,12 @@ func test_level_04_starts_with_the_bridge_burning_and_the_lever_out_of_reach() -
 	# with the intro and the rain's spin-up.
 	var entry := Content.level_for_scene(LEVEL_PATH)
 	var left := float(bridge.burn.burn_ticks - bridge.burn.burn) / 60.0
+	# The way goes up the steps to the landing at the pit and back left over
+	# the ledges to the lever.
 	var lever: Lever = room.get_node("Lever")
 	var spawn_x: float = (room.get_node("SpawnPoint") as Node2D).position.x
-	var walk := (lever.position.x - spawn_x) / float(Content.player()["walk_speed"])
+	var landing_x := bridge.global_rect().position.x
+	var walk := (landing_x - spawn_x + landing_x - lever.position.x) / float(Content.player()["walk_speed"])
 	var spin_up := float(Content.objects()["sprinkler"]["spin_up_seconds"])
 	check(float(entry["intro_seconds"]) + walk + spin_up > left + 1.0, "the lever is reachable %.1f s before the bridge burns out" % (left - walk - spin_up))
 	check(left >= 1.0, "the hero must see the bridge burn for a second at least, sees %.1f s" % left)
@@ -154,7 +186,8 @@ func test_level_04_history_never_has_the_bridge_whole_and_the_way_open() -> void
 			both += 1
 	check(bridge_back, "under Shift the bridge comes back from the ash")
 	check(both == 0, "a standing bridge and a burnt barricade together on %d ticks of the recorded history" % both)
-	check(bridge.burn.phase == WoodBurn.Phase.BURNT and barricade.burn.phase == WoodBurn.Phase.BURNT, "released Shift replays: both burn out again")
+	check(bridge.burn.phase == WoodBurn.Phase.BURNT, "released Shift replays: the bridge burns out again")
+	check(barricade.burn.phase == WoodBurn.Phase.WHOLE and barricade.doused >= 0, "released Shift replays: the fire system puts the barricade out again")
 	await _free(room)
 
 
@@ -165,7 +198,7 @@ func test_level_04_lever_now_does_nothing() -> void:
 	var sprinkler: Sprinkler = room.get_node("Sprinkler")
 	await _ticks(3 * 60)
 	check(bridge.burn.phase == WoodBurn.Phase.BURNT, "the bridge has burnt out")
-	await _stand_by_lever(room)
+	await _stand_by(room, "Lever")
 	await _press("interact")
 	check(lever.on, "the hero by the lever throws it")
 	await _ticks(2 * 60)
@@ -179,7 +212,7 @@ func test_level_04_lever_in_the_past_puts_the_bridge_out_in_a_new_branch() -> vo
 	var bridge: WoodZone = room.get_node("Bridge")
 	var barricade: WoodZone = room.get_node("Barricade")
 	await _ticks(4 * 60)
-	await _stand_by_lever(room)
+	await _stand_by(room, "Lever")
 	Input.action_press("rewind")
 	await _ticks(8 * 60)
 	check(int(room.get_node("RoomTime").call("cursor")) == 0, "Shift brings the world to the start of the history")
@@ -188,10 +221,44 @@ func test_level_04_lever_in_the_past_puts_the_bridge_out_in_a_new_branch() -> vo
 	Input.action_release("rewind")
 	await _ticks(2 * 60)
 	check(bridge.burn.phase == WoodBurn.Phase.WHOLE and bridge.doused >= 0, "the rain puts the bridge out")
-	check(barricade.burn.phase == WoodBurn.Phase.BURNING, "the rain never reaches the barricade")
 	await _ticks(3 * 60)
-	check(barricade.burn.phase == WoodBurn.Phase.BURNT, "the barricade burns through on its own")
 	check(bridge.burn.phase == WoodBurn.Phase.WHOLE, "the bridge stays in the new branch")
+	check(barricade.burn.phase == WoodBurn.Phase.WHOLE and barricade.doused >= 0, "the fire system still puts the barricade out")
+	await _free(room)
+
+
+func test_level_04_valve_now_does_nothing() -> void:
+	var room := await _load()
+	var barricade: WoodZone = room.get_node("Barricade")
+	var system: Sprinkler = room.get_node("FireSystem")
+	await _ticks(3 * 60)
+	check(barricade.burn.phase == WoodBurn.Phase.WHOLE, "the fire system has put the barricade out")
+	await _stand_by(room, "Valve")
+	await _press("interact")
+	await _ticks(2 * 60)
+	check(not system.powered and system.flow == 0, "the valve shuts the fire system")
+	check(barricade.burn.phase == WoodBurn.Phase.WHOLE, "a barricade put out stays whole")
+	await _free(room)
+
+
+func test_level_04_lever_and_valve_in_the_past_open_the_way() -> void:
+	var room := await _load()
+	var bridge: WoodZone = room.get_node("Bridge")
+	var barricade: WoodZone = room.get_node("Barricade")
+	await _ticks(4 * 60)
+	await _stand_by(room, "Lever")
+	Input.action_press("rewind")
+	await _ticks(8 * 60)
+	await _press("interact")
+	# The world stands at the start while Shift is held; the second change
+	# writes into the same frame and keeps the first.
+	await _stand_by(room, "Valve")
+	await _press("interact")
+	check((room.get_node("Lever") as Lever).on, "shutting the valve on the same frame keeps the lever thrown")
+	Input.action_release("rewind")
+	await _ticks(5 * 60)
+	check(bridge.burn.phase == WoodBurn.Phase.WHOLE, "the bridge is put out")
+	check(barricade.burn.phase == WoodBurn.Phase.BURNT, "the barricade burns through without the fire system")
 	await _free(room)
 
 
@@ -216,14 +283,19 @@ func test_level_04_geometry() -> void:
 	var rain := sprinkler.water_global_rect()
 	check(rain.intersects(rect), "the rain reaches the bridge")
 	check(not rain.intersects(barricade.global_rect()), "the rain never reaches the barricade")
+	var system: Sprinkler = room.get_node("FireSystem")
+	system.flow = Sprinkler.FLOW_MAX
+	var spray := system.water_global_rect()
+	check(spray.intersects(barricade.global_rect()), "the fire system reaches the barricade")
+	check(not spray.intersects(rect), "the fire system never reaches the bridge")
 	await _free(room)
 
 
-## Puts the hero on the landing by the lever.
-func _stand_by_lever(room: Node) -> void:
+## Puts the hero on the ledge by the lever or the valve (node name).
+func _stand_by(room: Node, node_name: String) -> void:
 	var player: Player = room.get_node("Player")
-	var lever: Lever = room.get_node("Lever")
-	player.respawn(lever.global_position - Vector2(20.0, 0.0))
+	var target: Node2D = room.get_node(node_name)
+	player.respawn(target.global_position - Vector2(20.0, 0.0))
 	await _ticks(10)
 
 

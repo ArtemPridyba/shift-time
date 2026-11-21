@@ -34,7 +34,8 @@
 		"intro_seconds": 0.6,
 		"objects": {
 			"bridge": { "burn_seconds": 3 },
-			"barricade": { "burn_seconds": 3.5 }
+			"barricade": { "burn_seconds": 3.5 },
+			"fire_system": { "start_seconds": 1.6 }
 		},
 		"title": "04 Interference"
 	},

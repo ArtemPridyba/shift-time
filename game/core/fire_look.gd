@@ -32,6 +32,9 @@ var smoke_after_seconds := 2.0
 var ash_pieces := 24
 var ash_seconds := 1.4
 var ash_gravity_px := 700.0
+var plank_pieces := 6
+var plank_seconds := 1.6
+var plank_gravity_px := 1400.0
 var steam_seconds := 2.5
 var steam_puffs := 10
 var steam_rise_px := 150.0
@@ -56,6 +59,9 @@ func configure(objects: Dictionary, time_data: Dictionary) -> void:
 	ash_pieces = int(look.get("ash_pieces", ash_pieces))
 	ash_seconds = float(look.get("ash_seconds", ash_seconds))
 	ash_gravity_px = float(look.get("ash_gravity_px", ash_gravity_px))
+	plank_pieces = int(look.get("plank_pieces", plank_pieces))
+	plank_seconds = float(look.get("plank_seconds", plank_seconds))
+	plank_gravity_px = float(look.get("plank_gravity_px", plank_gravity_px))
 	steam_seconds = float(steam.get("seconds", steam_seconds))
 	steam_puffs = int(steam.get("puffs", steam_puffs))
 	steam_rise_px = float(steam.get("rise_px", steam_rise_px))
@@ -138,6 +144,30 @@ func ash_at(burnt_age: float, size: Vector2) -> Array[Vector4]:
 	return result
 
 
+## The charred planks of a bridge (a zone wider than tall) that just burnt
+## out, `burnt_age` seconds ago: (x, y, angle, length), the bridge cut into
+## `plank_pieces` that break off one after another, tumble and fall into the
+## pit; empty for a wall and outside `plank_seconds`. Under Shift the age
+## shrinks and the planks fly back up into the bridge.
+func planks_at(burnt_age: float, size: Vector2) -> Array[Vector4]:
+	var result: Array[Vector4] = []
+	if size.x <= size.y or burnt_age < 0.0 or burnt_age > plank_seconds or plank_pieces <= 0:
+		return result
+	var length := size.x / float(plank_pieces)
+	for i in plank_pieces:
+		# The middle breaks first, the ends hold a moment longer.
+		var middle := absf(float(i) + 0.5 - float(plank_pieces) / 2.0) / float(plank_pieces)
+		var t := burnt_age - middle * 0.3 * plank_seconds
+		var x := -size.x / 2.0 + length * (float(i) + 0.5)
+		if t <= 0.0:
+			result.append(Vector4(x, 0.0, 0.0, length))
+			continue
+		var spin := (_hash(i + 271) - 0.5) * 6.0
+		x += (_hash(i + 281) - 0.5) * 60.0 * t
+		result.append(Vector4(x, 0.5 * plank_gravity_px * t * t, spin * t, length * (0.8 + 0.2 * _hash(i + 291))))
+	return result
+
+
 ## Steam of a fire put out `doused_age` seconds ago: (x, y, radius, alpha).
 ## Each puff starts a little later and lives half the steam time.
 func steam_at(doused_age: float, size: Vector2) -> Array[Vector4]:
@@ -171,6 +201,7 @@ func snapshot(clock: int, state: Dictionary, burn_ticks: int, size: Vector2) -> 
 		"sparks": sparks_at(t, size, strength),
 		"smoke": smoke_at(t, size, strength, burnt_age),
 		"ash": ash_at(burnt_age, size),
+		"planks": planks_at(burnt_age, size),
 		"steam": steam_at(age(clock, int(state.get("doused", -1))), size),
 	}
 
