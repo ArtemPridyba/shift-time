@@ -9,6 +9,11 @@ extends AnimatableBody2D
 ## `"cycle": "once"` for a platform that waits `delay_seconds` at its start,
 ## rides to `start + travel` one time and then stays there (level 01).
 ##
+## A `holdable` platform can be held at its start by a latch (a `Lever` whose
+## target is this platform; level 04): while `powered`, a `once` platform that
+## has not left its start yet stays there. The latch only holds, it never moves
+## the platform: once the platform has left its start, `powered` does nothing.
+##
 ## Temporal object contract: docs/architecture.md, section 4.1.
 
 const BODY_COLOR := Color("#6b717a")
@@ -18,12 +23,19 @@ const CYCLE_ONCE := "once"
 
 @export var object_id := "platform"
 @export var travel := Vector2(480, 0)
+## True for a platform a latch can hold at its start (see above).
+@export var holdable := false
+## The platform's width in pixels; 0 keeps the width of its scene (a bridge
+## of level 04 is wider).
+@export var width := 0.0
 
 ## Tick on the path: there, pause, back, pause. In `once` mode: wait, ride, stay.
 var phase := 0
 var time_direction := 1
 ## True for a platform that rides one way one time (`"cycle": "once"`).
 var once := false
+## Set by the latch of a `holdable` platform.
+var powered := false
 ## The bottom of the player's body this deep inside the platform is riding it,
 ## not being crushed.
 var carry_margin := 8.0
@@ -61,6 +73,11 @@ func apply_settings(settings: Dictionary) -> void:
 
 
 func _ready() -> void:
+	var shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if width > 0.0 and shape != null and shape.shape is RectangleShape2D:
+		var own := (shape.shape as RectangleShape2D).duplicate() as RectangleShape2D
+		own.size.x = width
+		shape.shape = own
 	_base()
 
 
@@ -68,15 +85,22 @@ func _ready() -> void:
 ## the physics server writes the body's transform back a step late, and an
 ## interference captured outside the tick would record a stale position.
 func capture_state() -> Dictionary:
-	return {"phase": phase, "position": position_at(phase)}
+	var state := {"phase": phase, "position": position_at(phase)}
+	if holdable:
+		state["powered"] = powered
+	return state
 
 
 func restore_state(state: Dictionary) -> void:
 	phase = int(state["phase"])
 	position = state["position"]
+	if holdable:
+		powered = bool(state.get("powered", false))
 
 
 func simulate_tick(_tick: int) -> void:
+	if is_held():
+		return
 	if once:
 		phase = mini(phase + 1, once_last_phase())
 	else:
@@ -86,6 +110,11 @@ func simulate_tick(_tick: int) -> void:
 
 func on_time_direction_changed(direction: int) -> void:
 	time_direction = direction
+
+
+## True while a latch holds this platform at its start.
+func is_held() -> bool:
+	return holdable and powered and once and phase <= _delay_ticks
 
 
 ## True when the platform in `state` would overlap the player's body above the

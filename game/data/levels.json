@@ -28,6 +28,17 @@
 		"title": "02 Flow"
 	},
 	{
+		"id": "level_04",
+		"scene": "res://levels/level_04.tscn",
+		"prelude_seconds": 4,
+		"intro_seconds": 0.6,
+		"objects": {
+			"bridge": { "cycle": "once", "speed": 480, "delay_seconds": 0.6 },
+			"gate": { "cycle": "opens_once", "delay_seconds": 2.2, "open_seconds": 1.2 }
+		},
+		"title": "04 Interference"
+	},
+	{
 		"id": "test_room",
 		"scene": "res://levels/test_room.tscn",
 		"prelude_seconds": 0,

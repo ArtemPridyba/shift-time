@@ -48,7 +48,7 @@ const TIME_KEYS: Array[String] = [
 	"rewind_speed_max", "rewind_ramp_delay_seconds", "rewind_ramp_seconds", "world_tempo",
 ]
 const LEVEL_KEYS: Array[String] = ["id", "scene", "prelude_seconds", "title"]
-const LEVEL_DOOR_CYCLES: Array[String] = ["loop", "once"]
+const LEVEL_DOOR_CYCLES: Array[String] = ["loop", "once", "opens_once"]
 const EXIT_ZONE_KEYS: Array[String] = ["delay_seconds"]
 const DOOR_KEYS: Array[String] = ["open_seconds", "hold_open_seconds", "close_seconds", "hold_closed_seconds"]
 const PLATFORM_KEYS: Array[String] = ["speed", "pause_seconds"]
