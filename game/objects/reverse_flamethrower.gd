@@ -177,7 +177,7 @@ func act(room: Node, direction: int) -> void:
 		if direction < 0:
 			change = node.call("ignite_change")
 		else:
-			change = node.call("douse_change", int(room.call("cursor")))
+			change = node.call("douse_change", int(room.call("world_tick")))
 		if not change.is_empty():
 			room.call("live_action", str(node.get("object_id")), change)
 

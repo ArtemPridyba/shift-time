@@ -234,21 +234,24 @@ func test_button_press_while_rewinding_records_state_and_cuts_future() -> void:
 	var objects := _objects(door, btn)
 	world.start(objects)
 
-	# Simulate forward 30 ticks to have some history.
+	# 30 forward ticks; nothing moves, so no frame is written (D56): the one
+	# starting frame stands for all of them.
 	for i in 30:
 		world.tick(FWD, objects, Rect2())
-	check(world.timeline.head() == 30, "timeline must have 30 forward ticks")
+	check(world.timeline.head() == 0 and world.timeline.world_tick() == 30,
+		"a still room keeps one frame and counts 30 world ticks, head %d" % world.timeline.head())
 
-	# Rewind 15 ticks.
+	# Rewind 15 ticks: the first skips the still ticks, the rest stand at frame 0.
 	for i in 15:
 		world.tick(BACK, objects, Rect2())
-	check(world.timeline.cursor() == 15, "cursor must be at tick 15 after rewind")
+	check(world.timeline.cursor() == 0 and world.timeline.world_tick() == 0 and world.timeline.at_start(),
+		"rewinding a still room goes back to its start at once")
 
-	# Press button while cursor is left of the head.
+	# Press button while Shift holds the world at its start.
 	_press_button(world, door, btn)
 
 	check(world.timeline.at_head(), "branching must cut future so cursor is at head")
-	check(world.timeline.head() == 15, "timeline head must be 15 after branch")
+	check(world.timeline.head() == 0, "the press rewrites frame 0, not a frame after the still ticks")
 	check(btn.pressed, "button must be pressed after interaction")
 	check(door.powered, "door must be powered after interaction")
 

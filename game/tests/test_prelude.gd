@@ -85,7 +85,8 @@ func test_prelude_events_fire_on_their_tick_and_rewind() -> void:
 	], 60.0)
 	check(events.size() == 2 and int(events[0]["tick"]) == 30, "a second must turn into its tick")
 	world.run_prelude(objects, 90, events)
-	check(world.timeline.head() == 90, "a 90-tick prelude after the start frame must end at frame 90")
+	check(world.timeline.world_tick() == 90, "a 90-tick prelude after the start frame must end at world tick 90")
+	check(world.timeline.head() == 61, "the still ticks before the press write no frames (D56), head %d" % world.timeline.head())
 	check(switch.on and motor.powered and motor.mark == 7, "both events must have happened by the end")
 	check(motor.turns == 60, "the motor runs from the press on tick 30, got %d turns" % motor.turns)
 	_rewind_to(world, objects, 60)
@@ -98,7 +99,7 @@ func test_prelude_events_fire_on_their_tick_and_rewind() -> void:
 	check(not switch.on and not motor.powered and motor.turns == 0, "frame 29 is before the press")
 	for i in 61:
 		world.tick(TimeWorld.FORWARD, objects)
-	check(world.timeline.cursor() == 90 and motor.mark == 7 and motor.turns == 60,
+	check(world.timeline.at_head() and world.timeline.world_tick() == 90 and motor.mark == 7 and motor.turns == 60,
 		"releasing Shift replays the events from the record (rule «A»)")
 
 
@@ -203,8 +204,10 @@ func test_the_same_room_records_the_same_prelude_every_time() -> void:
 
 # --- helpers ----------------------------------------------------------------
 
-func _rewind_to(world: TimeWorld, objects: Array, frame: int) -> void:
-	while world.timeline.cursor() > frame:
+## Rewinds until the world shows world tick `tick` or earlier: a still span is
+## skipped in one step (D56), so a tick inside it is never shown by itself.
+func _rewind_to(world: TimeWorld, objects: Array, tick: int) -> void:
+	while world.timeline.world_tick() > tick:
 		world.tick(BACK, objects)
 
 
