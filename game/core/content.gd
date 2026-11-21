@@ -12,7 +12,7 @@ const ART_PATH := "res://data/art.json"
 const LOOK_PATH := "res://data/look.json"
 const CAMERA_PATH := "res://data/camera.json"
 ## Numbers of `camera.json` (D83), each above 0.
-const CAMERA_KEYS := ["zoom", "lead_px", "lead_speed", "follow_speed", "overview_start_seconds", "overview_blend_seconds", "feet_screen_y"]
+const CAMERA_KEYS := ["zoom", "zoom_max", "zoom_step", "zoom_speed", "lead_px", "lead_speed", "follow_speed", "overview_start_seconds", "overview_blend_seconds", "feet_screen_y"]
 ## Colour roles every palette in `art.json` must give, each as a ramp from dark to light.
 const ART_ROLES: Array[String] = ["background", "steel", "mechanism", "suit", "helmet", "rust", "time", "fire", "interact", "water", "wood", "lamp_light"]
 const ART_RAMP_SIZE := 5
@@ -195,7 +195,11 @@ static func validate_camera(data: Variant) -> PackedStringArray:
 		elif not _is_number(data[key]) or float(data[key]) <= 0.0:
 			errors.append("camera.json: '%s' must be a number above 0" % key)
 	if errors.is_empty() and float(data["zoom"]) < 1.0:
-		errors.append("camera.json: 'zoom' must be at least 1: the close view is never farther than the room at its own size")
+		errors.append("camera.json: 'zoom' must be at least 1: the level starts no farther than the room at its own size")
+	if errors.is_empty() and float(data["zoom_max"]) < float(data["zoom"]):
+		errors.append("camera.json: 'zoom_max' must be at least 'zoom': the level starts no closer than the closest view")
+	if errors.is_empty() and (float(data["zoom_step"]) <= 1.0 or float(data["zoom_step"]) > 2.0):
+		errors.append("camera.json: 'zoom_step' must be above 1 and at most 2: one wheel step multiplies the zoom by it")
 	if errors.is_empty() and (float(data["feet_screen_y"]) < 0.5 or float(data["feet_screen_y"]) > 0.95):
 		errors.append("camera.json: 'feet_screen_y' must be from 0.5 to 0.95: her feet stay in the lower half of the screen")
 	return errors
