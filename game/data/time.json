@@ -6,5 +6,6 @@
   "max_state_step": 40,
   "rewind_speed_max": 3,
   "rewind_ramp_delay_seconds": 0.5,
-  "rewind_ramp_seconds": 1.5
+  "rewind_ramp_seconds": 1.5,
+  "world_tempo": 1.25
 }

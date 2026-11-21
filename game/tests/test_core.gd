@@ -44,6 +44,10 @@ func test_data_check_catches_broken_data() -> void:
 	tiny_time["history_seconds"] = 0.01
 	tiny_time["default_prelude_seconds"] = 0
 	check(not Content.validate_time(tiny_time).is_empty(), "a history shorter than two frames must be reported")
+	for tempo: float in [0.0, -1.0, 5.0]:
+		var bad_tempo := Content.time()
+		bad_tempo["world_tempo"] = tempo
+		check(not Content.validate_time(bad_tempo).is_empty(), "world_tempo %s must be reported" % tempo)
 
 	var time_data := Content.time()
 	check(Content.validate_objects(Content.objects(), time_data).is_empty(), "the shipped objects.json must pass")
@@ -52,6 +56,11 @@ func test_data_check_catches_broken_data() -> void:
 	var short_window := Content.objects()
 	short_window["door"]["hold_open_seconds"] = 2
 	check(not Content.validate_objects(short_window, time_data).is_empty(), "a door window under 3 s must be reported")
+	var squeezed := Content.objects()
+	squeezed["door"]["hold_open_seconds"] = 3.5
+	var fast_world := time_data.duplicate()
+	fast_world["world_tempo"] = 1.25
+	check(not Content.validate_objects(squeezed, fast_world).is_empty(), "a 3.5 s window at tempo 1.25 lasts 2.8 real seconds and must be reported")
 	var jumpy := Content.objects()
 	jumpy["door"]["open_seconds"] = 0.1
 	check(not Content.validate_objects(jumpy, time_data).is_empty(), "a door jumping above max_state_step must be reported")

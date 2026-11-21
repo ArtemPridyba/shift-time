@@ -170,7 +170,7 @@ func test_room_takes_its_prelude_from_levels_json() -> void:
 	check(is_equal_approx(time.prelude_seconds, float(entry["prelude_seconds"])), "the prelude length must come from levels.json")
 	check(lever.on and water.powered and water.level < Water.LEVEL_MAX, "after the prelude the valve is open and the well drains")
 	var objects := time.temporal_objects()
-	var at_event := int(round(float(entry["prelude_events"][0]["second"]) * 60.0))
+	var at_event := int(round(float(entry["prelude_events"][0]["second"]) * Content.world_ticks_per_second(Content.time())))
 	var history := _frames(time.world)
 	check(history.size() >= at_event + 2, "the prelude must be recorded")
 	var before: Dictionary = history[at_event - 1]

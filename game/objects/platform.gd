@@ -45,7 +45,7 @@ func _init() -> void:
 
 
 func configure(platform_data: Dictionary, time_data: Dictionary) -> void:
-	var ticks := float(time_data.get("physics_ticks_per_second", 60))
+	var ticks := Content.world_ticks_per_second(time_data)
 	_step = maxf(float(platform_data.get("speed", 120)), 1.0) / ticks
 	_pause_ticks = maxi(int(round(float(platform_data.get("pause_seconds", 4)) * ticks)), 1)
 	_delay_ticks = maxi(int(round(float(platform_data.get("delay_seconds", 0)) * ticks)), 0)

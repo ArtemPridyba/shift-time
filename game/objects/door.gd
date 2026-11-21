@@ -74,7 +74,7 @@ func _init() -> void:
 
 ## Reads the cycle from data: seconds into ticks.
 func configure(door_data: Dictionary, time_data: Dictionary) -> void:
-	var ticks := float(time_data.get("physics_ticks_per_second", 60))
+	var ticks := Content.world_ticks_per_second(time_data)
 	_open_ticks = maxi(int(round(float(door_data.get("open_seconds", 3)) * ticks)), 1)
 	_hold_open_ticks = maxi(int(round(float(door_data.get("hold_open_seconds", 4)) * ticks)), 1)
 	_close_ticks = maxi(int(round(float(door_data.get("close_seconds", 3)) * ticks)), 1)

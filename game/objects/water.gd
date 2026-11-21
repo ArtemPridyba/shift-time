@@ -61,7 +61,10 @@ var _step := 1
 var _draft := 8.0
 var _carry_margin := 8.0
 var _seen_level := -1
+## Ticks in one second of the world clock (D96), for the tank's own pace.
 var _ticks := 60.0
+## Real physics ticks per second, for speeds the player feels (`rise_px_per_second`).
+var _real_ticks := 60.0
 ## The look; it keeps marks, never references to bodies.
 var look := WaterLook.new()
 ## The world tick the tank shows, from `RoomTime`.
@@ -81,7 +84,8 @@ func _init() -> void:
 
 
 func configure(water_data: Dictionary, time_data: Dictionary) -> void:
-	_ticks = float(time_data.get("physics_ticks_per_second", 60))
+	_ticks = Content.world_ticks_per_second(time_data)
+	_real_ticks = float(time_data.get("physics_ticks_per_second", 60))
 	_step = maxi(int(round(float(LEVEL_MAX) / (float(water_data.get("full_seconds", 12)) * _ticks))), 1)
 	_draft = float(water_data.get("float_draft_px", 8))
 
@@ -118,7 +122,7 @@ func _ready() -> void:
 
 func _physics_process(_delta: float) -> void:
 	if _seen_level >= 0:
-		rise_px_per_second = (level - _seen_level) * size.y / LEVEL_MAX * _ticks if lifts_player else 0.0
+		rise_px_per_second = (level - _seen_level) * size.y / LEVEL_MAX * _real_ticks if lifts_player else 0.0
 	_seen_level = level
 	_live_tick += 1
 	var half := size.x / 2.0

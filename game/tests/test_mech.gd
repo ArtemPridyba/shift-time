@@ -96,7 +96,8 @@ func test_showcase_same_frame_same_look_forward_and_back() -> void:
 	var chain: MechChain = room.get_node("LiftChain")
 	var dust: TimeParticles = room.get_node("Dust")
 	var sparks: TimeParticles = room.get_node("Sparks")
-	await _ticks(150)
+	# 2.5 s of the world clock (D96): the gate is opening then.
+	await _ticks(int(round(2.5 * Content.world_ticks_per_second(Content.time()))))
 	var mark := room_time.cursor()
 	var look := _look(gear, wheel, chain, dust, sparks)
 	await _ticks(20)

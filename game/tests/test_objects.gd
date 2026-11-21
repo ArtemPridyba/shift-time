@@ -31,7 +31,7 @@ func check(condition: bool, message: String) -> void:
 func test_door_follows_its_cycle_from_data() -> void:
 	var door: Door = (load(DOOR_PATH) as PackedScene).instantiate()
 	var data: Dictionary = Content.objects()["door"]
-	var ticks := float(Content.time()["physics_ticks_per_second"])
+	var ticks := Content.world_ticks_per_second(Content.time())
 	var opening := int(round(float(data["open_seconds"]) * ticks))
 	var hold := int(round(float(data["hold_open_seconds"]) * ticks))
 	check(door.open_at(0) == 0, "the cycle starts closed")
@@ -46,6 +46,41 @@ func test_door_follows_its_cycle_from_data() -> void:
 	door.simulate_tick(0)
 	check(door.open == 500, "a locked door stands still")
 	door.free()
+
+
+## World tempo (D96): doors, platforms and water count their seconds on the
+## world clock, so at tempo 1.25 a 3 s opening takes 2.4 real seconds, a
+## platform covers a quarter more per tick and a tank empties a quarter sooner.
+func test_world_tempo_speeds_up_doors_platforms_and_water() -> void:
+	var slow := {"physics_ticks_per_second": 60, "world_tempo": 1.0}
+	var fast := {"physics_ticks_per_second": 60, "world_tempo": 1.25}
+	check(is_equal_approx(Content.world_ticks_per_second(fast), 48.0), "tempo 1.25 gives 48 world ticks a second")
+	check(is_equal_approx(Content.world_ticks_per_second({}), 60.0), "missing keys count as 60 ticks and tempo 1")
+	var door_data := {"open_seconds": 3, "hold_open_seconds": 4, "close_seconds": 3, "hold_closed_seconds": 4}
+	var door: Door = (load(DOOR_PATH) as PackedScene).instantiate()
+	door.configure(door_data, fast)
+	door.powered = true
+	var ticks := 0
+	while door.open < Door.OPEN_MAX and ticks < 1000:
+		door.simulate_tick(ticks)
+		ticks += 1
+	check(ticks == 144, "at tempo 1.25 a 3 s opening takes 144 ticks (2.4 s), took %d" % ticks)
+	door.free()
+	var platform: MovingPlatform = (load(PLATFORM_PATH) as PackedScene).instantiate()
+	platform.travel = Vector2(400, 0)
+	var platform_data := {"speed": 120, "pause_seconds": 4, "delay_seconds": 0}
+	platform.configure(platform_data, slow)
+	var slow_step := platform.position_at(1).distance_to(platform.position_at(0))
+	platform.configure(platform_data, fast)
+	var fast_step := platform.position_at(1).distance_to(platform.position_at(0))
+	check(is_equal_approx(fast_step, slow_step * 1.25), "the platform covers a quarter more per tick: %.3f against %.3f" % [fast_step, slow_step])
+	platform.free()
+	var tank: Water = (load("res://objects/water.tscn") as PackedScene).instantiate()
+	tank.configure({"full_seconds": 10}, slow)
+	var slow_drain := tank.step()
+	tank.configure({"full_seconds": 10}, fast)
+	check(tank.step() > slow_drain, "the tank empties sooner at tempo 1.25: step %d against %d" % [tank.step(), slow_drain])
+	tank.free()
 
 
 func test_door_and_platform_rewind_without_jumps() -> void:
@@ -228,7 +263,7 @@ func test_world_waits_instead_of_crushing_in_room() -> void:
 	var door: Door = room.get_node("Door")
 	var player: Player = room.get_node("Player")
 	var data: Dictionary = Content.objects()["door"]
-	var ticks := float(Content.time()["physics_ticks_per_second"])
+	var ticks := Content.world_ticks_per_second(Content.time())
 	await _ticks(int((float(data["open_seconds"]) + 1.0) * ticks))
 	player.respawn(Vector2(door.position.x, 960))
 	await _ticks(int((float(data["hold_open_seconds"]) + float(data["close_seconds"])) * ticks))
