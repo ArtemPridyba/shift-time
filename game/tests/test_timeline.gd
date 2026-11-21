@@ -219,3 +219,68 @@ func test_recorder_validates_objects() -> void:
 	check(not recorder.validate([HalfObject.new()]).is_empty(), "missing methods must be reported")
 	var frame := recorder.capture([HalfObject.new(), FakeObject.new("ok", 3)])
 	check(frame == {"ok": {"value": 3}}, "capture must skip an invalid object instead of failing, got %s" % [frame])
+
+
+# --- a still room (D56 «а») ----------------------------------------------------
+
+func test_hold_keeps_one_frame_and_counts_world_ticks() -> void:
+	var timeline := _filled(3)
+	check(timeline.same_as_head(_frame(2)) and not timeline.same_as_head(_frame(1)),
+		"a frame equal to the head must read as the same, another one must not")
+	for i in 5000:
+		timeline.hold()
+	check(timeline.size() == 3 and timeline.first() == 0, "still ticks must write no frames")
+	check(timeline.held() == 5000 and timeline.world_tick() == 5002, "the head must count its still ticks")
+	timeline.record(_frame(3))
+	check(timeline.tick_of(3) == 5003 and timeline.held() == 0,
+		"the next frame must come one world tick after the still ones, got %d" % timeline.tick_of(3))
+
+
+func test_rewind_skips_the_still_ticks_in_one_step() -> void:
+	var timeline := _filled(3)
+	for i in 100:
+		timeline.hold()
+	check(not timeline.at_start() and timeline.step_back(), "still ticks are something to rewind")
+	check(timeline.cursor() == 2 and timeline.world_tick() == 2, "one step back must skip all still ticks")
+	check(timeline.step_back() and timeline.cursor() == 1, "the next step goes to the frame before")
+	timeline.step_forward()
+	check(timeline.at_head() and timeline.world_tick() == 2, "the skipped still ticks are forgotten on replay")
+
+
+func test_a_still_start_is_rewound_to_its_first_tick() -> void:
+	var timeline := _filled(1)
+	for i in 30:
+		timeline.hold()
+	check(timeline.step_back() and timeline.world_tick() == 0, "the first step back skips the still start")
+	check(timeline.at_start() and not timeline.step_back(), "then the history is at its start")
+
+
+func test_replace_on_a_held_head_writes_a_new_frame() -> void:
+	var timeline := _filled(2)
+	check(timeline.replace_current(_frame(7)) and timeline.size() == 2,
+		"without still ticks the head is rewritten in place")
+	for i in 10:
+		timeline.hold()
+	check(timeline.replace_current(_frame(8)) and timeline.size() == 3, "on a held head the change goes after it")
+	check(timeline.frame_at(1) == _frame(7) and timeline.current() == _frame(8),
+		"the held frame must keep the state before the change")
+	check(timeline.tick_of(2) == 11 and timeline.world_tick() == 11, "the change is on the tick of the present")
+
+
+func test_branch_at_a_held_head_keeps_the_still_ticks() -> void:
+	var timeline := _filled(2)
+	for i in 10:
+		timeline.hold()
+	timeline.branch()
+	check(timeline.held() == 10, "a branch at the head cuts nothing and keeps the present")
+	timeline.step_back()
+	timeline.step_back()
+	timeline.branch()
+	check(timeline.head() == 0 and timeline.held() == 0 and timeline.world_tick() == 0, "a branch left of the head cuts the still ticks too")
+
+
+func test_clear_forgets_the_still_ticks() -> void:
+	var timeline := _filled(2)
+	timeline.hold()
+	timeline.clear()
+	check(timeline.held() == 0 and timeline.world_tick() == -1 and not timeline.hold(), "clear must forget the still ticks")

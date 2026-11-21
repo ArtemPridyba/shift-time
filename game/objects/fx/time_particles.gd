@@ -50,9 +50,9 @@ func _ready() -> void:
 	show_at(0.0)
 
 
-## The room's clock (`RoomTime`, group `world_clock`): the frame it shows now.
-func on_world_tick(cursor: int, _recorded: bool) -> void:
-	show_at(float(cursor) * _seconds_per_frame)
+## The room's clock (`RoomTime`, group `world_clock`): the world tick it shows now.
+func on_world_tick(tick: int, _recorded: bool) -> void:
+	show_at(float(tick) * _seconds_per_frame)
 
 
 ## Draws the particles of world time `seconds`.

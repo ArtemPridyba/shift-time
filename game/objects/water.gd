@@ -139,8 +139,8 @@ func _process(_delta: float) -> void:
 		_spray.queue_redraw()
 
 
-## From `RoomTime` every tick: the cursor and whether this tick was recorded at
-## the head. Marks of the look are taken only on recorded ticks.
+## From `RoomTime` every tick: the world tick and whether this tick ran at the
+## head (recorded, or still with nothing to record). Marks of the look are taken only on recorded ticks.
 func on_world_tick(tick: int, recorded: bool) -> void:
 	_world_tick = tick
 	look.observe(tick, recorded, surface_local_y(level), size.x / 2.0, bodies_in_tank())

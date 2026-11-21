@@ -7,7 +7,8 @@ extends RefCounted
 ##   more once a long hold has sped up, `RewindSpeed`), objects restore the last;
 ## - rewinding at the start: the world stands still (pinned at frame 0);
 ## - forward left of the head: one frame forward, the recorded future replays (rule «A»);
-## - forward at the head: objects simulate one tick and a new frame is recorded.
+## - forward at the head: objects simulate one tick and a new frame is recorded;
+##   when nothing changed, no frame is written and the head stands (STILL, D56).
 ## Before a frame is shown, solid objects are asked whether it would crush the
 ## player; if so the world waits on this tick (section 2.3).
 ## An interference (`player_action`, `live_action`) left of the head cuts the
@@ -20,7 +21,7 @@ extends RefCounted
 const FORWARD := 1
 const BACKWARD := -1
 
-enum Step { STARTED, RECORDED, REWOUND, REPLAYED, PINNED, WAITED }
+enum Step { STARTED, RECORDED, STILL, REWOUND, REPLAYED, PINNED, WAITED }
 
 var timeline: Timeline
 var _recorder := TemporalRecorder.new()
@@ -56,7 +57,7 @@ func tick(direction: int, objects: Array, player_rect: Rect2 = Rect2(), frames: 
 		timeline.step_forward()
 		return _show_or_wait(objects, player_rect, Step.REPLAYED, timeline.step_back)
 	var before := _recorder.capture(objects)
-	var tick_number := timeline.head() + 1
+	var tick_number := timeline.world_tick() + 1
 	for object in objects:
 		if object is Object and object.has_method("simulate_tick"):
 			object.call("simulate_tick", tick_number)
@@ -64,8 +65,16 @@ func tick(direction: int, objects: Array, player_rect: Rect2 = Rect2(), frames: 
 	if crushes(after, objects, player_rect):
 		_recorder.restore(before, objects)
 		return Step.WAITED
+	if timeline.same_as_head(after):
+		timeline.hold()
+		return Step.STILL
 	timeline.record(after)
 	return Step.RECORDED
+
+
+## True when this tick ran at the head: recorded, or still with nothing to record.
+static func at_head_step(step: Step) -> bool:
+	return step == Step.RECORDED or step == Step.STILL
 
 
 ## Runs the room without the player for `ticks` ticks, recording every frame
@@ -180,13 +189,14 @@ func crushes(frame: Dictionary, objects: Array, player_rect: Rect2) -> bool:
 func _rewind(objects: Array, player_rect: Rect2, frames: int) -> Step:
 	var moved := 0
 	for i in frames:
-		if not timeline.step_back():
+		if timeline.at_start():
 			break
-		if crushes(timeline.current(), objects, player_rect):
-			timeline.step_forward()
+		var back := timeline.cursor() if timeline.held() > 0 else timeline.cursor() - 1
+		if crushes(timeline.frame_at(back), objects, player_rect):
 			if moved == 0:
 				return Step.WAITED
 			break
+		timeline.step_back()
 		moved += 1
 	if moved == 0:
 		return Step.PINNED

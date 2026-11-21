@@ -79,17 +79,24 @@ func cursor() -> int:
 	return world.timeline.cursor()
 
 
+## The world tick the room shows now: frames plus the still ticks between them
+## (D56). The clock of decoration and of the ticks stored in states.
+func world_tick() -> int:
+	return world.timeline.world_tick()
+
+
 ## Decoration that is drawn from world time (the look of water, task 2.3А)
-## joins the group `world_clock` and gets the cursor every tick, and whether
-## this tick was recorded at the head. Nothing in that group is recorded.
+## joins the group `world_clock` and gets the world tick every tick (it keeps
+## running while the room stands still, D56), and whether this tick ran at the
+## head, recorded or still. Nothing in that group is recorded.
 func _tell_world_clock() -> void:
 	var room := get_parent()
 	if room == null:
 		return
-	var recorded := last_step == TimeWorld.Step.RECORDED
+	var recorded := TimeWorld.at_head_step(last_step)
 	for node in get_tree().get_nodes_in_group("world_clock"):
 		if room.is_ancestor_of(node) and node.has_method("on_world_tick"):
-			node.call("on_world_tick", world.timeline.cursor(), recorded)
+			node.call("on_world_tick", world.timeline.world_tick(), recorded)
 
 
 ## The recorded objects of this room, in tree order.

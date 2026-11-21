@@ -8,20 +8,31 @@ extends RefCounted
 ## left of the head it only replays. When the ring is full, the oldest frame is
 ## dropped and the cursor never goes left of the oldest kept frame.
 ##
+## A tick on which nothing in the room changed writes no frame (D56 «а»): the
+## head stands and counts the still ticks (`hold()`). So the start of the
+## history is never lost while the player thinks, and a rewind skips the still
+## time at once. Every frame keeps its world tick: the number of ticks the
+## world lived to it, still ones included. Decoration and the ticks stored in
+## states run on that clock (`world_tick()`), so they keep moving while the
+## room stands.
+##
 ## Pure rules: no nodes, no UI, no references to the game or the level.
 
 const MIN_CAPACITY := 2
 
 var _capacity: int
 var _slots: Array = []
+var _ticks: Array = []   # the world tick of every slot
 var _first := 0   # number of the oldest kept frame
 var _head := -1   # number of the newest frame, -1 while the history is empty
 var _cursor := -1
+var _held := 0    # still ticks after the head frame; only at the head
 
 
 func _init(capacity: int) -> void:
 	_capacity = maxi(capacity, MIN_CAPACITY)
 	_slots.resize(_capacity)
+	_ticks.resize(_capacity)
 
 
 ## How many frames `time.json` asks the history to hold.
@@ -68,22 +79,66 @@ func at_head() -> bool:
 	return _cursor == _head
 
 
+## True when nothing is left to rewind: the cursor is on the oldest frame and
+## no still ticks are held after it.
 func at_start() -> bool:
-	return is_empty() or _cursor == _first
+	return is_empty() or (_cursor == _first and held() == 0)
 
 
 ## Writes a new frame after the head. Only allowed at the head: a change in the
 ## past goes through `branch()` first. Returns false and changes nothing when
-## the cursor is left of the head.
+## the cursor is left of the head. The frame's world tick is one after the
+## present (the head frame plus its still ticks).
 func record(frame: Dictionary) -> bool:
 	if not at_head():
 		return false
+	var tick := 0 if is_empty() else world_tick() + 1
+	_append(frame, tick)
+	return true
+
+
+## True when `frame` is the same as the head frame: the room did not change.
+func same_as_head(frame: Dictionary) -> bool:
+	return not is_empty() and _slots[_head % _capacity] == frame
+
+
+## One still tick at the head: no frame is written, the head frame stands for
+## one more tick of world time. Returns false away from the head or while empty.
+func hold() -> bool:
+	if is_empty() or not at_head():
+		return false
+	_held += 1
+	return true
+
+
+## Still ticks the head frame stands for after its own tick; 0 left of the head.
+func held() -> int:
+	return _held if at_head() else 0
+
+
+## The world tick the room shows now: the tick of the frame at the cursor, plus
+## the still ticks at the head. -1 while empty.
+func world_tick() -> int:
+	if is_empty():
+		return -1
+	return int(_ticks[_cursor % _capacity]) + held()
+
+
+## The world tick of kept frame `number`; -1 outside the kept frames.
+func tick_of(number: int) -> int:
+	if number < _first or number > _head:
+		return -1
+	return int(_ticks[number % _capacity])
+
+
+func _append(frame: Dictionary, tick: int) -> void:
 	_head += 1
 	_slots[_head % _capacity] = frame.duplicate(true)
+	_ticks[_head % _capacity] = tick
 	_cursor = _head
+	_held = 0
 	if size() > _capacity:
 		_first += 1
-	return true
 
 
 ## The frame at the cursor (a copy), or an empty Dictionary while empty.
@@ -93,11 +148,23 @@ func current() -> Dictionary:
 	return (_slots[_cursor % _capacity] as Dictionary).duplicate(true)
 
 
+## A copy of kept frame `number`, or an empty Dictionary outside the kept frames.
+func frame_at(number: int) -> Dictionary:
+	if number < _first or number > _head:
+		return {}
+	return (_slots[number % _capacity] as Dictionary).duplicate(true)
+
+
 ## One frame back. Returns false at the start of the history: the cursor stays
 ## on the oldest frame and nothing breaks.
+## The still ticks at the head go back first, all in one step: they held no
+## change, so the frame stays and only the world tick moves back to it (D56).
 func step_back() -> bool:
 	if at_start():
 		return false
+	if held() > 0:
+		_held = 0
+		return true
 	_cursor -= 1
 	return true
 
@@ -117,15 +184,22 @@ func branch() -> void:
 		return
 	for number in range(_cursor + 1, _head + 1):
 		_slots[number % _capacity] = null
+	if _cursor != _head:
+		_held = 0
 	_head = _cursor
 
 
 ## Writes `frame` over the frame at the cursor. Only allowed at the head (after
 ## `branch()` the cursor is the head): an interference rewrites the present of
 ## the new branch. Returns false and changes nothing elsewhere or while empty.
+## When the head stands for still ticks, its frame is also the past of those
+## ticks: then `frame` is written after it, on the tick of the present.
 func replace_current(frame: Dictionary) -> bool:
 	if is_empty() or not at_head():
 		return false
+	if _held > 0:
+		_append(frame, world_tick())
+		return true
 	_slots[_cursor % _capacity] = frame.duplicate(true)
 	return true
 
@@ -144,6 +218,8 @@ func rewrite_past(object_id: String, state: Dictionary) -> void:
 ## Forgets everything.
 func clear() -> void:
 	_slots.fill(null)
+	_ticks.fill(null)
 	_first = 0
+	_held = 0
 	_head = -1
 	_cursor = -1

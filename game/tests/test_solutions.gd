@@ -149,6 +149,35 @@ static func solution_problems(data: Variant) -> PackedStringArray:
 	return errors
 
 
+## D56 «а»: a player who stands and thinks never loses the start of the
+## history. Every level is left without input for longer than the history
+## holds; its rooms must still keep their first frame, so Shift can bring the
+## world back to its start.
+func test_idle_player_keeps_the_start_of_history() -> void:
+	var idle := Timeline.capacity_for(Content.time()) + int(Content.time().get("physics_ticks_per_second", 60)) * 5
+	for entry: Variant in Content.levels():
+		if not entry is Dictionary or not str(entry.get("id", "")).begins_with(LEVEL_PREFIX):
+			continue
+		var id := str(entry["id"])
+		_reset_time()
+		var room: Node = (load(str(entry.get("scene", ""))) as PackedScene).instantiate()
+		_tree.root.add_child(room)
+		for i in idle:
+			await _tree.physics_frame
+		var clocks := room.find_children("*", "RoomTime", true, false)
+		check(not clocks.is_empty(), "%s has no RoomTime" % id)
+		for clock: Node in clocks:
+			var timeline := (clock as RoomTime).world.timeline
+			check(timeline.first() == 0,
+				"%s: after %d idle ticks the history lost its start (first frame %d, %d frames kept)"
+				% [id, idle, timeline.first(), timeline.size()])
+			check((clock as RoomTime).world_tick() >= idle,
+				"%s: the world clock of decoration must keep running in a still room, got %d" % [id, (clock as RoomTime).world_tick()])
+		room.queue_free()
+		await _tree.process_frame
+		_reset_time()
+
+
 ## Plays a solution in its level and returns true when the player reached the
 ## exit. Stops at the exit: what is pressed after it does not matter.
 func play(data: Dictionary) -> bool:
