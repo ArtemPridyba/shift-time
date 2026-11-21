@@ -14,11 +14,12 @@
 	{
 		"id": "level_02",
 		"scene": "res://levels/level_02.tscn",
-		"prelude_seconds": 4.5,
+		"prelude_seconds": 3.5,
 		"intro_seconds": 0.3,
 		"objects": {
-			"well": { "full_seconds": 9, "outlet_inset_px": 416, "lifts_player": false },
-			"pool": { "full_seconds": 6, "outlet_inset_px": 48, "lifts_player": false }
+			"well": { "full_seconds": 6, "outlet_inset_px": 416, "lifts_player": false },
+			"pool": { "full_seconds": 3.5, "outlet_inset_px": 48, "lifts_player": false },
+			"gate": { "open_level": 2500, "open_seconds": 1.5 }
 		},
 		"title": "02 Flow"
 	},

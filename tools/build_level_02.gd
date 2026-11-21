@@ -1,15 +1,18 @@
 extends SceneTree
 ## Builds level 02 `levels/level_02.tscn` (task 3.1, 17.11.2026; reworked after
-## Artem's playtest 21.11.2026, card docs/levels/02.md): a room of 41x20 cells,
-## about 1.3 screens wide, the camera follows the hero. He walks out of a
-## doorway onto a ledge at mid height. Right of it is a deep well with a float
-## and a grate on its floor, beyond that a wall as high as the full water line,
-## behind the wall a pool with its own float by the far wall and, above it on the
-## full line, the way out: an opening two cells high. The well runs through its
-## grate into the pool: at the start of the history the well is full and the
-## pool empty, then the well drains and the pool fills. The timing (prelude,
-## walk-in, drain and fill times) lives in data/levels.json, the water line is
-## the same height over everything.
+## Artem's playtests 21.11.2026, D97 and D98, card docs/levels/02.md): a room of
+## 41x17 cells, about 1.4 screens wide, the camera follows the hero. He walks out
+## of a doorway onto a ledge at mid height. Right of it is a well with a float and
+## a grate on its floor, beyond that a wall as high as the full water line,
+## behind the wall a small pool with its own float by the far wall and, beyond
+## the pool on the full line, a dry landing and the way out: a passage two cells
+## high, shut by a gate the pool holds down while it stands high. The well runs
+## through its grate into the pool: at the start of the history the well is full
+## and the pool empty, then the well drains and the pool fills. The full pool
+## carries the hero up to the landing, the empty pool opens the gate: the same
+## water once forward, once back. The timing (prelude, walk-in, drain and fill
+## times, the gate's level) lives in data/levels.json, the water line is the same
+## height over everything.
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
 ##   godot --headless --path game --script $PWD/tools/build_level_02.gd
@@ -23,19 +26,16 @@ const SCENE_PATH := "res://levels/level_02.tscn"
 
 const MAP := [
 	"#########################################",
-	"#.................................#######",
-	"#.................................#######",
-	"#.................................#######",
+	"#...............................#########",
+	"#...............................#########",
+	"#...............................#########",
 	"#....................................EE.#",
 	"#....................................EE.#",
-	"#...............##................#######",
-	"#...............##................#######",
-	"#...............##................#######",
-	"#...............##................#######",
-	"#S..............##................#######",
-	"#####...........##................#######",
-	"#####...........##................#######",
-	"#####...........#########################",
+	"#...............##..........#############",
+	"#...............##..........#############",
+	"#...............##..........#############",
+	"#...............##..........#############",
+	"#S..............#########################",
 	"#####...........#########################",
 	"#####...........#########################",
 	"#####...........#########################",
@@ -49,24 +49,31 @@ const MAP := [
 const ENTRANCE_CELLS := Rect2i(1, 9, 1, 2)
 
 ## The full water line: the top of the wall, row 6. Everything else is measured
-## from it: the hero's ledge is 5 cells under it (row 11), the well floor 12
-## (row 18), the pool floor 7 (row 13), the floor of the way out is on it.
+## from it: the hero's ledge is 5 cells under it (row 11), the well floor 9
+## (row 15), the pool floor 4 (row 10), the landing and the way out are on it.
 const LINE_ROW := 6
 ## The well tank covers the ledge too (columns 1-15, so the ledge is under water
 ## when the water is full) down to the well floor.
 const WELL_COLUMNS := Vector2i(1, 16)
-const WELL_FLOOR_ROW := 18
-## The pool tank: columns 18-33 down to the pool floor.
-const POOL_COLUMNS := Vector2i(18, 34)
-const POOL_FLOOR_ROW := 13
+const WELL_FLOOR_ROW := 15
+## The pool tank: columns 18-27 down to the pool floor.
+const POOL_COLUMNS := Vector2i(18, 28)
+const POOL_FLOOR_ROW := 10
 
 ## The well float lies on the well floor, centred on this column (cells, from
 ## the left): a jump from its edge to the wall is 3 cells, a hero's jump is 4.
 const FLOAT_CENTRE_COLUMN := 11.5
 ## The pool float stands by the far wall, centred on this column: from its edge
-## to the way out is half a cell, from the wall top to it far more than a jump,
-## so only a hero who rides it up from the pool floor reaches the way out.
-const POOL_FLOAT_CENTRE_COLUMN := 32.0
+## to the landing is half a cell, from the wall top to it far more than a jump,
+## so only a hero who rides it up from the pool floor reaches the landing.
+const POOL_FLOAT_CENTRE_COLUMN := 26.0
+## The landing beyond the pool is columns 28-31 on the full line; the passage
+## to the way out starts at column 32, rows 4-5, and the gate stands in its
+## mouth. The gate watches the pool: open while the pool is low, shut while it
+## stands high (its level in levels.json).
+const GATE_COLUMN := 32
+const GATE_ROWS := Vector2i(4, 6)
+const GATE_WIDTH := 32.0
 
 
 func _initialize() -> void:
@@ -109,6 +116,18 @@ func _initialize() -> void:
 	_add_float(root, well, "Float", FLOAT_CENTRE_COLUMN)
 	var pool := _add_water(root, "pool", POOL_COLUMNS, POOL_FLOOR_ROW, 0, 1)
 	_add_float(root, pool, "Float", POOL_FLOAT_CENTRE_COLUMN)
+
+	# The gate in the mouth of the way out: the pool holds it shut while it
+	# stands high, so the hero who rode the full pool up has to send the pool
+	# back down under Shift to pass.
+	var gate: WaterGate = (load("res://objects/water_gate.tscn") as PackedScene).instantiate()
+	gate.name = "Gate"
+	gate.watch_id = "pool"
+	gate.linked_id = "pool"
+	gate.height = float((GATE_ROWS.y - GATE_ROWS.x) * CELL)
+	gate.travel = gate.height
+	gate.position = Vector2(GATE_COLUMN * CELL + GATE_WIDTH / 2.0, (GATE_ROWS.x + GATE_ROWS.y) / 2.0 * CELL)
+	_own(root, gate)
 
 	var exit: ExitZone = (load("res://objects/exit_zone.tscn") as PackedScene).instantiate()
 	exit.size = Vector2(exit_cells.size * CELL)
