@@ -251,3 +251,72 @@ func test_fast_rewind_stops_before_a_frame_that_would_crush() -> void:
 	check(counter.value == 7, "waiting keeps the frame, got %d" % counter.value)
 	check(world.tick(BACK, objects, Rect2(), 3) == TimeWorld.Step.REWOUND, "once the player moves away the rewind goes on")
 	check(counter.value == 4, "three more frames back, got %d" % counter.value)
+
+
+# --- a still room (D56 «а») ----------------------------------------------------
+
+## A fake recorded object that moves until `stop_at` and then stands; it also
+## keeps the world tick of its last simulated tick, as wood keeps the tick it
+## burnt out on.
+class Mover extends RefCounted:
+	var object_id := "mover"
+	var value := 0
+	var stop_at := 30
+	var last_tick := -1
+	var pressed := false
+
+	func capture_state() -> Dictionary:
+		return {"value": value, "pressed": pressed}
+
+	func restore_state(state: Dictionary) -> void:
+		value = int(state["value"])
+		pressed = bool(state["pressed"])
+
+	func simulate_tick(tick: int) -> void:
+		last_tick = tick
+		if value < stop_at:
+			value += 1
+
+
+func test_a_still_room_does_not_grow_its_history() -> void:
+	var world := TimeWorld.new(Timeline.new(120))
+	var mover := Mover.new()
+	var steps := _run(world, [mover], FWD, 30 + 10000)
+	check(steps.count(TimeWorld.Step.STILL) == 10000 - 1, "a room that stopped must tick still, got %d" % steps.count(TimeWorld.Step.STILL))
+	check(world.timeline.first() == 0 and world.timeline.head() == 30, "a still room must keep its start, first %d head %d" % [world.timeline.first(), world.timeline.head()])
+	check(mover.last_tick == 10030 - 1, "objects must get the world tick, still ticks included, got %d" % mover.last_tick)
+	check(_run(world, [mover], BACK, 1) == [TimeWorld.Step.REWOUND] and world.timeline.cursor() == 30,
+		"the first tick of Shift skips the still time")
+	_run(world, [mover], BACK, 1)
+	check(mover.value == 29, "the second tick of Shift already moves the world, value %d" % mover.value)
+	_run(world, [mover], BACK, 100)
+	check(mover.value == 0 and world.timeline.at_start(), "Shift brings the world back to its start")
+
+
+func test_a_press_on_a_still_room_rewinds_to_before_the_press() -> void:
+	var world := _world()
+	var mover := Mover.new()
+	mover.stop_at = 0
+	_run(world, [mover], FWD, 300)
+	check(world.timeline.head() == 0, "nothing moved, one frame")
+	var state := mover.capture_state()
+	state["pressed"] = true
+	world.player_action([mover], "mover", state)
+	check(world.timeline.head() == 1, "the press must go after the still frame, head %d" % world.timeline.head())
+	_run(world, [mover], FWD, 5)
+	_run(world, [mover], BACK, 3)
+	check(not mover.pressed, "Shift must bring back the state before the press")
+	_run(world, [mover], FWD, 1)
+	check(mover.pressed, "releasing Shift replays the press (rule «A»)")
+
+
+func test_prelude_event_after_still_ticks_keeps_the_start() -> void:
+	var world := _world()
+	var mover := Mover.new()
+	mover.stop_at = 0
+	world.start([mover])
+	world.run_prelude([mover], 60, [{"tick": 40, "id": "mover", "state": {"pressed": true}}])
+	check(world.timeline.head() == 1 and world.timeline.tick_of(1) == 40,
+		"the event is a new frame on its own world tick, head %d tick %d" % [world.timeline.head(), world.timeline.tick_of(1)])
+	_run(world, [mover], BACK, 3)
+	check(not mover.pressed and world.timeline.at_start(), "the start frame is before the event")
