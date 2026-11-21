@@ -17,7 +17,10 @@
 		{ "actions": ["rewind", "move_right", "jump"], "ticks": 30 },
 		{ "actions": ["rewind", "move_right"], "ticks": 8 },
 		{ "actions": ["rewind"], "ticks": 20 },
-		{ "actions": [], "ticks": 300 },
-		{ "actions": ["move_right"], "ticks": 120 }
+		{ "actions": [], "ticks": 240 },
+		{ "actions": ["move_right"], "ticks": 30 },
+		{ "actions": [], "ticks": 10 },
+		{ "actions": ["rewind"], "ticks": 300 },
+		{ "actions": ["rewind", "move_right"], "ticks": 120 }
 	]
 }

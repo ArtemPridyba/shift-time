@@ -1,14 +1,16 @@
 class_name WaterGate
 extends Door
 ## A gate that keeps a passage shut while a tank stands high and opens by
-## itself once the tank has run low (level 02: the tunnel off the well). It is
+## itself once the tank has run low (level 02: the way out beyond the pool). It is
 ## a door whose `powered` comes from the water, not from a button: every tick
 ## at the head it reads the watched tank's level, and the door runs as usual,
 ## so its frames are recorded and it closes again, smoothly, when Shift lifts
 ## the water back (rule «A»).
 ##
 ## A level may set `open_level` through `objects` of its entry in
-## `data/levels.json`, besides the door's own seconds.
+## `data/levels.json`, besides the door's own seconds. Settings come before the
+## room's first frame, so a gate whose tank starts low starts fully open there
+## instead of opening on screen.
 ##
 ## Temporal object contract: docs/architecture.md, section 4.1.
 
@@ -24,6 +26,11 @@ const GATE_COLOR := Color("#5a6068")
 func apply_settings(settings: Dictionary) -> void:
 	open_level = int(settings.get("open_level", open_level))
 	super.apply_settings(settings)
+	var tank := _watched()
+	if tank != null and tank.level <= open_level:
+		powered = true
+		open = OPEN_MAX
+		_apply()
 
 
 func simulate_tick(tick: int) -> void:
