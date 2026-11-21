@@ -269,6 +269,7 @@ func test_level_01_door_is_about_120_px_and_she_fits_under_it() -> void:
 ## D83 (20.11.2026): the level opens on the whole room, then the camera comes
 ## close behind the heroine; the overview key shows the room again.
 func test_level_01_camera_shows_the_room_then_comes_close() -> void:
+	PlayerCamera.forget_zoom()
 	var room := await _load()
 	var camera: PlayerCamera = room.get_node("Player/Camera2D")
 	var blocks: TileMapLayer = room.get_node("Blocks")
@@ -320,6 +321,73 @@ func test_camera_overview_math() -> void:
 	var broken := Content.camera().duplicate()
 	broken["zoom"] = 0.5
 	check(not Content.validate_camera(broken).is_empty(), "a close zoom below 1 must be reported")
+	broken = Content.camera().duplicate()
+	broken["zoom_max"] = float(broken["zoom"]) - 0.5
+	check(not Content.validate_camera(broken).is_empty(), "a closest view nearer than the start zoom must be reported")
+	broken = Content.camera().duplicate()
+	broken["zoom_step"] = 1.0
+	check(not Content.validate_camera(broken).is_empty(), "a wheel step that does not change the zoom must be reported")
+
+
+## D95 (21.11.2026): a wheel step multiplies the zoom, which stays between the
+## whole room and the closest view; the camera slides to it evenly.
+func test_camera_wheel_zoom_math() -> void:
+	check(is_equal_approx(CameraView.step_zoom(2.0, 1.0, 0.6, 3.0, 1.2), 2.4), "one step in multiplies by the step")
+	check(is_equal_approx(CameraView.step_zoom(2.4, -1.0, 0.6, 3.0, 1.2), 2.0), "one step out undoes it")
+	check(is_equal_approx(CameraView.step_zoom(2.9, 3.0, 0.6, 3.0, 1.2), 3.0), "never closer than the closest view")
+	check(is_equal_approx(CameraView.step_zoom(0.7, -3.0, 0.6, 3.0, 1.2), 0.6), "never farther than the whole room")
+	check(is_equal_approx(CameraView.step_zoom(2.0, -5.0, 4.0, 3.0, 1.2), 3.0), "a room smaller than the closest view keeps the closest view")
+	var z := 1.0
+	for i in 60:
+		var next := CameraView.ease_zoom(z, 3.0, 10.0, 1.0 / 60.0)
+		check(next >= z and next <= 3.0, "the zoom slides towards the chosen one without overshooting")
+		z = next
+	check(absf(z - 3.0) < 0.01, "after a second it is there, %.3f" % z)
+
+
+## D95: the mouse wheel moves the close view between the whole room and
+## zoom_max, and the next level starts at the chosen zoom.
+func test_level_01_wheel_zooms_and_is_remembered() -> void:
+	PlayerCamera.forget_zoom()
+	var params := Content.camera()
+	var per_second := float(Content.time()["physics_ticks_per_second"])
+	var room := await _load()
+	var camera: PlayerCamera = room.get_node("Player/Camera2D")
+	check(is_equal_approx(camera.chosen_zoom(), float(params["zoom"])), "the level starts at the data zoom")
+	_wheel(MOUSE_BUTTON_WHEEL_UP)
+	check(camera.overview_amount() == 1.0 and is_equal_approx(camera.chosen_zoom(), float(params["zoom"]) * float(params["zoom_step"])), "one wheel step up comes one step closer, %.2f" % camera.chosen_zoom())
+	for i in 30:
+		_wheel(MOUSE_BUTTON_WHEEL_UP)
+	check(is_equal_approx(camera.chosen_zoom(), float(params["zoom_max"])), "the wheel stops at zoom_max")
+	await _ticks(int((float(params["overview_blend_seconds"]) + 1.0) * per_second))
+	check(camera.overview_amount() == 0.0, "the wheel ends the start overview")
+	check(absf(camera.zoom.x - float(params["zoom_max"])) < 0.01, "the camera has slid to the chosen zoom, %.2f" % camera.zoom.x)
+	for i in 60:
+		_wheel(MOUSE_BUTTON_WHEEL_DOWN)
+	check(is_equal_approx(camera.chosen_zoom(), camera.far_zoom()) and camera.far_zoom() < 1.0, "the wheel stops at the whole room, %.2f" % camera.chosen_zoom())
+	await _ticks(int(per_second))
+	var blocks: TileMapLayer = room.get_node("Blocks")
+	var size := Vector2(blocks.get_used_rect().size * blocks.tile_set.tile_size)
+	check(size.x * camera.zoom.x <= 1921.0 and size.y * camera.zoom.y <= 1081.0, "zoomed all the way out the whole room is on the screen")
+	var key := InputEventKey.new()
+	key.physical_keycode = KEY_EQUAL
+	key.pressed = true
+	_tree.root.push_input(key)
+	var chosen := camera.chosen_zoom()
+	check(chosen > camera.far_zoom(), "the = key comes closer too")
+	await _free(room)
+	room = await _load()
+	camera = room.get_node("Player/Camera2D")
+	check(is_equal_approx(camera.chosen_zoom(), chosen), "the next level starts at the chosen zoom, %.2f, not the data's" % camera.chosen_zoom())
+	await _free(room)
+	PlayerCamera.forget_zoom()
+
+
+func _wheel(button: MouseButton) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = button
+	event.pressed = true
+	_tree.root.push_input(event)
 
 
 func _load() -> Node:
