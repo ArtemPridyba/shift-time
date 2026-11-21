@@ -23,7 +23,7 @@ func check(condition: bool, message: String) -> void:
 func test_door_closes_once_and_stays_closed() -> void:
 	var door: Door = (load(DOOR_PATH) as PackedScene).instantiate()
 	door.apply_settings(ONCE)
-	var ticks := int(Content.time()["physics_ticks_per_second"])
+	var ticks := int(round(Content.world_ticks_per_second(Content.time())))
 	check(door.open == Door.OPEN_MAX, "a door that runs once starts fully open, is %d" % door.open)
 	for i in ticks - 1:
 		door.simulate_tick(i)
@@ -59,7 +59,7 @@ func test_platform_rides_once_and_stays() -> void:
 	platform.apply_settings({"cycle": "once", "speed": 96, "delay_seconds": 2})
 	check(platform.once, "a platform with cycle 'once' must report it")
 	var base := platform.position_at(0)
-	var ticks := int(Content.time()["physics_ticks_per_second"])
+	var ticks := int(round(Content.world_ticks_per_second(Content.time())))
 	for i in 2 * ticks - 1:
 		platform.simulate_tick(i)
 	check(platform.position == base, "the platform waits at its start for delay_seconds, is at %s" % [platform.position])

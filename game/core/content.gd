@@ -39,10 +39,13 @@ const PLAYER_KEYS: Array[String] = [
 	"breath_seconds", "breath_refill_seconds", "breath_vignette_alpha", "breath_vignette_radius",
 	"fire_seconds", "fire_cool_seconds",
 ]
+## Bounds of `world_tempo` in `time.json` (D96).
+const WORLD_TEMPO_MIN := 0.5
+const WORLD_TEMPO_MAX := 2.0
 const TIME_KEYS: Array[String] = [
 	"physics_ticks_per_second", "snapshot_every_ticks", "history_seconds",
 	"default_prelude_seconds", "max_state_step",
-	"rewind_speed_max", "rewind_ramp_delay_seconds", "rewind_ramp_seconds",
+	"rewind_speed_max", "rewind_ramp_delay_seconds", "rewind_ramp_seconds", "world_tempo",
 ]
 const LEVEL_KEYS: Array[String] = ["id", "scene", "prelude_seconds", "title"]
 const LEVEL_DOOR_CYCLES: Array[String] = ["loop", "once"]
@@ -89,6 +92,16 @@ static func player() -> Dictionary:
 static func camera() -> Dictionary:
 	var data: Variant = load_json(CAMERA_PATH)
 	return data if data is Dictionary else {}
+
+
+## Ticks in one second of the world's own clock: `physics_ticks_per_second`
+## divided by `world_tempo` (D96). Doors, platforms, water and the prelude turn
+## their seconds into ticks with this, so a tempo of 1.25 runs every mechanism
+## and every tank a quarter faster, while the player, breath and fire keep
+## real seconds. A missing key counts as 60 ticks and tempo 1.
+static func world_ticks_per_second(time_data: Dictionary) -> float:
+	var ticks := float(time_data.get("physics_ticks_per_second", 60))
+	return ticks / maxf(float(time_data.get("world_tempo", 1.0)), 0.01)
 
 
 static func time() -> Dictionary:
@@ -259,6 +272,8 @@ static func validate_time(data: Variant) -> PackedStringArray:
 		errors.append("time.json: 'rewind_ramp_delay_seconds' must be 0 or above")
 	if float(data["rewind_ramp_seconds"]) <= 0.0:
 		errors.append("time.json: 'rewind_ramp_seconds' must be above 0")
+	if float(data["world_tempo"]) < WORLD_TEMPO_MIN or float(data["world_tempo"]) > WORLD_TEMPO_MAX:
+		errors.append("time.json: 'world_tempo' must be between %s and %s" % [WORLD_TEMPO_MIN, WORLD_TEMPO_MAX])
 	var prelude := float(data["default_prelude_seconds"])
 	if prelude < 0.0 or prelude > float(data["history_seconds"]):
 		errors.append("time.json: 'default_prelude_seconds' must be between 0 and 'history_seconds'")
@@ -374,7 +389,12 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	if not data is Dictionary:
 		errors.append("objects.json: expected an object")
 		return errors
-	var ticks := float(time_data["physics_ticks_per_second"])
+	# Doors, platforms and water count in world seconds (D96); a window to act
+	# is checked in real seconds, the seconds the player has.
+	var ticks := world_ticks_per_second(time_data)
+	var tempo := maxf(float(time_data.get("world_tempo", 1.0)), 0.01)
+	# Lamps, wood and reverse items keep real seconds for now (D96).
+	var real_ticks := float(time_data["physics_ticks_per_second"])
 	var max_step := float(time_data["max_state_step"])
 	if not data.has("carry_margin_px") or not _is_number(data["carry_margin_px"]) or float(data["carry_margin_px"]) <= 0.0:
 		errors.append("objects.json: 'carry_margin_px' must be a number above 0")
@@ -392,14 +412,14 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 		return errors
 	var door: Dictionary = data["door"]
 	for key in ["hold_open_seconds", "hold_closed_seconds"]:
-		if float(door[key]) < MIN_WINDOW_SECONDS:
-			errors.append("objects.json: 'door.%s' is a window to act and must be at least %d s" % [key, MIN_WINDOW_SECONDS])
+		if float(door[key]) / tempo < MIN_WINDOW_SECONDS:
+			errors.append("objects.json: 'door.%s' is a window to act and must last at least %d s at 'world_tempo'" % [key, MIN_WINDOW_SECONDS])
 	for key in ["open_seconds", "close_seconds"]:
 		if 1000.0 / (float(door[key]) * ticks) > max_step:
 			errors.append("objects.json: 'door.%s' is too short: the door would jump more than max_state_step per tick" % key)
 	var platform: Dictionary = data["platform"]
-	if float(platform["pause_seconds"]) < MIN_WINDOW_SECONDS:
-		errors.append("objects.json: 'platform.pause_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
+	if float(platform["pause_seconds"]) / tempo < MIN_WINDOW_SECONDS:
+		errors.append("objects.json: 'platform.pause_seconds' is a window to act and must last at least %d s at 'world_tempo'" % MIN_WINDOW_SECONDS)
 	var step := float(platform["speed"]) / ticks
 	if step > max_step:
 		errors.append("objects.json: 'platform.speed' moves more than max_state_step per tick")
@@ -424,9 +444,9 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 			errors.append("objects.json: 'lamp.break_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
 		var lamp: Dictionary = data["lamp"]
 		# The fall is quadratic: its last tick moves the lamp twice the average step.
-		if 2000.0 / (float(lamp["fall_seconds"]) * ticks) > max_step:
+		if 2000.0 / (float(lamp["fall_seconds"]) * real_ticks) > max_step:
 			errors.append("objects.json: 'lamp.fall_seconds' is too short: the lamp would jump more than max_state_step per tick")
-		if 1000.0 / (float(lamp["shatter_seconds"]) * ticks) > max_step:
+		if 1000.0 / (float(lamp["shatter_seconds"]) * real_ticks) > max_step:
 			errors.append("objects.json: 'lamp.shatter_seconds' is too short: the shards would jump more than max_state_step per tick")
 		if float(data["wood"]["burn_seconds"]) < MIN_WINDOW_SECONDS:
 			errors.append("objects.json: 'wood.burn_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
@@ -436,7 +456,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 		for key in ["follow_px"]:
 			if float(thrower[key]) > max_step:
 				errors.append("objects.json: 'flamethrower.%s' moves more than max_state_step per tick" % key)
-		if float(thrower["max_fall_speed"]) / ticks > max_step:
+		if float(thrower["max_fall_speed"]) / real_ticks > max_step:
 			errors.append("objects.json: 'flamethrower.max_fall_speed' moves more than max_state_step per tick")
 		var dark: Variant = data.get("darkness")
 		if not dark is Dictionary:

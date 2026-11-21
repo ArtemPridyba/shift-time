@@ -225,7 +225,7 @@ func _sample(time: RoomTime, count: int, into: Dictionary) -> void:
 
 ## How far a powered door moves in one tick, from the same data the door reads.
 func _door_step() -> int:
-	var ticks := float(Content.time().get("physics_ticks_per_second", 60))
+	var ticks := Content.world_ticks_per_second(Content.time())
 	var open_ticks := maxi(int(round(float(Content.objects().get("door", {}).get("open_seconds", 3)) * ticks)), 1)
 	return int(round(float(Door.OPEN_MAX) / float(open_ticks)))
 

@@ -182,7 +182,9 @@ func _apply_object_settings(objects: Array) -> void:
 
 func _read_prelude() -> void:
 	var time_data := Content.time()
-	var per_second := float(time_data.get("physics_ticks_per_second", 60))
+	# World seconds (D96): the prelude runs as long as the faster world needs
+	# to reach the same picture.
+	var per_second := Content.world_ticks_per_second(time_data)
 	var room := get_parent()
 	var entry := Content.level_for_scene(room.scene_file_path if room != null else "")
 	var settings: Variant = entry.get("objects", {})
