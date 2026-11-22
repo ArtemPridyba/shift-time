@@ -57,21 +57,24 @@ const BRIDGE_HEIGHT := 32.0
 const BRIDGE_CELLS := Rect2i(14, 10, 15, 1)
 ## The barricade closes the corridor (rows 7-9) in column 28.
 const BARRICADE_CELLS := Rect2i(28, 7, 1, 3)
-## The lever stands on the upper ledge by the left wall, two jumps from the
-## landing: cell (2, 8). The valve of the fire system stands on the lower
-## ledge, level with the landing: cell (5, 9). The ledges hang over the hall floor, high enough to walk
-## under them from the entrance.
-const LEVER_CELL := Vector2i(2, 8)
-const VALVE_CELL := Vector2i(5, 9)
+## The lever stands on the lower ledge, level with the landing, one jump from
+## it: cell (5, 9). The valve of the fire system stands on the upper ledge by
+## the left wall, two jumps from the landing: cell (2, 8) (D106: swapped, so
+## the two water lines never cross). The ledges hang over the hall floor, high
+## enough to walk under them from the entrance.
+const LEVER_CELL := Vector2i(5, 9)
+const VALVE_CELL := Vector2i(2, 8)
 ## The sprinkler pipe hangs under the ceiling over the pit only, its rain falls
 ## to the bridge; it stops short of the barricade.
 const PIPE_Y := 192.0
 const PIPE_LEFT := 14 * 64
 const PIPE_RIGHT := 27 * 64 + 16
-## The cistern the pipe draws from (decoration), in cells.
-const CISTERN_CELLS := Rect2i(1, 2, 3, 1)
-## The fire system: its main runs along the ceiling from the valve to the
-## corridor and down its wall; its nozzle hangs over the barricade only.
+## The cistern the pipe draws from (decoration), in cells, over the lever.
+const CISTERN_CELLS := Rect2i(4, 2, 3, 1)
+## The fire system: its main rises from the valve by the left wall, runs along
+## the ceiling over the cistern to the corridor and down its wall; its nozzle
+## hangs over the barricade only. The feed pipe runs under the main, so the
+## two lines never cross (D106).
 const MAIN_Y := 80.0
 const MAIN_X := 27 * 64 + 44
 const SYSTEM_Y := 7 * 64 + 12
@@ -111,18 +114,11 @@ func _initialize() -> void:
 	entrance.position = Vector2(ENTRANCE_CELLS.position * CELL)
 	_own(root, entrance)
 
-	# Decoration: the cistern under the ceiling, the feed pipe to the
-	# sprinkler, the rods up from the lever and the valve, and the fire
-	# system's main. Nothing here is recorded.
+	# Decoration: the cistern under the ceiling and the rod down to the lever.
+	# Nothing here is recorded.
 	_pipe(root, "Cistern", Rect2(Vector2(CISTERN_CELLS.position * CELL), Vector2(CISTERN_CELLS.size * CELL)), Color("#4a5058"))
-	_pipe(root, "FeedPipe", Rect2(CISTERN_CELLS.end.x * CELL, PIPE_Y - 10.0, PIPE_LEFT - CISTERN_CELLS.end.x * CELL, 12.0))
 	var lever_x := (LEVER_CELL.x + 0.5) * CELL
 	_pipe(root, "LeverRod", Rect2(lever_x - 3.0, CISTERN_CELLS.end.y * CELL, 6.0, (LEVER_CELL.y + 1) * CELL - 64.0 - CISTERN_CELLS.end.y * CELL))
-	var valve_x := (VALVE_CELL.x + 0.5) * CELL
-	_pipe(root, "ValveRiser", Rect2(valve_x - 5.0, MAIN_Y, 10.0, (VALVE_CELL.y + 1) * CELL - 32.0 - MAIN_Y))
-	_pipe(root, "Main", Rect2(valve_x - 5.0, MAIN_Y - 5.0, MAIN_X - valve_x + 10.0, 10.0))
-	_pipe(root, "MainDown", Rect2(MAIN_X - 5.0, MAIN_Y, 10.0, SYSTEM_Y - MAIN_Y))
-	_pipe(root, "MainIn", Rect2(MAIN_X - 5.0, SYSTEM_Y - 10.0, BARRICADE_CELLS.position.x * CELL - MAIN_X + 5.0, 12.0))
 
 	# Both wood zones are burning when the room starts: the fire was lit before
 	# the hero came. Their burn times are per level (data/levels.json).
@@ -133,9 +129,24 @@ func _initialize() -> void:
 	barricade.name = "Barricade"
 	_own(root, barricade)
 
+	# The two water lines (D106): pipes that show the water running in them.
+	# The feed pipe runs from the cistern along the sprinkler's nozzles; the
+	# main rises from the valve to the ceiling, over the cistern, down the
+	# corridor wall and along the fire system's nozzle.
+	var feed_y := PIPE_Y - 4.0
+	_water_pipe(root, "FeedPipe", WaterPipe.Kind.FEED, "../Sprinkler", PackedVector2Array([
+		Vector2(CISTERN_CELLS.end.x * CELL, feed_y), Vector2(PIPE_RIGHT, feed_y)]))
+	var valve_x := (VALVE_CELL.x + 0.5) * CELL
+	var system_y := SYSTEM_Y - 4.0
+	_water_pipe(root, "FireMain", WaterPipe.Kind.MAIN, "../FireSystem", PackedVector2Array([
+		Vector2(valve_x, (VALVE_CELL.y + 1) * CELL - 32.0), Vector2(valve_x, MAIN_Y),
+		Vector2(MAIN_X, MAIN_Y), Vector2(MAIN_X, system_y),
+		Vector2(BARRICADE_CELLS.end.x * CELL, system_y)]))
+
 	var sprinkler := Sprinkler.new()
 	sprinkler.name = "Sprinkler"
 	sprinkler.object_id = "sprinkler"
+	sprinkler.draw_pipe = false
 	var bridge_top := float(BRIDGE_CELLS.position.y * CELL)
 	sprinkler.size = Vector2(PIPE_RIGHT - PIPE_LEFT, bridge_top + BRIDGE_HEIGHT / 2.0 - PIPE_Y)
 	sprinkler.position = Vector2((PIPE_LEFT + PIPE_RIGHT) / 2.0, PIPE_Y)
@@ -154,6 +165,7 @@ func _initialize() -> void:
 	system.name = "FireSystem"
 	system.object_id = "fire_system"
 	system.powered = true
+	system.draw_pipe = false
 	system.size = Vector2(BARRICADE_CELLS.size.x * CELL, BARRICADE_CELLS.size.y * CELL - 16.0 - (SYSTEM_Y - BARRICADE_CELLS.position.y * CELL))
 	system.position = Vector2((BARRICADE_CELLS.position.x + BARRICADE_CELLS.size.x / 2.0) * CELL, SYSTEM_Y)
 	_own(root, system)
@@ -195,6 +207,16 @@ func _wood(id: String, rect: Rect2) -> WoodZone:
 	zone.position = rect.get_center()
 	zone.start_phase = WoodBurn.Phase.BURNING
 	return zone
+
+
+## A water pipe along `path` (pixels) that shows the water of `source`.
+func _water_pipe(root: Node, node_name: String, kind: WaterPipe.Kind, source: String, path: PackedVector2Array) -> void:
+	var pipe := WaterPipe.new()
+	pipe.name = node_name
+	pipe.kind = kind
+	pipe.source_path = NodePath(source)
+	pipe.points = path
+	_own(root, pipe)
 
 
 ## A decorative pipe or tank: a plain rectangle, never recorded.

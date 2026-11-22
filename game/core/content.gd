@@ -142,6 +142,12 @@ static func look_mech() -> Dictionary:
 	return mech if mech is Dictionary else {}
 
 
+## The water pipes of level 04 (D106): sizes, colours, the running water.
+static func look_pipe() -> Dictionary:
+	var pipe: Variant = look().get("pipe")
+	return pipe if pipe is Dictionary else {}
+
+
 ## The numbers of the shared material, `material` of `art.json`.
 static func art_material() -> Dictionary:
 	var material: Variant = art().get("material")
@@ -631,6 +637,8 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 
 
 ## A number between `low` and `high` (`low` itself is allowed unless `above_low`).
+const LOOK_PIPE_COLORS: Array[String] = ["shell", "shell_light", "empty", "water", "dash"]
+const LOOK_PIPE_NUMBERS: Array[String] = ["feed_width_px", "main_width_px", "wall_px", "flange_every_px", "flange_px", "dash_length_px", "dash_gap_px", "dash_speed_px"]
 const LOOK_MECH_COLORS: Array[String] = ["iron", "iron_light", "iron_shadow", "iron_dark", "outline", "valve", "valve_light", "rust", "yellow"]
 const LOOK_PAIRS: Array[String] = ["velocity", "velocity_jitter", "gravity", "wobble_px", "wobble_hz", "size", "burst_area"]
 
@@ -656,6 +664,18 @@ static func validate_look(data: Variant) -> PackedStringArray:
 			errors.append("look.json: 'mech.%s' must be a color like \"#4c4c53\"" % key)
 	if not _is_number(mech.get("outline_px")) or float(mech["outline_px"]) <= 0.0:
 		errors.append("look.json: 'mech.outline_px' must be a number above 0")
+	var pipe: Variant = data.get("pipe")
+	if not pipe is Dictionary:
+		errors.append("look.json: 'pipe' must be an object")
+		return errors
+	for key in LOOK_PIPE_COLORS:
+		if not pipe.get(key) is String or not Color.html_is_valid(pipe[key]):
+			errors.append("look.json: 'pipe.%s' must be a color like \"#5a6068\"" % key)
+	for key in LOOK_PIPE_NUMBERS:
+		if not _is_number(pipe.get(key)) or float(pipe[key]) <= 0.0:
+			errors.append("look.json: 'pipe.%s' must be a number above 0" % key)
+	if _is_number(pipe.get("wall_px")) and _is_number(pipe.get("feed_width_px")) and 2.0 * float(pipe["wall_px"]) >= float(pipe["feed_width_px"]):
+		errors.append("look.json: 'pipe.wall_px' leaves no channel inside the feed pipe")
 	return errors
 
 

@@ -33,6 +33,8 @@ const DROP_COLOR := Color(0.78, 0.85, 0.9, 0.9)
 ## Pipe length and rain height, pixels.
 @export var size := Vector2(640, 256)
 @export var powered := false
+## False when a WaterPipe draws the pipe along the nozzles (level 04, D106).
+@export var draw_pipe := true
 
 var flow := 0
 var _step := 28
@@ -120,7 +122,8 @@ func is_raining() -> bool:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2(-size.x / 2.0, -10.0), Vector2(size.x, 12.0)), PIPE_COLOR)
+	if draw_pipe:
+		draw_rect(Rect2(Vector2(-size.x / 2.0, -10.0), Vector2(size.x, 12.0)), PIPE_COLOR)
 	var nozzles := maxi(int(size.x / _nozzle_spacing), 1)
 	var gap := size.x / float(nozzles)
 	var reach := size.y * float(flow) / float(FLOW_MAX)

@@ -133,5 +133,20 @@
     "rust": "#7a3a22",
     "yellow": "#d4a21e",
     "outline_px": 1.8
+  },
+  "pipe": {
+    "shell": "#5a6068",
+    "shell_light": "#767c84",
+    "empty": "#24282d",
+    "water": "#5f7f93",
+    "dash": "#cfe0ea",
+    "feed_width_px": 14,
+    "main_width_px": 22,
+    "wall_px": 3,
+    "flange_every_px": 128,
+    "flange_px": 6,
+    "dash_length_px": 14,
+    "dash_gap_px": 26,
+    "dash_speed_px": 240
   }
 }
