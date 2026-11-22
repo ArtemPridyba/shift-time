@@ -45,6 +45,20 @@ func test_broken_world_data_is_reported() -> void:
 	check(not WorldData.validate_look(look).is_empty(), "a lamp radius below the range is reported")
 
 
+## A picture from a file must stay alive after `_draw`: draw calls keep only
+## its id, a freed one draws a white box.
+func test_kit_pictures_from_files_are_kept() -> void:
+	var path := "res://assets/art/heroine/parts/battery.png"
+	if not ResourceLoader.exists(path):
+		path = "res://icon.svg"
+	var first := KitTextures.kept(path)
+	check(first != null, "a picture loads from %s" % path)
+	var id := first.get_rid() if first != null else RID()
+	first = null
+	var again := KitTextures.kept(path)
+	check(again != null and again.get_rid() == id, "the same picture is kept, not loaded again and freed")
+
+
 func test_lamp_flicker_is_a_formula_of_world_time() -> void:
 	var lamp: Dictionary = WorldData.look()["lamp"]
 	var energy := float(lamp["energy"])
