@@ -96,7 +96,25 @@ Request E-2b: repaint the first picture, a layout diagram of the room, as the fi
 The numbers and the flat colours are notes for you: do not paint them. 16:9.
 ```
 
-Если и так уехало — править готовую картинку по месту, по одной вещи за сообщение, и мерить по тому, что на ней есть: «Edit this picture and keep everything else exactly as it is: move the broken steps to the right, so that a flat floor as long as eight heroines lying head to foot stays between the shutter and the first step.»
+**Правки по месту** (22.11, второй Э-2: Gemini не перерисовал схему, а поправил свою прошлую картинку — ступени остались сразу за заслонкой, заслонка стала плоской полосатой панелью). Уроки:
+
+- Картинку с неверной расстановкой не прикладывать «как образец стиля»: Gemini берёт её за основу и копирует расстановку. Стиль он помнит по чату; если нужен образец — только крупный план (Э-1) или вырезка одной вещи.
+- Одна правка — одно сообщение. Мерить по тому, что на картинке («до левого края жёлтой платформы»), а не числами.
+- Как должна выглядеть вещь — показать вырезкой из удачной картинки: заслонка из Э-1 — [gemini/ref_shutter.jpg](gemini/ref_shutter.jpg).
+
+Правка 1 — заслонка: приложить последнюю картинку и `ref_shutter.jpg`.
+
+```text
+Edit the first picture and keep everything else exactly as it is: replace the striped panel under the brick column with the heavy steel shutter from the second picture: a thick riveted dark-steel slab with bolted plates, a toothed rack along its left side, the handwheel and two gears beside it, worn yellow fittings. Keep its position and its width. No hazard stripes on its face.
+```
+
+Правка 2 — пол между заслонкой и ступенями: приложить то, что вышло после правки 1.
+
+```text
+Edit this picture and keep everything else exactly as it is. The flat floor where the heroine stands continues to the right, past the shutter, until it reaches the lower yellow platform: the left end of that platform touches the end of this floor at the same height, like a bridge leaving it. Only there, under the left end of the platform, the floor breaks away in a few short, steep steps down to the pit floor. Between the shutter and the platform there are no steps and no rubble, only flat floor.
+```
+
+Не выходит за две-три попытки — оставить как есть: для игры кадр нужен как образец вида (D109), детали Н-1…Н-12 важнее.
 
 ## 4. Детали
 
