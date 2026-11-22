@@ -85,20 +85,30 @@ func show_at(seconds: float) -> void:
 		_glow.queue_redraw()
 
 
-## Cables and shades: lit by the lamps like everything else.
+## Chains and caged lamps: lit by the lamps like everything else.
 func _draw() -> void:
-	var shade := WorldData.color(_world, "lamp_shade")
 	var picture := KitTextures.piece("lamp")
 	for lamp: Dictionary in _lamps:
 		var at := WorldData.lamp_at(lamp)
-		draw_line(Vector2(at.x, WorldData.CELL), at - Vector2(0, 12), WorldData.color(_world, "iron"), 2.0)
+		# The chain it hangs on.
+		var link := Vector2(at.x, WorldData.CELL)
+		while link.y < at.y - 14.0:
+			draw_rect(Rect2(link - Vector2(1.5, 0), Vector2(3, 5)), WorldData.color(_world, "iron").lightened(0.1), false, 1.0)
+			link.y += 6.0
 		if picture != null:
 			var size := Vector2(picture.get_size()) * (64.0 / maxf(float(picture.get_width()), 1.0))
 			draw_texture_rect(picture, Rect2(at - Vector2(size.x / 2.0, size.y * 0.6), size), false)
 			continue
-		draw_colored_polygon(PackedVector2Array([at + Vector2(-30, 6), at + Vector2(-10, -12),
-			at + Vector2(10, -12), at + Vector2(30, 6)]), shade)
-		draw_line(at + Vector2(-30, 6), at + Vector2(30, 6), shade.lightened(0.3), 2.0)
+		# A caged lamp (D115): a small rusty cap, a wire cage round the bulb.
+		var rust := WorldData.color(_world, "rust").darkened(0.35)
+		var wire := WorldData.color(_world, "iron").lightened(0.15)
+		draw_colored_polygon(PackedVector2Array([at + Vector2(-11, -1), at + Vector2(-6, -12),
+			at + Vector2(6, -12), at + Vector2(11, -1)]), rust)
+		draw_line(at + Vector2(-11, -1), at + Vector2(11, -1), rust.lightened(0.25), 2.0)
+		draw_arc(at + Vector2(0, 8), 9.0, 0.0, PI, 10, wire, 1.5)
+		for x in [-9.0, -3.0, 3.0, 9.0]:
+			draw_line(at + Vector2(x, -1), at + Vector2(x * 0.7, 8.0 + sqrt(maxf(81.0 - x * x, 0.0)) * 0.9), wire, 1.2)
+		draw_line(at + Vector2(-9, 8), at + Vector2(9, 8), wire, 1.2)
 
 
 func _draw_glow() -> void:

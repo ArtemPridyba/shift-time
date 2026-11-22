@@ -6,7 +6,7 @@
 
 1. **Новый чат в приложении Gemini** (режим картинок, «высокий», как для героини). Весь набор делаем в одном чате, чтобы стиль не уплыл.
 2. **Первое сообщение — бриф** (раздел 2) и три картинки:
-   - [`docs/art/gemini/ref_close.jpg`](gemini/ref_close.jpg) — игра сейчас, так видит игрок (камера ×2,25);
+   - [`docs/art/gemini/ref_close.jpg`](gemini/ref_close.jpg) — игра сейчас, так видит игрок (камера ×1,5, D114);
    - [`docs/art/gemini/ref_room.jpg`](gemini/ref_room.jpg) — вся первая комната издалека;
    - [`docs/art/heroine/character_ref.jpg`](heroine/character_ref.jpg) — героиня, это образец кисти;
    - снимки `ref_close` и `ref_room` пересняты 22.11 после уменьшения мира (D112): размеры деталей рядом с героиней — в [scale.md](scale.md);
@@ -27,7 +27,7 @@ I am making a 2D game and I need you as the concept artist and asset painter for
 
 THE GAME. "Shift Time" is a 2D side-view puzzle-platformer that runs in a web browser. A young crane operator walks through an old factory at night. On her forearm is a gauntlet that turns back the time of the world around her: doors, moving platforms, water, lamps. The player walks, jumps and pulls levers; while she holds a key, the world plays backwards around her.
 
-THE CAMERA. Strict side view, like the cross-section of a building or a stage set: we look straight at the back wall of a factory hall. No vanishing point, no 3/4 view, no isometric view. Floors and platforms are horizontal slabs: we see their front face and a thin strip of their top surface, as if the camera were only a little above them (about 10 degrees). Everything stands on a grid: one cell is 64 game pixels; the heroine is 92 pixels tall (about 1.5 cells); a door is 2 cells tall. The camera shows about 13 cells across and 7.5 cells high, so on a 1920x1080 screen one cell is about 144 pixels and the heroine is about 210 pixels tall. A room is up to three screens wide and the camera follows her.
+THE CAMERA. Strict side view, like the cross-section of a building or a stage set: we look straight at the back wall of a factory hall. No vanishing point, no 3/4 view, no isometric view. Floors and platforms are horizontal slabs: we see their front face and a thin strip of their top surface, as if the camera were only a little above them (about 10 degrees). Everything stands on a grid: one cell is 64 game pixels; the heroine is 92 pixels tall (about 1.5 cells); a door is 2 cells tall. The camera shows about 20 cells across and 11 cells high, so on a 1920x1080 screen one cell is about 96 pixels and the heroine is about 140 pixels tall. A room is up to three screens wide and the camera follows her.
 
 THE LAYERS, from back to front:
 1. The night sky, seen only through the windows (the game draws it).
@@ -61,8 +61,11 @@ What each placeholder is:
 - the grey blocks with grid lines along the bottom: the floor, a slab of black cast-iron floor plates on dark brick masonry; her boots stand on the middle of the plates' top strip;
 - the column of grey blocks hanging from the top: a brick partition wall coming down from the ceiling;
 - the narrow bar under it with a light stripe: a heavy riveted steel shutter that slides down into the floor along a toothed rack between two gears; the dark ring beside it is the hub of its handwheel;
+- the dark rectangle with a thin bright outline on the left: the doorway she came in through, a dark opening in the brick wall with a worn steel frame (the bright outline is only a placeholder, not a colour to use);
+- the column of grey blocks along the left edge: the side wall of the hall, brick;
+- on the right the floor drops in two short steps into a dark pit: the floor broken away, a few fallen bricks on the steps;
 - the empty grey: the back wall of the hall behind everything: red brick, one tall arched window with broken panes and a dark night sky behind, a black cast-iron column, a background machine in deep shadow.
-Light: the hall is dark, it is night. A warm orange enamel dish lamp hangs above the heroine and another above the shutter; each makes a soft island of light on the floor and the wall behind; between the islands it is dark, but the edge of the floor still reads faintly. Dust floats in the lamp light. No purple anywhere except the small light of her gauntlet. 16:9, 1920x1080.
+Light: the hall is dark, it is night. A caged lamp hangs above the heroine and another above the shutter: a bare bulb in a wire cage under a small rusty cap, on a chain; each makes a soft island of light on the floor and the wall behind; between the islands it is dark, but the edge of the floor still reads faintly. Dust floats in the lamp light. No purple anywhere except the small light of her gauntlet. 16:9, 1920x1080.
 ```
 
 **Э-2. Вся комната** — приложить `ref_room.jpg` и удачный Э-1.
@@ -79,6 +82,51 @@ What each placeholder is:
 - the empty grey: the back wall: red brick, three or four tall arched windows with a night sky, black cast-iron columns, roof trusses along the top, a crane beam, background machines in deep shadow.
 Light: five warm islands of light from hanging lamps: over the doorway, over the shutter, over each platform, over the exit. Everything else dark, the floor edges still faintly readable. 16:9.
 ```
+
+**Э-2б. Если Gemini переставил уровень** (22.11, первый Э-2 — [gemini/raw/e2_room_v1.jpg](gemini/raw/e2_room_v1.jpg): ступени начались прямо под заслонкой, заслонка в широкой башне, платформы и уступ на других высотах). Для вида это не помеха (D109): детали игра всё равно ставит по своей сетке. Но если нужен кадр, совпадающий с уровнем, — словами расстановку не объяснить, генератор её не держит. Работает другое: дать ему схему, где всё уже стоит на месте, и попросить её **перерисовать**, а не «посмотреть». Схема уровня 01 — [gemini/layout_room.png](gemini/layout_room.png) (цветные зоны с номерами, 16:9). Её строит `tools/layout_guide.py` из данных уровня (карта сборщика, `world` в `levels.json`): после правок уровня — `python3 tools/layout_guide.py level_01 docs/art/gemini/layout_room.png`; номера для другого уровня — в `LABELS` скрипта. В новом сообщении первой картинкой — схема, второй — удачный кадр Gemini как образец вида.
+
+```text
+Request E-2b: repaint the first picture, a layout diagram of the room, as the finished game, in the style of the second picture (your painting). The diagram is exact: keep every shape where it is and the same size; change only how things look, never where they are. What the flat colours and numbers mean:
+- brown: the back wall of sooty red brick; dark blue arches: tall arched windows with a night sky;
+- dark grey: solid ground, black cast-iron floor slabs on dark masonry; the thin light line on top of each slab is its walkable top surface, keep it that thin; the dark bands above and below the room are the roof and the foundations, in darkness;
+- 1, black: the doorway she came in through;
+- 2, the narrow red column: a brick partition hanging from the ceiling, only as wide as the heroine; the yellow-black bar under it: a heavy steel shutter, as narrow as the bar;
+- 3: a flat floor between the shutter and the steps, nothing on it, no stairs here;
+- 4: the floor broken away in two short steps down into the pit, a few fallen bricks on them; the steps begin only at the right end of the flat floor 3, under the left end of platform 5, not at the shutter;
+- 5 and 6, yellow bars: two thin moving steel platforms with a worn signal-yellow top edge;
+- 7: the floor of the pit;
+- 8, grey with a red dot: the exit, a heavy hermetic door with rounded corners, a red beacon lamp above it;
+- 9, beige: a high concrete ledge;
+- orange dots on black lines: caged lamps (a bare bulb in a wire cage under a small rusty cap) hanging on chains, warm light pooling below each;
+- purple: the heroine, for scale.
+The numbers and the flat colours are notes for you: do not paint them. 16:9.
+```
+
+**Правки по месту** (22.11, второй Э-2: Gemini не перерисовал схему, а поправил свою прошлую картинку — ступени остались сразу за заслонкой, заслонка стала плоской полосатой панелью). Уроки:
+
+- Картинку с неверной расстановкой не прикладывать «как образец стиля»: Gemini берёт её за основу и копирует расстановку. Стиль он помнит по чату; если нужен образец — только крупный план (Э-1) или вырезка одной вещи.
+- Одна правка — одно сообщение. Мерить по тому, что на картинке («до левого края жёлтой платформы»), а не числами.
+- Как должна выглядеть вещь — показать вырезкой из удачной картинки: заслонка из Э-1 — [gemini/ref_shutter.jpg](gemini/ref_shutter.jpg).
+
+Правка 1 — заслонка: приложить последнюю картинку и `ref_shutter.jpg` (с 22.11 — заслонка, которую выбрал Борис, из `raw/e1_close_v2.jpg`, D115).
+
+```text
+Edit the first picture and keep everything else exactly as it is: replace the shutter under the brick column with the one from the second picture: the brick partition in a riveted rusty iron frame, a handwheel and a gear at its lower edge, and under it a narrow riveted steel shutter post with a toothed rack along its left side and worn yellow-and-black stripes on its face. Keep its position and its width.
+```
+
+Правка 2 — пол между заслонкой и ступенями: приложить то, что вышло после правки 1.
+
+```text
+Edit this picture and keep everything else exactly as it is. The flat floor where the heroine stands continues to the right, past the shutter, until it reaches the lower yellow platform: the left end of that platform touches the end of this floor at the same height, like a bridge leaving it. Only there, under the left end of the platform, the floor breaks away in a few short, steep steps down to the pit floor. Between the shutter and the platform there are no steps and no rubble, only flat floor.
+```
+
+Правка 3 — лампы (выбор Бориса 22.11, D115): приложить картинку и [gemini/ref_lamp.jpg](gemini/ref_lamp.jpg). Тот же образец — к запросу Н-8.
+
+```text
+Edit the first picture and keep everything else exactly as it is: make every hanging lamp like the lamp in the second picture: a bare bulb in a wire cage under a small rusty metal cap, hanging on a chain. Keep each lamp where it is and keep the warm cone of light below it.
+```
+
+Не выходит за две-три попытки — оставить как есть: для игры кадр нужен как образец вида (D109), детали Н-1…Н-12 важнее.
 
 ## 4. Детали
 
@@ -167,7 +215,7 @@ Request N-7: moving platforms. Separate pieces on one sheet with wide empty gree
 Свет ламп и стрелки часов делает игра, поэтому лампы рисуются выключенными, часы — без стрелок.
 
 ```text
-Request N-8: lamps and the clock. Separate pieces on one sheet with wide empty green gaps, flat front view, flat even light, nothing lit and nothing glowing: (a) an enamel dish lamp on a short cable, dark green-grey enamel outside, white inside, the bulb pale clear glass, switched off; (b) a caged wall lamp with a glass globe, switched off; (c) a big round factory wall clock with a cast-iron rim and a cream face with plain tick marks, no numbers, without hands; (d) the clock's two hands alone, straight, pointing up.
+Request N-8: lamps and the clock. Separate pieces on one sheet with wide empty green gaps, flat front view, flat even light, nothing lit and nothing glowing: (a) the hanging lamp of the hall, like the attached picture: a bare bulb in a wire cage under a small rusty metal cap, hanging on a chain, the bulb pale clear glass, switched off; (b) a caged wall lamp with a glass globe, switched off; (c) a big round factory wall clock with a cast-iron rim and a cream face with plain tick marks, no numbers, without hands; (d) the clock's two hands alone, straight, pointing up.
 ```
 
 ### Н-9. Станки фона
