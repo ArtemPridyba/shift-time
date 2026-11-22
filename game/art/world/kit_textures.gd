@@ -82,7 +82,16 @@ static func _file(name: String) -> Texture2D:
 	var path := str((textures as Dictionary).get(name, ""))
 	if path.is_empty() or not ResourceLoader.exists(path):
 		return null
-	return load(path) as Texture2D
+	return kept(path)
+
+
+## The picture at `path`, loaded once and kept. A draw call holds only the
+## texture's id: a picture nobody keeps is freed after `_draw` and the piece
+## shows as a white box (22.11.2026, the first Gemini floor test).
+static func kept(path: String) -> Texture2D:
+	if not _cache.has(path):
+		_cache[path] = load(path) as Texture2D
+	return _cache[path]
 
 
 ## 4 bricks across, 10 courses: running bond, mortar between, a few darker and
