@@ -93,23 +93,27 @@ Request N-1: brick wall tile. Take the brick wall of the reference frame and pai
 
 ### Н-2. Пол, земля, уступ
 
-Твёрдое в игре — блоки по сетке. Код собирает их из трёх кусков: верхняя кромка (на ней стоит героиня), заливка массы под ней и боковая кромка (край уступа, стенки ямы). Углы код сложит из кромок.
+Твёрдое в игре — блоки по сетке. Код собирает их сам: верхняя грань (на ней стоит героиня), передняя кромка, заливка массы под ней, боковая кромка (край уступа, стенки ямы). Углы код сложит из кромок.
+
+**Толщину грани у Gemini не просить** (22.11, первый эталонный кадр): он рисует пол широкой дорогой в перспективе и не слушает «тоньше» — генераторы плохо держат пропорции. Поэтому верх пола он рисует плоско, строго сверху, как карту, а код сжимает эту картинку в тонкую полоску (16 px в игре) — так и получается лёгкий взгляд сверху. Перспективу Gemini не рисует нигде.
 
 ```text
-Request N-2a: the top edge of the floor. A long horizontal strip, 4:1. Above the floor: flat green. From the top down: a thin strip of the top surface of worn black cast-iron checker plates, seen from just a little above (about one fifth of the strip's height; the heroine's boots stand on the middle of this strip); the front edge of the plates, a riveted iron angle (another fifth); below it dark brick masonry down to the bottom edge of the picture. Flat even light. The game repeats it left and right, so the left end must continue the right end.
+Request N-2a: the top surface of the floor, seen from straight above. A square swatch, 1:1, filling the whole picture edge to edge: worn black cast-iron checker floor plates with rivets and seams between the plates, seen exactly from above like a map or a floor plan: no perspective at all, no horizon, no wall, flat even light. The left edge continues the right edge. The game squeezes this picture into a thin strip under the heroine's feet; that squeeze makes the look from above, so do not draw any perspective yourself.
 ```
 
 ```text
-Request N-2b: the solid ground under the floor. A square swatch, 1:1, filling the whole picture: old dark masonry of the factory foundation, brick and rough concrete, darker and lower in contrast than the back wall, little detail; it is mass, not a feature. Flat even light; the left edge continues the right edge, the top continues the bottom.
+Request N-2b: the front edge of the floor, seen straight from the front. A long horizontal strip, 8:1, filling the whole picture: the riveted iron angle along the front edge of the floor plates, worn and scratched, a few short rust streaks; none of the top surface is visible. Flat even light. The left end continues the right end.
 ```
 
 ```text
-Request N-2c: the side edge of a ledge. A tall vertical strip, 1:4. Left of the ledge: flat green. The vertical face of the ledge's edge: a riveted iron angle along the edge, dark masonry to its right down to the right edge of the picture. Flat even light; the top end continues the bottom end.
+Request N-2c: the solid ground under the floor. A square swatch, 1:1, filling the whole picture: old dark masonry of the factory foundation, brick and rough concrete, darker and lower in contrast than the back wall, little detail; it is mass, not a feature. Flat even light; the left edge continues the right edge, the top continues the bottom.
 ```
 
 ```text
-Request N-2d: the top edge of the high concrete ledge. Same as N-2a, but the slab is worn grey-ochre concrete with a steel edge band and chipped corners; below it concrete with stains.
+Request N-2d: the side edge of a ledge. A tall vertical strip, 1:4. Left of the ledge: flat green. The vertical face of the ledge's edge: a riveted iron angle along the edge, dark masonry to its right down to the right edge of the picture. Flat even light; the top end continues the bottom end.
 ```
+
+**Н-2e.** Бетонный уступ выхода: запросы N-2a и N-2b ещё раз, в каждом заменить материал: «worn grey-ochre concrete with a steel edge band and chipped corners» вместо чугунных плит.
 
 ### Н-3. Окно
 
@@ -211,3 +215,9 @@ Request N-12: things the player uses. Separate pieces on one sheet with wide emp
 | Пурпур, циан, что-то светится | `No purple, magenta or cyan anywhere, and nothing glows.` |
 | Буквы, цифры | `Remove all text, letters and numbers.` |
 | Мелко, детали не читаются | `Fewer, bigger details: it must read when it is small on the screen.` |
+
+**Если Gemini не держит пропорции** (пол слишком широкий, заслонка толще, героиня мельче): эталонный кадр задаёт вид — кисть, цвета, свет, материалы, — а не геометрию. Геометрию строит игра по сетке, поэтому кадр с неточными размерами годится. Если всё же хочется поправить кадр, не описывать его заново, а править готовую картинку и мерить по тому, что на ней есть: «толщиной с её ботинок», «вдвое уже двери», а не числами:
+
+```text
+Edit this picture and keep everything else exactly as it is: lower the camera to the height of the floor, so the top surface of the floor becomes a thin strip no thicker than the heroine's boots are tall, and she stands on the middle of that strip. Keep the front face of the floor below as it is. The seams between the plates are straight and vertical, with no perspective.
+```
