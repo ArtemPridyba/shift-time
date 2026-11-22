@@ -61,6 +61,7 @@ What each placeholder is:
 - the grey blocks with grid lines along the bottom: the floor, a slab of black cast-iron floor plates on dark brick masonry; her boots stand on the middle of the plates' top strip;
 - the column of grey blocks hanging from the top: a brick partition wall coming down from the ceiling;
 - the narrow bar under it with a light stripe: a heavy riveted steel shutter that slides down into the floor along a toothed rack between two gears; the dark ring beside it is the hub of its handwheel;
+- the dark rectangle with a thin bright outline on the left: the doorway she came in through, a dark opening in the brick wall with a worn steel frame (the bright outline is only a placeholder, not a colour to use);
 - the empty grey: the back wall of the hall behind everything: red brick, one tall arched window with broken panes and a dark night sky behind, a black cast-iron column, a background machine in deep shadow.
 Light: the hall is dark, it is night. A warm orange enamel dish lamp hangs above the heroine and another above the shutter; each makes a soft island of light on the floor and the wall behind; between the islands it is dark, but the edge of the floor still reads faintly. Dust floats in the lamp light. No purple anywhere except the small light of her gauntlet. 16:9, 1920x1080.
 ```
