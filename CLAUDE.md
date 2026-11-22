@@ -160,4 +160,5 @@ Details: `docs/style.md` (the style test), `docs/setting.md`, `docs/art-pipeline
 - The heroine wears the time device as a gauntlet on her forearm; the time-direction indicator lives on it.
 - Time reads in the picture by motion: particles, light pulses and the wrist device run the other way in reverse mode.
 - Special items glow only where there is light. Reverse items and decoration play inverted animations. Fire danger reads by shape and particles before contact, not by one color.
+- Scale (D112, 22.11): the world is sized to the heroine: 92 px = 1.75 m, about 52 px a metre; the jump is about one height (≈100 px up, ≈150 px across, 2.3 cells); a step of one cell is easy, two cells need a lift, a crate or a ledge between; doors and platforms are two cells; sizes of every part in `docs/art/scale.md`.
 - Level geometry and collision come from the blockout in Godot, never from an image. AI art goes in only after the approved look (`docs/art/level01-look.md`).
