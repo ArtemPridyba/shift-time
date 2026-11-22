@@ -17,6 +17,7 @@ extends SceneTree
 const CELL := 64
 const TILESET_RES := "res://levels/blockout/blockout_tileset.tres"
 const SCENE_PATH := "res://levels/level_01.tscn"
+const LEVEL_ID := "level_01"
 
 const MAP := [
 	"################################################",
@@ -83,6 +84,15 @@ func _initialize() -> void:
 				"E":
 					exit_cells = Rect2i(cell, Vector2i.ONE) if exit_cells.size == Vector2i.ZERO else exit_cells.expand(cell + Vector2i.ONE)
 
+	# The Night shop world (task Д3): the back wall behind everything, the
+	# ground after the doors and platforms, the light; the blockout tiles stay
+	# the collision and are hidden. The look is data: world in levels.json.
+	blocks.visible = false
+	var back := WorldBack.new()
+	back.name = "WorldBack"
+	back.level_id = LEVEL_ID
+	_own(root, back)
+
 	var entrance := Node2D.new()
 	entrance.set_script(load("res://objects/entrance_frame.gd"))
 	entrance.name = "Entrance"
@@ -99,6 +109,15 @@ func _initialize() -> void:
 
 	_add_platform(root, "platform_1", PLATFORM_1_CENTRE, PLATFORM_1_TRAVEL)
 	_add_platform(root, "platform_2", PLATFORM_2_CENTRE, PLATFORM_2_TRAVEL)
+
+	var ground := WorldGround.new()
+	ground.name = "WorldGround"
+	ground.level_id = LEVEL_ID
+	_own(root, ground)
+	var light := WorldLight.new()
+	light.name = "WorldLight"
+	light.level_id = LEVEL_ID
+	_own(root, light)
 
 	var exit: ExitZone = (load("res://objects/exit_zone.tscn") as PackedScene).instantiate()
 	exit.size = Vector2(exit_cells.size * CELL)

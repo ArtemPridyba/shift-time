@@ -330,6 +330,8 @@ static func validate_levels(data: Variant, history_seconds: float) -> PackedStri
 			errors.append_array(_object_settings_problems(entry["objects"], where))
 		if entry.has("prelude_events") and _is_number(entry["prelude_seconds"]):
 			errors.append_array(_prelude_event_problems(entry["prelude_events"], float(entry["prelude_seconds"]), where))
+		if entry.has("world"):
+			errors.append_array(WorldData.validate_layout(entry["world"], where))
 	return errors
 
 
@@ -676,6 +678,7 @@ static func validate_look(data: Variant) -> PackedStringArray:
 			errors.append("look.json: 'pipe.%s' must be a number above 0" % key)
 	if _is_number(pipe.get("wall_px")) and _is_number(pipe.get("feed_width_px")) and 2.0 * float(pipe["wall_px"]) >= float(pipe["feed_width_px"]):
 		errors.append("look.json: 'pipe.wall_px' leaves no channel inside the feed pipe")
+	errors.append_array(WorldData.validate_look(data.get("world")))
 	return errors
 
 

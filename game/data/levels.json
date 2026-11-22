@@ -9,6 +9,48 @@
 			"platform_1": { "cycle": "once", "speed": 128 },
 			"platform_2": { "cycle": "once", "speed": 96, "delay_seconds": 2.6667 }
 		},
+		"world": {
+			"_about": "The look of the room (task Д3): pieces of the Night shop kit by grid cells, rect [x, y, w, h]; lamps hang from the ceiling at cell x on drop cells of cable. Numbers of the kit: world in look.json.",
+			"back": [
+				{ "kind": "truss", "rect": [1, 1, 46, 0.7] },
+				{ "kind": "window", "rect": [4, 2.5, 2, 4] },
+				{ "kind": "window", "rect": [14.5, 2.5, 2, 4] },
+				{ "kind": "window", "rect": [20.5, 2.5, 2, 4] },
+				{ "kind": "window", "rect": [26.5, 2.5, 2, 4] },
+				{ "kind": "window", "rect": [32.5, 2.5, 2, 4] },
+				{ "kind": "soot", "rect": [3.7, 1.3, 2.6, 1.6] },
+				{ "kind": "soot", "rect": [26.2, 1.3, 2.6, 1.6] },
+				{ "kind": "column", "rect": [7.4, 1, 0.45, 16] },
+				{ "kind": "column", "rect": [18.1, 1, 0.45, 16] },
+				{ "kind": "column", "rect": [24.1, 1, 0.45, 16] },
+				{ "kind": "column", "rect": [30.1, 1, 0.45, 16] },
+				{ "kind": "column", "rect": [38.3, 1, 0.45, 16] },
+				{ "kind": "crane", "rect": [12, 1.75, 26, 0.35] },
+				{ "kind": "rust", "rect": [12.3, 1.2, 1.4, 3] },
+				{ "kind": "rust", "rect": [33.2, 7, 1.2, 3] },
+				{ "kind": "cracks", "rect": [8.4, 4.6, 1.3, 1.6] },
+				{ "kind": "cracks", "rect": [22.8, 8.2, 1.4, 1.8] },
+				{ "kind": "cracks", "rect": [40.3, 1.6, 1.2, 2.4] },
+				{ "kind": "tank", "rect": [16.6, 5, 1.9, 5] },
+				{ "kind": "pipe", "rect": [10.25, 1, 0.3, 9] },
+				{ "kind": "pipe", "rect": [26.0, 8, 0.3, 7] },
+				{ "kind": "pipe", "rect": [45.8, 1, 0.3, 4] }
+			],
+			"front": [
+				{ "kind": "glass", "rect": [4, 9.85, 1.6, 0.15] },
+				{ "kind": "bricks", "rect": [20.7, 11.55, 1.3, 0.45] },
+				{ "kind": "bricks", "rect": [24, 14.55, 2.2, 0.45] },
+				{ "kind": "beam", "rect": [30, 14.7, 3, 0.3] }
+			],
+			"lamps": [
+				{ "x": 3, "drop": 3.8 },
+				{ "x": 9.5, "drop": 3.6 },
+				{ "x": 24, "drop": 3.8 },
+				{ "x": 33, "drop": 3.2 },
+				{ "x": 43, "drop": 0.6 }
+			],
+			"ground": { "concrete": [[39, 5, 9, 12]] }
+		},
 		"title": "01 Effect"
 	},
 	{
