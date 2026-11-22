@@ -24,9 +24,9 @@ static func tile(name: String) -> Texture2D:
 		"brick":
 			image = _brick(world)
 		"masonry":
-			image = _blocks(WorldData.color(world, "masonry"), Vector2i(64, 32), 3)
+			image = _blocks(WorldData.color(world, "masonry"), WorldData.pair(world, "masonry_px", Vector2i(32, 16)), 3)
 		"concrete":
-			image = _blocks(WorldData.color(world, "concrete").darkened(0.15), Vector2i(128, 64), 5)
+			image = _blocks(WorldData.color(world, "concrete").darkened(0.15), WorldData.pair(world, "concrete_px", Vector2i(64, 32)), 5)
 		"floor_top":
 			image = _top(world, WorldData.color(world, "iron").lightened(0.28), WorldData.color(world, "iron"))
 		"concrete_top":
@@ -97,8 +97,12 @@ static func kept(path: String) -> Texture2D:
 ## 4 bricks across, 10 courses: running bond, mortar between, a few darker and
 ## lighter bricks and chips.
 static func _brick(world: Dictionary) -> Image:
-	var size_v: Array = world.get("brick_px", [64, 24])
-	var brick := Vector2i(int(size_v[0]), int(size_v[1]))
+	var brick := WorldData.pair(world, "brick_px", Vector2i(28, 10))
+	# The mortar, the chips and the darker lower edge shrink with the brick
+	# (D112: bricks to the heroine's size are small).
+	var m := 2 if brick.y >= 16 else 1
+	var lip := maxi(1, brick.y / 8)
+	var chip_size := Vector2i(maxi(2, brick.x / 12), maxi(1, brick.y / 8))
 	var image := Image.create(brick.x * 4, brick.y * 10, false, Image.FORMAT_RGBA8)
 	image.fill(WorldData.color(world, "mortar"))
 	var base := WorldData.color(world, "brick")
@@ -108,13 +112,13 @@ static func _brick(world: Dictionary) -> Image:
 			var x := column * brick.x - shift
 			var k := ParticleField.rand01(31, row * 8 + column, 0)
 			var tone := base.darkened(0.25 * k) if k < 0.6 else base.lightened(0.12 * (k - 0.6))
-			_fill_wrapped(image, Rect2i(x + 2, row * brick.y + 2, brick.x - 4, brick.y - 4), tone)
+			_fill_wrapped(image, Rect2i(x + m, row * brick.y + m, brick.x - 2 * m, brick.y - 2 * m), tone)
 			var chip := ParticleField.rand01(32, row * 8 + column, 1)
 			if chip > 0.55:
-				var cx := x + 4 + int(chip * float(brick.x - 14))
-				_fill_wrapped(image, Rect2i(cx, row * brick.y + 2, 5, 3), WorldData.color(world, "mortar"))
+				var cx := x + 2 * m + int(chip * float(brick.x - 4 * m - chip_size.x))
+				_fill_wrapped(image, Rect2i(Vector2i(cx, row * brick.y + m), chip_size), WorldData.color(world, "mortar"))
 			# A darker lower edge gives each brick a little body, not a light.
-			_fill_wrapped(image, Rect2i(x + 2, row * brick.y + brick.y - 5, brick.x - 4, 3), tone.darkened(0.18))
+			_fill_wrapped(image, Rect2i(x + m, row * brick.y + brick.y - m - lip, brick.x - 2 * m, lip), tone.darkened(0.18))
 	return image
 
 

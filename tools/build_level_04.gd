@@ -36,9 +36,9 @@ const MAP := [
 	"#...........................################",
 	"#...........................################",
 	"#..........................................#",
-	"#.......................................EE.#",
-	"###.....................................EE.#",
-	"#....##...####...............###############",
+	"####....................................EE.#",
+	"#.....##................................EE.#",
+	"#.........####...............###############",
 	"#........#####...............###############",
 	"#.......######...............###############",
 	"#.S....#######...............###############",
@@ -57,20 +57,22 @@ const BRIDGE_HEIGHT := 32.0
 const BRIDGE_CELLS := Rect2i(14, 10, 15, 1)
 ## The barricade closes the corridor (rows 7-9) in column 28.
 const BARRICADE_CELLS := Rect2i(28, 7, 1, 3)
-## The lever stands on the lower ledge, level with the landing, one jump from
-## it: cell (5, 9). The valve of the fire system stands on the upper ledge by
-## the left wall, two jumps from the landing: cell (2, 8) (D108: swapped, so
-## the two water lines never cross). The ledges hang over the hall floor, high
+## The lever stands on the lower ledge, a cell above the landing and two cells
+## from it, one jump: cell (6, 8). The valve of the fire system stands on the
+## upper ledge by the left wall, a cell higher again and two cells further,
+## two jumps from the landing: cell (2, 7) (D108: swapped, so the two water
+## lines never cross; D112: the ledges moved for the jump of one heroine
+## height, which carries about 2.3 cells, no longer 3). The ledges hang over the hall floor, high
 ## enough to walk under them from the entrance.
-const LEVER_CELL := Vector2i(5, 9)
-const VALVE_CELL := Vector2i(2, 8)
+const LEVER_CELL := Vector2i(6, 8)
+const VALVE_CELL := Vector2i(2, 7)
 ## The sprinkler pipe hangs under the ceiling over the pit only, its rain falls
 ## to the bridge; it stops short of the barricade.
 const PIPE_Y := 192.0
 const PIPE_LEFT := 14 * 64
 const PIPE_RIGHT := 27 * 64 + 16
 ## The cistern the pipe draws from (decoration), in cells, over the lever.
-const CISTERN_CELLS := Rect2i(4, 2, 3, 1)
+const CISTERN_CELLS := Rect2i(5, 2, 3, 1)
 ## The fire system: its main rises from the valve by the left wall, runs along
 ## the ceiling over the cistern to the corridor and down its wall; its nozzle
 ## hangs over the barricade only. The feed pipe runs under the main, so the

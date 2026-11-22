@@ -2,54 +2,54 @@
 	{
 		"id": "level_01",
 		"scene": "res://levels/level_01.tscn",
-		"prelude_seconds": 3.5,
-		"intro_seconds": 1.2,
+		"prelude_seconds": 2.5,
+		"intro_seconds": 0.8,
 		"objects": {
-			"door": { "cycle": "once", "hold_open_seconds": 1, "close_seconds": 4 },
-			"platform_1": { "cycle": "once", "speed": 128 },
-			"platform_2": { "cycle": "once", "speed": 96, "delay_seconds": 2.6667 }
+			"door": { "cycle": "once", "hold_open_seconds": 0.5, "close_seconds": 3.5 },
+			"platform_1": { "cycle": "once", "speed": 96 },
+			"platform_2": { "cycle": "once", "speed": 64, "delay_seconds": 1.0 }
 		},
 		"world": {
-			"_about": "The look of the room (task Д3): pieces of the Night shop kit by grid cells, rect [x, y, w, h]; lamps hang from the ceiling at cell x on drop cells of cable. Numbers of the kit: world in look.json.",
+			"_about": "The look of the room (task Д3): pieces of the Night shop kit by grid cells, rect [x, y, w, h]; lamps hang from the ceiling at cell x on drop cells of cable. Numbers of the kit: world in look.json. Sizes follow the heroine (D112, docs/art/scale.md): a window 1.25x2.5 cells is 1.5x3 m.",
 			"back": [
-				{ "kind": "truss", "rect": [1, 1, 46, 0.7] },
-				{ "kind": "window", "rect": [4, 2.5, 2, 4] },
-				{ "kind": "window", "rect": [14.5, 2.5, 2, 4] },
-				{ "kind": "window", "rect": [20.5, 2.5, 2, 4] },
-				{ "kind": "window", "rect": [26.5, 2.5, 2, 4] },
-				{ "kind": "window", "rect": [32.5, 2.5, 2, 4] },
-				{ "kind": "soot", "rect": [3.7, 1.3, 2.6, 1.6] },
-				{ "kind": "soot", "rect": [26.2, 1.3, 2.6, 1.6] },
-				{ "kind": "column", "rect": [7.4, 1, 0.45, 16] },
-				{ "kind": "column", "rect": [18.1, 1, 0.45, 16] },
-				{ "kind": "column", "rect": [24.1, 1, 0.45, 16] },
-				{ "kind": "column", "rect": [30.1, 1, 0.45, 16] },
-				{ "kind": "column", "rect": [38.3, 1, 0.45, 16] },
-				{ "kind": "crane", "rect": [12, 1.75, 26, 0.35] },
-				{ "kind": "rust", "rect": [12.3, 1.2, 1.4, 3] },
-				{ "kind": "rust", "rect": [33.2, 7, 1.2, 3] },
-				{ "kind": "cracks", "rect": [8.4, 4.6, 1.3, 1.6] },
-				{ "kind": "cracks", "rect": [22.8, 8.2, 1.4, 1.8] },
-				{ "kind": "cracks", "rect": [40.3, 1.6, 1.2, 2.4] },
-				{ "kind": "tank", "rect": [16.6, 5, 1.9, 5] },
-				{ "kind": "pipe", "rect": [10.25, 1, 0.3, 9] },
-				{ "kind": "pipe", "rect": [26.0, 8, 0.3, 7] },
-				{ "kind": "pipe", "rect": [45.8, 1, 0.3, 4] }
+				{ "kind": "truss", "rect": [1, 1, 30, 0.5] },
+				{ "kind": "window", "rect": [3, 3, 1.25, 2.5] },
+				{ "kind": "window", "rect": [11, 3, 1.25, 2.5] },
+				{ "kind": "window", "rect": [15, 3, 1.25, 2.5] },
+				{ "kind": "window", "rect": [19, 3, 1.25, 2.5] },
+				{ "kind": "window", "rect": [27, 3, 1.25, 2.5] },
+				{ "kind": "soot", "rect": [2.8, 2, 1.7, 1] },
+				{ "kind": "soot", "rect": [18.8, 2, 1.7, 1] },
+				{ "kind": "column", "rect": [6.2, 1, 0.3, 16] },
+				{ "kind": "column", "rect": [13.4, 1, 0.3, 16] },
+				{ "kind": "column", "rect": [17.4, 1, 0.3, 16] },
+				{ "kind": "column", "rect": [21.4, 1, 0.3, 16] },
+				{ "kind": "column", "rect": [25.4, 1, 0.3, 16] },
+				{ "kind": "crane", "rect": [9, 1.6, 15, 0.22] },
+				{ "kind": "rust", "rect": [10.3, 1.3, 0.8, 1.8] },
+				{ "kind": "rust", "rect": [22.3, 10.2, 0.7, 1.8] },
+				{ "kind": "cracks", "rect": [5.0, 6.5, 0.8, 1] },
+				{ "kind": "cracks", "rect": [16.4, 12.6, 0.8, 1] },
+				{ "kind": "cracks", "rect": [29.4, 4, 0.7, 1.4] },
+				{ "kind": "tank", "rect": [17.4, 12.4, 1.5, 2.6] },
+				{ "kind": "pipe", "rect": [9.6, 1, 0.18, 9] },
+				{ "kind": "pipe", "rect": [16.2, 11.4, 0.18, 3.6] },
+				{ "kind": "pipe", "rect": [30.4, 1, 0.18, 3] }
 			],
 			"front": [
-				{ "kind": "glass", "rect": [4, 9.85, 1.6, 0.15] },
-				{ "kind": "bricks", "rect": [20.7, 11.55, 1.3, 0.45] },
-				{ "kind": "bricks", "rect": [24, 14.55, 2.2, 0.45] },
-				{ "kind": "beam", "rect": [30, 14.7, 3, 0.3] }
+				{ "kind": "glass", "rect": [3.6, 11.92, 0.9, 0.08] },
+				{ "kind": "bricks", "rect": [14.15, 12.75, 0.7, 0.25] },
+				{ "kind": "bricks", "rect": [17, 14.78, 1.2, 0.22] },
+				{ "kind": "beam", "rect": [19.6, 14.84, 1.8, 0.16] }
 			],
 			"lamps": [
-				{ "x": 3, "drop": 3.8 },
-				{ "x": 9.5, "drop": 3.6 },
-				{ "x": 24, "drop": 3.8 },
-				{ "x": 33, "drop": 3.2 },
-				{ "x": 43, "drop": 0.6 }
+				{ "x": 2.5, "drop": 8 },
+				{ "x": 7.0, "drop": 8 },
+				{ "x": 15.5, "drop": 8 },
+				{ "x": 20.5, "drop": 8 },
+				{ "x": 28, "drop": 5 }
 			],
-			"ground": { "concrete": [[39, 5, 9, 12]] }
+			"ground": { "concrete": [[24, 9, 8, 8]] }
 		},
 		"title": "01 Effect"
 	},

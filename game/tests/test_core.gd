@@ -164,8 +164,11 @@ func test_jump_height_fits_the_grid() -> void:
 		v = motion.step(v, 0.0, false, false, DT)
 	var height := -top
 	check(landed, "the jump never came back to the floor")
-	check(height > 128.0, "jump is %.0f px: must clear 2 cells (128 px)" % height)
-	check(height < 192.0, "jump is %.0f px: must stay below 3 cells (192 px)" % height)
+	# D112 (22.11.2026): the jump is about one heroine height (92 px), so the
+	# world can be built to her size: a step of one cell is easy, two cells
+	# are out of reach and need a lift, a crate or a ledge between.
+	check(height > 96.0, "jump is %.0f px: must clear 1.5 cells (96 px)" % height)
+	check(height < 120.0, "jump is %.0f px: must stay about one heroine height, well below 2 cells (128 px)" % height)
 
 
 func test_walk_accelerates_and_stops() -> void:
