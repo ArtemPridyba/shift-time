@@ -1,5 +1,29 @@
 {
   "particles": {
+    "lamp_dust": {
+      "shape": "dot",
+      "blend": "add",
+      "rate": 4,
+      "lifetime": 7,
+      "lifetime_jitter": 0.3,
+      "cone": {"spread": 0.5, "length_px": 420},
+      "velocity": [0, 3],
+      "velocity_jitter": [6, 1.5],
+      "gravity": [0, 0],
+      "wobble_px": [9, 30],
+      "wobble_hz": [0.03, 0.11],
+      "size": [2, 5],
+      "spin": 0,
+      "stretch": 0,
+      "color": "#ffd9a8",
+      "alpha": 0.8,
+      "fade_in": 0.2,
+      "fade_out": 0.3,
+      "on_floor": "none",
+      "burst_count": 0,
+      "burst_every": 0,
+      "burst_area": [0, 0]
+    },
     "dust": {
       "shape": "dot",
       "blend": "add",

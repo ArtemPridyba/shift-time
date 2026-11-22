@@ -6,7 +6,8 @@ extends Node2D
 ## warm island (`PointLight2D`) on what the player uses. A lamp flickers a
 ## little by a formula of world time (`WorldData.lamp_energy`), so under Shift
 ## the flicker plays backwards; dust drifts in its light (`TimeParticles`,
-## Д2) and is seen only there. A weak light of her own lights only the heroine
+## Д2, the light preset `lamp_dust`: five lamps on a screen) and is seen only
+## there. A weak light of her own lights only the heroine
 ## (light mask 2), so she reads between the islands (D76). Nothing here is
 ## recorded or collides.
 
@@ -51,7 +52,7 @@ func _ready() -> void:
 		_shine.append(1.0)
 		var dust := TimeParticles.new()
 		dust.name = "Dust%d" % (i + 1)
-		dust.preset = "dust"
+		dust.preset = "lamp_dust"
 		dust.noise_seed = 17 + i * 5
 		dust.position = at + Vector2(0, 12)
 		add_child(dust)
