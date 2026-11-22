@@ -291,6 +291,94 @@ func test_level_04_geometry() -> void:
 	await _free(room)
 
 
+func test_water_pipe_follows_its_sprinkler() -> void:
+	var sprinkler := Sprinkler.new()
+	sprinkler.name = "Source"
+	var pipe := WaterPipe.new()
+	pipe.source_path = NodePath("../Source")
+	pipe.points = PackedVector2Array([Vector2.ZERO, Vector2(400, 0), Vector2(400, 200)])
+	var holder := Node2D.new()
+	holder.add_child(sprinkler)
+	holder.add_child(pipe)
+	_tree.root.add_child(holder)
+	check(pipe.fill == 0.0 and pipe.run == 0.0, "a pipe to a shut sprinkler is empty")
+	sprinkler.powered = true
+	pipe.refresh()
+	check(pipe.fill == 1.0 and pipe.run == 0.0, "an open line before its rain starts is full and still")
+	sprinkler.flow = Sprinkler.FLOW_MAX
+	pipe.refresh()
+	check(pipe.run == 1.0, "water runs in the pipe while it rains")
+	sprinkler.powered = false
+	sprinkler.flow = Sprinkler.FLOW_MAX / 2
+	pipe.refresh()
+	check(is_equal_approx(pipe.fill, 0.5) and is_equal_approx(pipe.run, 0.5), "a closed line drains with its flow")
+	pipe.on_world_tick(30, true)
+	var at_30 := pipe.dash_offset()
+	pipe.on_world_tick(31, true)
+	var at_31 := pipe.dash_offset()
+	pipe.on_world_tick(30, false)
+	check(at_31 != at_30, "the dashes move with world time")
+	check(pipe.dash_offset() == at_30, "the dashes stand where they were at the same world frame, so they run back under Shift")
+	var look := Content.look_pipe()
+	pipe.kind = WaterPipe.Kind.MAIN
+	check(pipe.width() == float(look["main_width_px"]), "the main takes its width from look.json")
+	pipe.kind = WaterPipe.Kind.FEED
+	check(pipe.width() < float(look["main_width_px"]), "the feed pipe is thinner than the main")
+	holder.queue_free()
+	await _tree.process_frame
+
+
+func test_pipe_look_data_is_checked() -> void:
+	var data := Content.look().duplicate(true)
+	check(Content.validate_look(data).is_empty(), "look.json passes the data check")
+	data["pipe"].erase("dash_speed_px")
+	check(not Content.validate_look(data).is_empty(), "a missing pipe number must be reported")
+	data = Content.look().duplicate(true)
+	data["pipe"]["water"] = "blue-ish"
+	check(not Content.validate_look(data).is_empty(), "a broken pipe colour must be reported")
+	data = Content.look().duplicate(true)
+	data["pipe"]["wall_px"] = 8
+	check(not Content.validate_look(data).is_empty(), "walls thicker than the feed pipe must be reported")
+
+
+## The playtest of 22.11 (D108): the two water lines read as one tangle where
+## the valve's riser crossed the lever's feed pipe. The feed pipe, the main and
+## the lever's rod never cross, and each line shows the water of its own
+## sprinkler.
+func test_level_04_water_lines_never_cross() -> void:
+	var room := await _load()
+	var feed: WaterPipe = room.get_node("FeedPipe")
+	var main: WaterPipe = room.get_node("FireMain")
+	check(feed.get_node(feed.source_path) == room.get_node("Sprinkler"), "the feed pipe shows the sprinkler over the bridge")
+	check(main.get_node(main.source_path) == room.get_node("FireSystem"), "the main shows the fire system over the barricade")
+	check(feed.kind != main.kind, "the two lines differ in shape")
+	var rod: ColorRect = room.get_node("LeverRod")
+	var rod_rect := Rect2(rod.position, rod.size)
+	var feed_rects := _pipe_rects(feed)
+	var main_rects := _pipe_rects(main)
+	for f in feed_rects:
+		for m in main_rects:
+			check(not f.intersects(m), "the feed pipe %s crosses the main %s" % [f, m])
+	for m in main_rects:
+		check(not m.intersects(rod_rect), "the main %s crosses the lever's rod" % [m])
+	var valve: Lever = room.get_node("Valve")
+	var lever: Lever = room.get_node("Lever")
+	check(main.points[0].distance_to(valve.position) < 64.0, "the main starts at the valve")
+	check(absf(rod_rect.get_center().x - lever.position.x) < 8.0, "the rod comes down to the lever")
+	await _free(room)
+
+
+## The pipe's straight runs as rectangles with its width, local pixels.
+func _pipe_rects(pipe: WaterPipe) -> Array[Rect2]:
+	var rects: Array[Rect2] = []
+	var half := pipe.width() / 2.0
+	for i in pipe.points.size() - 1:
+		var a := pipe.points[i]
+		var b := pipe.points[i + 1]
+		rects.append(Rect2(a.min(b) - Vector2(half, half), (b - a).abs() + Vector2(half, half) * 2.0))
+	return rects
+
+
 ## Puts the hero on the ledge by the lever or the valve (node name).
 func _stand_by(room: Node, node_name: String) -> void:
 	var player: Player = room.get_node("Player")
