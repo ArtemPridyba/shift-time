@@ -324,6 +324,8 @@ static func validate_levels(data: Variant, history_seconds: float) -> PackedStri
 			errors.append_array(_object_settings_problems(entry["objects"], where))
 		if entry.has("prelude_events") and _is_number(entry["prelude_seconds"]):
 			errors.append_array(_prelude_event_problems(entry["prelude_events"], float(entry["prelude_seconds"]), where))
+		if entry.has("world"):
+			errors.append_array(WorldData.validate_layout(entry["world"], where))
 	return errors
 
 
@@ -656,6 +658,7 @@ static func validate_look(data: Variant) -> PackedStringArray:
 			errors.append("look.json: 'mech.%s' must be a color like \"#4c4c53\"" % key)
 	if not _is_number(mech.get("outline_px")) or float(mech["outline_px"]) <= 0.0:
 		errors.append("look.json: 'mech.outline_px' must be a number above 0")
+	errors.append_array(WorldData.validate_look(data.get("world")))
 	return errors
 
 
