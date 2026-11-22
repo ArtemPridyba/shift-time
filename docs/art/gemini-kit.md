@@ -6,7 +6,7 @@
 
 1. **Новый чат в приложении Gemini** (режим картинок, «высокий», как для героини). Весь набор делаем в одном чате, чтобы стиль не уплыл.
 2. **Первое сообщение — бриф** (раздел 2) и три картинки:
-   - [`docs/art/gemini/ref_close.jpg`](gemini/ref_close.jpg) — игра сейчас, так видит игрок (камера ×2,25);
+   - [`docs/art/gemini/ref_close.jpg`](gemini/ref_close.jpg) — игра сейчас, так видит игрок (камера ×1,5, D114);
    - [`docs/art/gemini/ref_room.jpg`](gemini/ref_room.jpg) — вся первая комната издалека;
    - [`docs/art/heroine/character_ref.jpg`](heroine/character_ref.jpg) — героиня, это образец кисти;
    - снимки `ref_close` и `ref_room` пересняты 22.11 после уменьшения мира (D112): размеры деталей рядом с героиней — в [scale.md](scale.md);
@@ -27,7 +27,7 @@ I am making a 2D game and I need you as the concept artist and asset painter for
 
 THE GAME. "Shift Time" is a 2D side-view puzzle-platformer that runs in a web browser. A young crane operator walks through an old factory at night. On her forearm is a gauntlet that turns back the time of the world around her: doors, moving platforms, water, lamps. The player walks, jumps and pulls levers; while she holds a key, the world plays backwards around her.
 
-THE CAMERA. Strict side view, like the cross-section of a building or a stage set: we look straight at the back wall of a factory hall. No vanishing point, no 3/4 view, no isometric view. Floors and platforms are horizontal slabs: we see their front face and a thin strip of their top surface, as if the camera were only a little above them (about 10 degrees). Everything stands on a grid: one cell is 64 game pixels; the heroine is 92 pixels tall (about 1.5 cells); a door is 2 cells tall. The camera shows about 13 cells across and 7.5 cells high, so on a 1920x1080 screen one cell is about 144 pixels and the heroine is about 210 pixels tall. A room is up to three screens wide and the camera follows her.
+THE CAMERA. Strict side view, like the cross-section of a building or a stage set: we look straight at the back wall of a factory hall. No vanishing point, no 3/4 view, no isometric view. Floors and platforms are horizontal slabs: we see their front face and a thin strip of their top surface, as if the camera were only a little above them (about 10 degrees). Everything stands on a grid: one cell is 64 game pixels; the heroine is 92 pixels tall (about 1.5 cells); a door is 2 cells tall. The camera shows about 20 cells across and 11 cells high, so on a 1920x1080 screen one cell is about 96 pixels and the heroine is about 140 pixels tall. A room is up to three screens wide and the camera follows her.
 
 THE LAYERS, from back to front:
 1. The night sky, seen only through the windows (the game draws it).
@@ -62,6 +62,8 @@ What each placeholder is:
 - the column of grey blocks hanging from the top: a brick partition wall coming down from the ceiling;
 - the narrow bar under it with a light stripe: a heavy riveted steel shutter that slides down into the floor along a toothed rack between two gears; the dark ring beside it is the hub of its handwheel;
 - the dark rectangle with a thin bright outline on the left: the doorway she came in through, a dark opening in the brick wall with a worn steel frame (the bright outline is only a placeholder, not a colour to use);
+- the column of grey blocks along the left edge: the side wall of the hall, brick;
+- on the right the floor drops in two short steps into a dark pit: the floor broken away, a few fallen bricks on the steps;
 - the empty grey: the back wall of the hall behind everything: red brick, one tall arched window with broken panes and a dark night sky behind, a black cast-iron column, a background machine in deep shadow.
 Light: the hall is dark, it is night. A warm orange enamel dish lamp hangs above the heroine and another above the shutter; each makes a soft island of light on the floor and the wall behind; between the islands it is dark, but the edge of the floor still reads faintly. Dust floats in the lamp light. No purple anywhere except the small light of her gauntlet. 16:9, 1920x1080.
 ```
