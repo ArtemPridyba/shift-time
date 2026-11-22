@@ -65,7 +65,7 @@ What each placeholder is:
 - the column of grey blocks along the left edge: the side wall of the hall, brick;
 - on the right the floor drops in two short steps into a dark pit: the floor broken away, a few fallen bricks on the steps;
 - the empty grey: the back wall of the hall behind everything: red brick, one tall arched window with broken panes and a dark night sky behind, a black cast-iron column, a background machine in deep shadow.
-Light: the hall is dark, it is night. A warm orange enamel dish lamp hangs above the heroine and another above the shutter; each makes a soft island of light on the floor and the wall behind; between the islands it is dark, but the edge of the floor still reads faintly. Dust floats in the lamp light. No purple anywhere except the small light of her gauntlet. 16:9, 1920x1080.
+Light: the hall is dark, it is night. A caged lamp hangs above the heroine and another above the shutter: a bare bulb in a wire cage under a small rusty cap, on a chain; each makes a soft island of light on the floor and the wall behind; between the islands it is dark, but the edge of the floor still reads faintly. Dust floats in the lamp light. No purple anywhere except the small light of her gauntlet. 16:9, 1920x1080.
 ```
 
 **Э-2. Вся комната** — приложить `ref_room.jpg` и удачный Э-1.
@@ -97,7 +97,7 @@ Request E-2b: repaint the first picture, a layout diagram of the room, as the fi
 - 7: the floor of the pit;
 - 8, grey with a red dot: the exit, a heavy hermetic door with rounded corners, a red beacon lamp above it;
 - 9, beige: a high concrete ledge;
-- orange dots on black lines: enamel lamps hanging on cables, warm light pooling below each;
+- orange dots on black lines: caged lamps (a bare bulb in a wire cage under a small rusty cap) hanging on chains, warm light pooling below each;
 - purple: the heroine, for scale.
 The numbers and the flat colours are notes for you: do not paint them. 16:9.
 ```
@@ -108,16 +108,22 @@ The numbers and the flat colours are notes for you: do not paint them. 16:9.
 - Одна правка — одно сообщение. Мерить по тому, что на картинке («до левого края жёлтой платформы»), а не числами.
 - Как должна выглядеть вещь — показать вырезкой из удачной картинки: заслонка из Э-1 — [gemini/ref_shutter.jpg](gemini/ref_shutter.jpg).
 
-Правка 1 — заслонка: приложить последнюю картинку и `ref_shutter.jpg`.
+Правка 1 — заслонка: приложить последнюю картинку и `ref_shutter.jpg` (с 22.11 — заслонка, которую выбрал Борис, из `raw/e1_close_v2.jpg`, D115).
 
 ```text
-Edit the first picture and keep everything else exactly as it is: replace the striped panel under the brick column with the heavy steel shutter from the second picture: a thick riveted dark-steel slab with bolted plates, a toothed rack along its left side, the handwheel and two gears beside it, worn yellow fittings. Keep its position and its width. No hazard stripes on its face.
+Edit the first picture and keep everything else exactly as it is: replace the shutter under the brick column with the one from the second picture: the brick partition in a riveted rusty iron frame, a handwheel and a gear at its lower edge, and under it a narrow riveted steel shutter post with a toothed rack along its left side and worn yellow-and-black stripes on its face. Keep its position and its width.
 ```
 
 Правка 2 — пол между заслонкой и ступенями: приложить то, что вышло после правки 1.
 
 ```text
 Edit this picture and keep everything else exactly as it is. The flat floor where the heroine stands continues to the right, past the shutter, until it reaches the lower yellow platform: the left end of that platform touches the end of this floor at the same height, like a bridge leaving it. Only there, under the left end of the platform, the floor breaks away in a few short, steep steps down to the pit floor. Between the shutter and the platform there are no steps and no rubble, only flat floor.
+```
+
+Правка 3 — лампы (выбор Бориса 22.11, D115): приложить картинку и [gemini/ref_lamp.jpg](gemini/ref_lamp.jpg). Тот же образец — к запросу Н-8.
+
+```text
+Edit the first picture and keep everything else exactly as it is: make every hanging lamp like the lamp in the second picture: a bare bulb in a wire cage under a small rusty metal cap, hanging on a chain. Keep each lamp where it is and keep the warm cone of light below it.
 ```
 
 Не выходит за две-три попытки — оставить как есть: для игры кадр нужен как образец вида (D109), детали Н-1…Н-12 важнее.
@@ -209,7 +215,7 @@ Request N-7: moving platforms. Separate pieces on one sheet with wide empty gree
 Свет ламп и стрелки часов делает игра, поэтому лампы рисуются выключенными, часы — без стрелок.
 
 ```text
-Request N-8: lamps and the clock. Separate pieces on one sheet with wide empty green gaps, flat front view, flat even light, nothing lit and nothing glowing: (a) an enamel dish lamp on a short cable, dark green-grey enamel outside, white inside, the bulb pale clear glass, switched off; (b) a caged wall lamp with a glass globe, switched off; (c) a big round factory wall clock with a cast-iron rim and a cream face with plain tick marks, no numbers, without hands; (d) the clock's two hands alone, straight, pointing up.
+Request N-8: lamps and the clock. Separate pieces on one sheet with wide empty green gaps, flat front view, flat even light, nothing lit and nothing glowing: (a) the hanging lamp of the hall, like the attached picture: a bare bulb in a wire cage under a small rusty metal cap, hanging on a chain, the bulb pale clear glass, switched off; (b) a caged wall lamp with a glass globe, switched off; (c) a big round factory wall clock with a cast-iron rim and a cream face with plain tick marks, no numbers, without hands; (d) the clock's two hands alone, straight, pointing up.
 ```
 
 ### Н-9. Станки фона
