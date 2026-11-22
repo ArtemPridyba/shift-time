@@ -43,6 +43,12 @@ func test_broken_world_data_is_reported() -> void:
 	look = WorldData.look().duplicate(true)
 	(look["lamp"] as Dictionary)["radius_px"] = -5
 	check(not WorldData.validate_look(look).is_empty(), "a lamp radius below the range is reported")
+	look = WorldData.look().duplicate(true)
+	look["masonry_px"] = [48, 16]
+	check(not WorldData.validate_look(look).is_empty(), "a masonry block that does not divide its 256 px tile is reported")
+	look = WorldData.look().duplicate(true)
+	look.erase("concrete_px")
+	check(not WorldData.validate_look(look).is_empty(), "a missing concrete block size is reported")
 
 
 func test_lamp_flicker_is_a_formula_of_world_time() -> void:

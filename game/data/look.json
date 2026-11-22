@@ -174,7 +174,7 @@
     "dash_speed_px": 240
   },
   "world": {
-    "_about": "The Night shop kit (task Д3, D61, D64, D106). colors: the code placeholders of the kit and darkness, the colour the dark room multiplies everything by (CanvasModulate). textures: a Gemini picture per piece, res:// path, empty draws the code placeholder; brick, masonry, floor_top and concrete_top repeat as tiles (floor_top: the top face strip on top, top_face_px of it, then the iron edge and masonry), the others stretch over the piece's rect. brick_px: one brick of the placeholder wall. top_face_px: the visible top face of floors and ledges, her feet on its middle (collision unchanged). edge_px: the iron angle along the sides and lower faces of solid cells. machine_dim: background machines are this much darker than the wall pieces. lamp: every lamp of a layout (lamps in levels.json): the warm colour and energy of its light, radius_px of the island, below_px how far below the bulb the island's centre lies, flicker depth (0..1) and flicker_hz, a formula of world time; halo_px and halo_alpha: the soft glow round the bulb. heroine_light: a weak light that lights only the heroine, so she reads between the islands (D76).",
+    "_about": "The Night shop kit (task Д3, D61, D64, D106). colors: the code placeholders of the kit and darkness, the colour the dark room multiplies everything by (CanvasModulate). textures: a Gemini picture per piece, res:// path, empty draws the code placeholder; brick, masonry, floor_top and concrete_top repeat as tiles (floor_top: the top face strip on top, top_face_px of it, then the iron edge and masonry), the others stretch over the piece's rect. brick_px: one brick of the placeholder wall; masonry_px and concrete_px: one block of the masonry and concrete placeholders, each dividing 256 (D112: the kit is sized to the heroine, 92 px = 1.75 m, about 52 px a metre; docs/art/scale.md). top_face_px: the visible top face of floors and ledges, her feet on its middle (collision unchanged). edge_px: the iron angle along the sides and lower faces of solid cells. machine_dim: background machines are this much darker than the wall pieces. lamp: every lamp of a layout (lamps in levels.json): the warm colour and energy of its light, radius_px of the island, below_px how far below the bulb the island's centre lies, flicker depth (0..1) and flicker_hz, a formula of world time; halo_px and halo_alpha: the soft glow round the bulb. heroine_light: a weak light that lights only the heroine, so she reads between the islands (D76).",
     "colors": {
       "brick": "#74382a",
       "mortar": "#2e221f",
@@ -197,7 +197,9 @@
       "soot": "", "rust": "", "cracks": "", "tank": "", "hopper": "", "pipe": "", "catwalk": "",
       "bricks": "", "beam": "", "glass": "", "lamp": ""
     },
-    "brick_px": [64, 24],
+    "brick_px": [28, 10],
+    "masonry_px": [32, 16],
+    "concrete_px": [64, 32],
     "top_face_px": 16,
     "edge_px": 6,
     "machine_dim": 0.35,

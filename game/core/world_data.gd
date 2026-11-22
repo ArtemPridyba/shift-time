@@ -114,6 +114,13 @@ static func validate_look(world: Variant) -> PackedStringArray:
 	if not brick is Array or brick.size() != 2 or not _is_number(brick[0]) or not _is_number(brick[1]) \
 			or float(brick[0]) < 8.0 or float(brick[1]) < 4.0:
 		errors.append("%s.brick_px must be [width, height], at least [8, 4]" % where)
+	# The masonry and concrete placeholders tile a 256 px picture, so their
+	# blocks divide it (D112).
+	for key: String in ["masonry_px", "concrete_px"]:
+		var block: Variant = world.get(key)
+		if not block is Array or block.size() != 2 or not _is_number(block[0]) or not _is_number(block[1]) \
+				or int(block[0]) < 8 or int(block[1]) < 4 or 256 % int(block[0]) != 0 or 256 % int(block[1]) != 0:
+			errors.append("%s.%s must be [width, height], at least [8, 4], each dividing 256" % [where, key])
 	var lamp: Variant = world.get("lamp")
 	if not lamp is Dictionary:
 		errors.append("%s.lamp must be an object" % where)
@@ -187,6 +194,14 @@ static func _is_rect(value: Variant) -> bool:
 		if not _is_number(n):
 			return false
 	return float(value[2]) > 0.0 and float(value[3]) > 0.0
+
+
+## A [width, height] pair of the look as whole pixels, or `fallback`.
+static func pair(world: Dictionary, key: String, fallback: Vector2i) -> Vector2i:
+	var value: Variant = world.get(key)
+	if value is Array and value.size() == 2 and _is_number(value[0]) and _is_number(value[1]):
+		return Vector2i(int(value[0]), int(value[1]))
+	return fallback
 
 
 static func _number(errors: PackedStringArray, section: Dictionary, where: String, key: String, low: float, high: float) -> void:
