@@ -77,6 +77,27 @@ What each placeholder is:
 Light: five warm islands of light from hanging lamps: over the doorway, over the shutter, over each platform, over the exit. Everything else dark, the floor edges still faintly readable. 16:9.
 ```
 
+**Э-2б. Если Gemini переставил уровень** (22.11, первый Э-2 — [gemini/raw/e2_room_v1.jpg](gemini/raw/e2_room_v1.jpg): ступени начались прямо под заслонкой, заслонка в широкой башне, платформы и уступ на других высотах). Для вида это не помеха (D109): детали игра всё равно ставит по своей сетке. Но если нужен кадр, совпадающий с уровнем, — словами расстановку не объяснить, генератор её не держит. Работает другое: дать ему схему, где всё уже стоит на месте, и попросить её **перерисовать**, а не «посмотреть». Схема уровня 01 — [gemini/layout_room.png](gemini/layout_room.png) (цветные зоны с номерами, 16:9). В новом сообщении первой картинкой — схема, второй — удачный кадр Gemini как образец вида.
+
+```text
+Request E-2b: repaint the first picture, a layout diagram of the room, as the finished game, in the style of the second picture (your painting). The diagram is exact: keep every shape where it is and the same size; change only how things look, never where they are. What the flat colours and numbers mean:
+- brown: the back wall of sooty red brick; dark blue arches: tall arched windows with a night sky;
+- dark grey: solid ground, black cast-iron floor slabs on dark masonry; the thin light line on top of each slab is its walkable top surface, keep it that thin; the dark bands above and below the room are the roof and the foundations, in darkness;
+- 1, black: the doorway she came in through;
+- 2, the narrow red column: a brick partition hanging from the ceiling, only as wide as the heroine; the yellow-black bar under it: a heavy steel shutter, as narrow as the bar;
+- 3: a long flat floor between the shutter and the steps, nothing on it, no stairs here;
+- 4: the floor broken away in four steps down into the pit, fallen bricks on the steps; the steps begin only at the right end of the flat floor 3, far from the shutter;
+- 5 and 6, yellow bars: two thin moving steel platforms with a worn signal-yellow top edge;
+- 7: the floor of the pit;
+- 8, grey with a red dot: the exit, a heavy hermetic door with rounded corners, a red beacon lamp above it;
+- 9, beige: a high concrete ledge;
+- orange dots on black lines: enamel lamps hanging on cables, warm light pooling below each;
+- purple: the heroine, for scale.
+The numbers and the flat colours are notes for you: do not paint them. 16:9.
+```
+
+Если и так уехало — править готовую картинку по месту, по одной вещи за сообщение, и мерить по тому, что на ней есть: «Edit this picture and keep everything else exactly as it is: move the broken steps to the right, so that a flat floor as long as eight heroines lying head to foot stays between the shutter and the first step.»
+
 ## 4. Детали
 
 У каждой детали: зачем она игре (по-русски) и запрос. Сохранять картинки как есть, в самом большом размере.

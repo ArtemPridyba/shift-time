@@ -49,7 +49,7 @@
 				{ "x": 33, "drop": 3.2 },
 				{ "x": 43, "drop": 0.6 }
 			],
-			"ground": { "concrete": [[39, 5, 9, 12]] }
+			"ground": { "concrete": [[38, 5, 9, 12]] }
 		},
 		"title": "01 Effect"
 	},
