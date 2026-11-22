@@ -319,7 +319,7 @@ func test_level_02_jumping_into_the_well_at_once_does_not_drown() -> void:
 	player.drowned.connect(func() -> void: drowned[0] = true)
 	await _ticks(24)
 	Input.action_press("move_right")
-	await _ticks(40)
+	await _ticks(56)
 	Input.action_release("move_right")
 	var lowest := 1.0
 	for i in 360:
@@ -433,7 +433,7 @@ func test_level_02_the_full_pool_floods_the_tunnel_and_shift_drains_it() -> void
 		last = tunnel.level
 	check(tunnel.level == 0, "under Shift the tunnel runs dry with the pool: %d" % tunnel.level)
 	check(worst <= Water.LEVEL_MAX / 20, "the tunnel goes down smoothly: the largest step %d" % worst)
-	await _walk_out(room, 300)
+	await _walk_out(room, 480)
 	check(bool(room.get("is_completed")), "through the dry tunnel the hero walks out under Shift, he stopped at %s" % [player.global_position])
 	check(player.breath_fraction() > 0.99, "the dry tunnel costs no air: %.2f" % player.breath_fraction())
 	await _free(room)
@@ -467,7 +467,7 @@ func test_level_02_in_the_flooded_tunnel_shift_saves_the_hero() -> void:
 			lowest = minf(lowest, player.breath_fraction())
 		check(not drowned[0] and lowest > 0.15, "Shift sends the water down in time: the breath fell to %.2f" % lowest)
 		check(not player.is_head_under_water() and tunnel.level == 0, "the tunnel is dry under Shift: %d" % tunnel.level)
-		await _walk_out(room, 300)
+		await _walk_out(room, 480)
 		check(bool(room.get("is_completed")), "out of the tunnel the hero walks out, he stopped at %s" % [player.global_position])
 		await _free(room)
 
@@ -534,7 +534,7 @@ func test_level_02_rising_water_does_not_carry_the_hero_without_the_float() -> v
 	var time: RoomTime = room.get_node("RoomTime")
 	var player: Player = room.get_node("Player")
 	check(not well.lifts_player and not (room.get_node("Pool") as Water).lifts_player, "both waters of the level leave the player to the float")
-	player.respawn(Vector2(920, WELL_FLOOR_ROW * CELL))
+	player.respawn(Vector2(560, WELL_FLOOR_ROW * CELL))
 	await _ticks(10)
 	Input.action_press("rewind")
 	await _ticks(150)

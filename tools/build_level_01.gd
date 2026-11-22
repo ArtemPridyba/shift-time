@@ -1,7 +1,10 @@
 extends SceneTree
 ## Builds level 01 `levels/level_01.tscn` (task 2.5, merged with the platform
-## level 03 on 16.11.2026, widened the same day; card docs/levels/01.md): a room
-## of 48x17 cells, about 1.6 screens wide, the camera follows the hero. He walks
+## level 03 on 16.11.2026, widened the same day, rebuilt to the heroine's size
+## on 22.11.2026, D112; card docs/levels/01.md): a room of 32x17 cells, a tall
+## hall a little wider than the screen, the camera follows the hero. Everything
+## she uses is sized to her (92 px tall): the door and the platforms are two
+## cells, the pit is a little over four jumps wide. She walks
 ## out of a doorway on the left, then comes a door that is closing, a long pit,
 ## platform 1 that has already left and rides across it once, and platform 2
 ## that sinks beside the exit pillar. The timing (door, platforms, prelude, the
@@ -20,39 +23,40 @@ const SCENE_PATH := "res://levels/level_01.tscn"
 const LEVEL_ID := "level_01"
 
 const MAP := [
-	"################################################",
-	"#..........#...................................#",
-	"#..........#...................................#",
-	"#..........#.............................EE....#",
-	"#..........#.............................EE....#",
-	"#..........#..........................##########",
-	"#..........#..........................##########",
-	"#..........#..........................##########",
-	"#..........D..........................##########",
-	"#S.........D..........................##########",
-	"####################..................##########",
-	"#####################.................##########",
-	"######################................##########",
-	"#######################...............##########",
-	"########################..............##########",
-	"################################################",
-	"################################################",
+	"################################",
+	"#.......#......................#",
+	"#.......#......................#",
+	"#.......#......................#",
+	"#.......#......................#",
+	"#.......#......................#",
+	"#.......#......................#",
+	"#.......#..................EE..#",
+	"#.......#..................EE..#",
+	"#.......#...............########",
+	"#.......D...............########",
+	"#S......D...............########",
+	"##############..........########",
+	"###############.........########",
+	"################........########",
+	"################################",
+	"################################",
 ]
 
 ## The doorway the hero walks out of (decoration only), in cells.
-const ENTRANCE_CELLS := Rect2i(1, 8, 1, 2)
+const ENTRANCE_CELLS := Rect2i(1, 10, 1, 2)
 
-## Platform 1 starts flush with the left ground (columns 20-22, top at row 10)
-## and rides 12 cells right. Platform 2 starts flush with the exit pillar
-## (columns 35-37, top at row 5) and sinks 9 cells to just above the pit floor;
-## on its way it passes the level of platform 1's end (row 10) at the moment
+## Platform 1 starts flush with the left ground (columns 14-15, top at row 12)
+## and rides 6 cells right. Platform 2 starts flush with the exit ledge
+## (columns 22-23, top at row 9) and sinks 5 cells to just above the pit floor;
+## on its way it passes the level of platform 1's end (row 12) at the moment
 ## platform 1 arrives there (the delays are in data/levels.json, checked by a
-## test). Centres, in cells.
+## test). Centres, in cells. Both are two cells wide (D112).
 const PLATFORM_HEIGHT := 32.0
-const PLATFORM_1_CENTRE := Vector2(21.5, 10.0)
-const PLATFORM_1_TRAVEL := Vector2(12.0, 0.0)
-const PLATFORM_2_CENTRE := Vector2(36.5, 5.0)
-const PLATFORM_2_TRAVEL := Vector2(0.0, 9.0)
+const PLATFORM_WIDTH_CELLS := 2
+const PLATFORM_1_CENTRE := Vector2(15.0, 12.0)
+const PLATFORM_1_TRAVEL := Vector2(6.0, 0.0)
+const PLATFORM_2_CENTRE := Vector2(23.0, 9.0)
+const PLATFORM_2_TRAVEL := Vector2(0.0, 5.0)
 
 
 func _initialize() -> void:
@@ -146,6 +150,7 @@ func _add_platform(root: Node, id: String, centre: Vector2, travel_cells: Vector
 	platform.object_id = id
 	platform.name = id.to_pascal_case()
 	platform.travel = travel_cells * CELL
+	platform.width = float(PLATFORM_WIDTH_CELLS * CELL)
 	platform.position = Vector2(centre.x * CELL, centre.y * CELL + PLATFORM_HEIGHT / 2.0)
 	_own(root, platform)
 

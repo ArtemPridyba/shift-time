@@ -64,8 +64,9 @@ const POOL_COLUMNS := Vector2i(18, 28)
 const POOL_FLOOR_ROW := 10
 
 ## The well float lies on the well floor, centred on this column (cells, from
-## the left): a jump from its edge to the wall is 3 cells, a hero's jump is 4.
-const FLOAT_CENTRE_COLUMN := 11.5
+## the left): a jump from its edge to the wall is 1.5 cells, a hero's jump is
+## about 2.3 (D112: the jump of one heroine height).
+const FLOAT_CENTRE_COLUMN := 13.0
 ## The pool float stands by the far wall, centred on this column: from its edge
 ## to the landing is half a cell, from the wall top to it far more than a jump,
 ## so only a hero who rides it up from the pool floor reaches the landing.

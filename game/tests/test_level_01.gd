@@ -153,7 +153,7 @@ func test_level_01_platform_1_has_left_and_platform_2_has_started_to_sink() -> v
 	var gap := first.position_at(first.phase).x - start.x
 	check(gap > 100.0 and gap < first.travel.x, "after the prelude platform 1 is on its way, %.0f px from its start" % gap)
 	var sunk := second.position_at(second.phase).y - second.position_at(0).y
-	check(sunk > 0.0 and sunk < 5.0 * 64.0, "after the prelude platform 2 has started to sink but is still above platform 1's level, %.0f px down" % sunk)
+	check(sunk > 0.0 and sunk < 3.0 * 64.0, "after the prelude platform 2 has started to sink but is still above platform 1's level, %.0f px down" % sunk)
 	var jump_reach := float(Content.player()["walk_speed"]) * 2.0 * float(Content.player()["jump_velocity"]) / float(Content.player()["gravity"])
 	check(player.global_position.x < start.x - 96.0, "the hero starts left of the pit, on the ground platform 1 has left")
 	check(first.travel.x + 192.0 > jump_reach, "the pit is wider than a jump (%.0f px), so the platform is needed" % jump_reach)
@@ -189,7 +189,9 @@ func test_level_01_is_wider_than_one_screen_and_the_camera_follows() -> void:
 	var size := blocks.get_used_rect().size * blocks.tile_set.tile_size
 	var width := int(ProjectSettings.get_setting("display/window/size/viewport_width"))
 	var height := int(ProjectSettings.get_setting("display/window/size/viewport_height"))
-	check(size.x >= width + width / 2 and size.x <= 3 * width, "the room is %d px wide, the screen %d: it should be 1.5 to 3 screens" % [size.x, width])
+	# D112 (22.11.2026): the room was 1.5 screens wide while the world was
+	# twice the heroine's size; sized to her it is a little over one screen.
+	check(size.x > width and size.x <= 3 * width, "the room is %d px wide, the screen %d: it should be more than one screen, at most 3" % [size.x, width])
 	check(size.y >= height and size.y < height + blocks.tile_set.tile_size.y, "the room is %d px tall, the screen %d" % [size.y, height])
 	var camera: Camera2D = room.get_node("Player/Camera2D")
 	check(camera.limit_right == size.x and camera.limit_left == 0, "the camera limits are %d..%d, the room is %d wide" % [camera.limit_left, camera.limit_right, size.x])

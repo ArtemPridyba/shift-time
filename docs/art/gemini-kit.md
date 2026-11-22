@@ -9,6 +9,7 @@
    - [`docs/art/gemini/ref_close.jpg`](gemini/ref_close.jpg) — игра сейчас, так видит игрок (камера ×2,25);
    - [`docs/art/gemini/ref_room.jpg`](gemini/ref_room.jpg) — вся первая комната издалека;
    - [`docs/art/heroine/character_ref.jpg`](heroine/character_ref.jpg) — героиня, это образец кисти;
+   - снимки `ref_close` и `ref_room` пересняты 22.11 после уменьшения мира (D112): размеры деталей рядом с героиней — в [scale.md](scale.md);
    - по желанию — снимок экрана макета «Ночной цех» (<https://claude.ai/artifact/4oXXyUdMz88da8hk4ozYFC>), образец настроения.
 
    В конце брифа Gemini должен пересказать его в пяти строках. Если пересказ мимо — поправить словами до того, как он начнёт рисовать.
@@ -38,6 +39,8 @@ THE LAYERS, from back to front:
 HOW THE GAME USES YOUR PICTURES. Every piece is a separate image. The game cuts it out of its background, scales it to the grid and places it; walls and floors repeat side by side as tiles. The game makes all the light: the room is dark, and small warm lamps light only the things the player needs. So every piece must be painted in flat, even, neutral light, like a material swatch: no shadow cast by the object, no light source, no glow, no dark corners or vignette, no fog. Shading only where the form itself turns (a round pipe, a rivet head). Painted-in lighting breaks as soon as the game lights the piece. The background behind an isolated piece is flat pure green #00FF00, perfectly even, so it can be keyed out; holes and empty window panes inside a piece are the same flat green. Never use that green inside a piece.
 
 THE LOOK: "Night factory". An old factory of red brick and black cast iron in a near future between old mechanics and new technology: rust, tired warehouse and laboratory spaces, a few working new machines among them. Serious and atmospheric, not cartoonish, yet every shape reads at a glance. Materials: sooty red-brown brick with grey mortar; near-black cast iron with cold grey worn edges and rivets; grey-ochre concrete; orange-brown rust; tin; old wood; rubber. Everything the player moves or presses (levers, buttons, crates, the edge of a moving platform) is worn signal-yellow paint over steel. The world is warm (yellow things, orange lamps); time is cold purple, and purple belongs only to the heroine's gauntlet: never use purple, magenta or cyan in the environment, and nothing in the environment glows.
+
+THE SCALE. Everything is sized to the heroine, as a real factory would be next to a real woman: a door is a little taller than her, a moving platform is one and a half of her heights wide, a step is up to her waist, a lever reaches her chest, one brick is about half her head wide. Never draw the world giant next to her.
 
 THE BRUSH. Hand-painted digital art in the same style as the attached heroine: painterly but clean, soft texture, medium detail that still reads when the piece is small. No black outlines. Not pixel art, not a photo, not a 3D render.
 
@@ -77,7 +80,7 @@ What each placeholder is:
 Light: five warm islands of light from hanging lamps: over the doorway, over the shutter, over each platform, over the exit. Everything else dark, the floor edges still faintly readable. 16:9.
 ```
 
-**Э-2б. Если Gemini переставил уровень** (22.11, первый Э-2 — [gemini/raw/e2_room_v1.jpg](gemini/raw/e2_room_v1.jpg): ступени начались прямо под заслонкой, заслонка в широкой башне, платформы и уступ на других высотах). Для вида это не помеха (D109): детали игра всё равно ставит по своей сетке. Но если нужен кадр, совпадающий с уровнем, — словами расстановку не объяснить, генератор её не держит. Работает другое: дать ему схему, где всё уже стоит на месте, и попросить её **перерисовать**, а не «посмотреть». Схема уровня 01 — [gemini/layout_room.png](gemini/layout_room.png) (цветные зоны с номерами, 16:9). В новом сообщении первой картинкой — схема, второй — удачный кадр Gemini как образец вида.
+**Э-2б. Если Gemini переставил уровень** (22.11, первый Э-2 — [gemini/raw/e2_room_v1.jpg](gemini/raw/e2_room_v1.jpg): ступени начались прямо под заслонкой, заслонка в широкой башне, платформы и уступ на других высотах). Для вида это не помеха (D109): детали игра всё равно ставит по своей сетке. Но если нужен кадр, совпадающий с уровнем, — словами расстановку не объяснить, генератор её не держит. Работает другое: дать ему схему, где всё уже стоит на месте, и попросить её **перерисовать**, а не «посмотреть». Схема уровня 01 — [gemini/layout_room.png](gemini/layout_room.png) (цветные зоны с номерами, 16:9). Её строит `tools/layout_guide.py` из данных уровня (карта сборщика, `world` в `levels.json`): после правок уровня — `python3 tools/layout_guide.py level_01 docs/art/gemini/layout_room.png`; номера для другого уровня — в `LABELS` скрипта. В новом сообщении первой картинкой — схема, второй — удачный кадр Gemini как образец вида.
 
 ```text
 Request E-2b: repaint the first picture, a layout diagram of the room, as the finished game, in the style of the second picture (your painting). The diagram is exact: keep every shape where it is and the same size; change only how things look, never where they are. What the flat colours and numbers mean:
@@ -85,8 +88,8 @@ Request E-2b: repaint the first picture, a layout diagram of the room, as the fi
 - dark grey: solid ground, black cast-iron floor slabs on dark masonry; the thin light line on top of each slab is its walkable top surface, keep it that thin; the dark bands above and below the room are the roof and the foundations, in darkness;
 - 1, black: the doorway she came in through;
 - 2, the narrow red column: a brick partition hanging from the ceiling, only as wide as the heroine; the yellow-black bar under it: a heavy steel shutter, as narrow as the bar;
-- 3: a long flat floor between the shutter and the steps, nothing on it, no stairs here;
-- 4: the floor broken away in four steps down into the pit, fallen bricks on the steps; the steps begin only at the right end of the flat floor 3, far from the shutter;
+- 3: a flat floor between the shutter and the steps, nothing on it, no stairs here;
+- 4: the floor broken away in two short steps down into the pit, a few fallen bricks on them; the steps begin only at the right end of the flat floor 3, under the left end of platform 5, not at the shutter;
 - 5 and 6, yellow bars: two thin moving steel platforms with a worn signal-yellow top edge;
 - 7: the floor of the pit;
 - 8, grey with a red dot: the exit, a heavy hermetic door with rounded corners, a red beacon lamp above it;
