@@ -59,7 +59,7 @@ const BRIDGE_CELLS := Rect2i(14, 10, 15, 1)
 const BARRICADE_CELLS := Rect2i(28, 7, 1, 3)
 ## The lever stands on the lower ledge, level with the landing, one jump from
 ## it: cell (5, 9). The valve of the fire system stands on the upper ledge by
-## the left wall, two jumps from the landing: cell (2, 8) (D106: swapped, so
+## the left wall, two jumps from the landing: cell (2, 8) (D108: swapped, so
 ## the two water lines never cross). The ledges hang over the hall floor, high
 ## enough to walk under them from the entrance.
 const LEVER_CELL := Vector2i(5, 9)
@@ -74,7 +74,7 @@ const CISTERN_CELLS := Rect2i(4, 2, 3, 1)
 ## The fire system: its main rises from the valve by the left wall, runs along
 ## the ceiling over the cistern to the corridor and down its wall; its nozzle
 ## hangs over the barricade only. The feed pipe runs under the main, so the
-## two lines never cross (D106).
+## two lines never cross (D108).
 const MAIN_Y := 80.0
 const MAIN_X := 27 * 64 + 44
 const SYSTEM_Y := 7 * 64 + 12
@@ -129,7 +129,7 @@ func _initialize() -> void:
 	barricade.name = "Barricade"
 	_own(root, barricade)
 
-	# The two water lines (D106): pipes that show the water running in them.
+	# The two water lines (D108): pipes that show the water running in them.
 	# The feed pipe runs from the cistern along the sprinkler's nozzles; the
 	# main rises from the valve to the ceiling, over the cistern, down the
 	# corridor wall and along the fire system's nozzle.

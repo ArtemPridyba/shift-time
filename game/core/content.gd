@@ -142,7 +142,7 @@ static func look_mech() -> Dictionary:
 	return mech if mech is Dictionary else {}
 
 
-## The water pipes of level 04 (D106): sizes, colours, the running water.
+## The water pipes of level 04 (D108): sizes, colours, the running water.
 static func look_pipe() -> Dictionary:
 	var pipe: Variant = look().get("pipe")
 	return pipe if pipe is Dictionary else {}

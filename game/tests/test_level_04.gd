@@ -341,7 +341,7 @@ func test_pipe_look_data_is_checked() -> void:
 	check(not Content.validate_look(data).is_empty(), "walls thicker than the feed pipe must be reported")
 
 
-## The playtest of 22.11 (D106): the two water lines read as one tangle where
+## The playtest of 22.11 (D108): the two water lines read as one tangle where
 ## the valve's riser crossed the lever's feed pipe. The feed pipe, the main and
 ## the lever's rod never cross, and each line shows the water of its own
 ## sprinkler.

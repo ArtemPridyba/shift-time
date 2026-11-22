@@ -33,7 +33,7 @@ const DROP_COLOR := Color(0.78, 0.85, 0.9, 0.9)
 ## Pipe length and rain height, pixels.
 @export var size := Vector2(640, 256)
 @export var powered := false
-## False when a WaterPipe draws the pipe along the nozzles (level 04, D106).
+## False when a WaterPipe draws the pipe along the nozzles (level 04, D108).
 @export var draw_pipe := true
 
 var flow := 0
