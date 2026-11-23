@@ -16,19 +16,29 @@ const CELL := 64.0
 
 ## Back wall pieces. Machines are drawn darker and quieter than the play layer.
 const BACK_KINDS: Array[String] = ["window", "column", "truss", "crane", "plaster",
-	"soot", "rust", "cracks", "tank", "hopper", "pipe", "catwalk"]
+	"soot", "rust", "cracks", "stain", "tank", "hopper", "pipe", "catwalk"]
 const MACHINE_KINDS: Array[String] = ["tank", "hopper", "pipe", "catwalk"]
 ## Pieces lying on the floor, in front of the ground.
-const FRONT_KINDS: Array[String] = ["bricks", "beam", "glass"]
+const FRONT_KINDS: Array[String] = ["bricks", "beam", "glass", "lump"]
+## Pieces whose picture keeps its proportions: as wide as the rect, standing
+## on its lower edge; the others fill their rect.
+const KEEP_ASPECT: Array[String] = ["tank", "hopper", "catwalk", "bricks", "beam", "glass", "lump"]
+## Stains are white masks (N-11): the game paints them with these colours.
+const MASK_COLORS := {"soot": "soot", "rust": "rust_stain", "cracks": "crack", "stain": "stain"}
 
 ## Pictures a Gemini file can replace (D106): an empty path draws the code
-## placeholder. Tiles repeat; the other pictures stretch over the piece's rect.
-const TILE_TEXTURES: Array[String] = ["brick", "masonry", "concrete", "floor_top", "concrete_top"]
-const PIECE_TEXTURES: Array[String] = ["window", "column", "truss", "crane", "plaster",
-	"soot", "rust", "cracks", "tank", "hopper", "pipe", "catwalk", "bricks", "beam", "glass", "lamp"]
+## placeholder. Tiles repeat; column, pipe, truss, the crane beam and the lamp
+## chain repeat along their length; the other pictures cover the piece's rect.
+## `tools/cut_kit.py` cuts the files, `kit_texel` texture pixels per room pixel.
+const TILE_TEXTURES: Array[String] = ["brick", "masonry", "concrete", "floor_top", "concrete_top",
+	"floor_edge", "concrete_edge", "ledge_side"]
+const PIECE_TEXTURES: Array[String] = ["window", "column", "truss", "crane", "crane_beam", "plaster",
+	"soot", "rust", "cracks", "stain", "tank", "hopper", "pipe", "catwalk", "bricks", "beam", "glass",
+	"lump", "lamp", "lamp_chain"]
 
 const COLORS: Array[String] = ["brick", "mortar", "masonry", "iron", "iron_edge", "concrete",
-	"sky_top", "sky_bottom", "glass", "machine", "rust", "lamp_shade", "bulb", "darkness"]
+	"sky_top", "sky_bottom", "glass", "machine", "rust", "lamp_shade", "bulb", "darkness",
+	"soot", "rust_stain", "crack", "stain"]
 
 
 static func look() -> Dictionary:
@@ -110,6 +120,7 @@ static func validate_look(world: Variant) -> PackedStringArray:
 	_number(errors, world, where, "top_face_px", 2.0, 48.0)
 	_number(errors, world, where, "edge_px", 1.0, 32.0)
 	_number(errors, world, where, "machine_dim", 0.0, 1.0)
+	_number(errors, world, where, "kit_texel", 1.0, 8.0)
 	var brick: Variant = world.get("brick_px")
 	if not brick is Array or brick.size() != 2 or not _is_number(brick[0]) or not _is_number(brick[1]) \
 			or float(brick[0]) < 8.0 or float(brick[1]) < 4.0:
@@ -135,6 +146,7 @@ static func validate_look(world: Variant) -> PackedStringArray:
 		_number(errors, l, where + ".lamp", "flicker_hz", 0.0, 20.0)
 		_number(errors, l, where + ".lamp", "halo_px", 0.0, 400.0)
 		_number(errors, l, where + ".lamp", "halo_alpha", 0.0, 1.0)
+		_number(errors, l, where + ".lamp", "picture_bulb", 0.0, 1.0)
 	var own: Variant = world.get("heroine_light")
 	if not own is Dictionary:
 		errors.append("%s.heroine_light must be an object" % where)

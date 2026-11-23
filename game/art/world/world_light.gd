@@ -27,6 +27,8 @@ var _seconds_per_frame := 1.0 / 60.0
 
 func _ready() -> void:
 	add_to_group("world_clock")
+	# The chain picture repeats down to the lamp.
+	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	_world = WorldData.look()
 	_lamp = _world.get("lamp", {})
 	_lamps = WorldData.layout(WorldData.entry(level_id)).get("lamps", [])
@@ -88,16 +90,23 @@ func show_at(seconds: float) -> void:
 ## Chains and caged lamps: lit by the lamps like everything else.
 func _draw() -> void:
 	var picture := KitTextures.piece("lamp")
+	var chain := KitTextures.piece("lamp_chain")
 	for lamp: Dictionary in _lamps:
 		var at := WorldData.lamp_at(lamp)
+		# The lamp picture at its own size, the bulb where the glow is.
+		var size := Vector2(picture.get_size()) / KitTextures.texel("lamp") if picture != null else Vector2.ZERO
+		var top := at.y + 7.0 - size.y * float(_lamp.get("picture_bulb", 0.66)) if picture != null else at.y - 14.0
 		# The chain it hangs on.
-		var link := Vector2(at.x, WorldData.CELL)
-		while link.y < at.y - 14.0:
-			draw_rect(Rect2(link - Vector2(1.5, 0), Vector2(3, 5)), WorldData.color(_world, "iron").lightened(0.1), false, 1.0)
-			link.y += 6.0
+		if chain != null:
+			var width := float(chain.get_width()) / KitTextures.texel("lamp_chain")
+			KitTextures.draw_down(self, chain, Rect2(at.x - width / 2.0, WorldData.CELL, width, top + 2.0 - WorldData.CELL))
+		else:
+			var link := Vector2(at.x, WorldData.CELL)
+			while link.y < top:
+				draw_rect(Rect2(link - Vector2(1.5, 0), Vector2(3, 5)), WorldData.color(_world, "iron").lightened(0.1), false, 1.0)
+				link.y += 6.0
 		if picture != null:
-			var size := Vector2(picture.get_size()) * (64.0 / maxf(float(picture.get_width()), 1.0))
-			draw_texture_rect(picture, Rect2(at - Vector2(size.x / 2.0, size.y * 0.6), size), false)
+			draw_texture_rect(picture, Rect2(at.x - size.x / 2.0, top, size.x, size.y), false)
 			continue
 		# A caged lamp (D115): a small rusty cap, a wire cage round the bulb.
 		var rust := WorldData.color(_world, "rust").darkened(0.35)

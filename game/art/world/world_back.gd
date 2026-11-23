@@ -35,7 +35,9 @@ func _ready() -> void:
 	var unshaded := CanvasItemMaterial.new()
 	unshaded.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
 	sky.material = unshaded
-	_layer("Pieces", _draw_pieces)
+	# Columns, pipes and the truss repeat their pictures along their length.
+	var pieces := _layer("Pieces", _draw_pieces)
+	pieces.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 
 
 func _layer(layer_name: String, painter: Callable) -> Node2D:
@@ -48,7 +50,7 @@ func _layer(layer_name: String, painter: Callable) -> Node2D:
 
 func _draw_wall(node: Node2D) -> void:
 	var brick := KitTextures.tile("brick")
-	node.draw_texture_rect_region(brick, _room, _room)
+	node.draw_texture_rect_region(brick, _room, KitTextures.region(_room, KitTextures.texel("brick")))
 
 
 func _draw_sky(node: Node2D) -> void:
@@ -84,16 +86,57 @@ func _draw_pieces(node: Node2D) -> void:
 	if _mesh == null:
 		_mesh = _paint_pieces().build()
 	node.draw_mesh(_mesh, null)
+	var dim := Color.WHITE.darkened(float(_world.get("machine_dim", 0.35)))
 	for piece: Dictionary in _pieces:
 		var kind := str(piece.get("kind"))
 		var r := WorldData.piece_rect(piece)
+		if kind == "crane":
+			_crane_pictures(node, r)
+			continue
 		var picture := KitTextures.piece(kind)
-		if picture != null:
-			var tint := Color.WHITE.darkened(float(_world.get("machine_dim", 0.35))) \
-				if WorldData.MACHINE_KINDS.has(kind) else Color.WHITE
-			node.draw_texture_rect(picture, r, false, tint)
-		elif kind == "soot":
-			_soot(node, r)
+		if picture == null:
+			if kind == "soot" or kind == "stain":
+				_soot(node, r, kind)
+			continue
+		var tint := dim if WorldData.MACHINE_KINDS.has(kind) else Color.WHITE
+		if WorldData.MASK_COLORS.has(kind):
+			tint = WorldData.color(_world, str(WorldData.MASK_COLORS[kind]))
+		match kind:
+			"column":
+				KitTextures.draw_down(node, picture, r, tint)
+			"pipe":
+				_pipe_picture(node, picture, r, tint)
+			"truss":
+				KitTextures.draw_across(node, picture, r, tint)
+			_:
+				var dest := KitTextures.fit_bottom(picture, r) if WorldData.KEEP_ASPECT.has(kind) else r
+				node.draw_texture_rect(picture, dest, false, tint)
+
+
+## The crane beam repeats along the rect; the trolley with its hook hangs
+## under it at its own size. Without pictures the placeholder is in the mesh.
+func _crane_pictures(node: Node2D, r: Rect2) -> void:
+	var hook := KitTextures.piece("crane")
+	if hook == null:
+		return
+	var beam := KitTextures.piece("crane_beam")
+	if beam != null:
+		KitTextures.draw_across(node, beam, r)
+	else:
+		node.draw_rect(r, WorldData.color(_world, "iron"))
+	var size := Vector2(hook.get_size()) / KitTextures.texel("crane")
+	var x := r.position.x + r.size.x * 0.62
+	node.draw_texture_rect(hook, Rect2(Vector2(x - size.x / 2.0, r.end.y - 2.0), size), false)
+
+
+## A pipe runs along the longer side of its rect.
+func _pipe_picture(node: Node2D, picture: Texture2D, r: Rect2, tint: Color) -> void:
+	if r.size.y >= r.size.x:
+		KitTextures.draw_down(node, picture, r, tint)
+		return
+	node.draw_set_transform(r.get_center(), PI / 2.0)
+	KitTextures.draw_down(node, picture, Rect2(-r.size.y / 2.0, -r.size.x / 2.0, r.size.y, r.size.x), tint)
+	node.draw_set_transform(Vector2.ZERO)
 
 
 func _paint_pieces() -> MeshPainter:
@@ -103,11 +146,13 @@ func _paint_pieces() -> MeshPainter:
 		if KitTextures.piece(kind) != null:
 			continue
 		var r := WorldData.piece_rect(piece)
+		if kind == "crane":
+			_crane(painter, r)
+			continue
 		match kind:
 			"window": _window(painter, r)
 			"column": _column(painter, r)
 			"truss": _truss(painter, r)
-			"crane": _crane(painter, r)
 			"plaster": _plaster(painter, r)
 			"rust": _rust(painter, r)
 			"cracks": _cracks(painter, r)
@@ -216,8 +261,10 @@ func _plaster(node: MeshPainter, r: Rect2) -> void:
 	node.polygon(_blob(r, 11), color)
 
 
-func _soot(node: Node2D, r: Rect2) -> void:
-	node.draw_texture_rect(KitTextures.soft_disc(), r, false, Color(0, 0, 0, 0.6))
+## Soft soot and water stains without their masks: a soft dark spot.
+func _soot(node: Node2D, r: Rect2, kind: String) -> void:
+	var color := Color(0, 0, 0, 0.6) if kind == "soot" else WorldData.color(_world, "stain")
+	node.draw_texture_rect(KitTextures.soft_disc(), r, false, color)
 
 
 func _rust(node: MeshPainter, r: Rect2) -> void:

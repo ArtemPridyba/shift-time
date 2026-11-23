@@ -50,6 +50,8 @@ func _draw() -> void:
 		return
 	var masonry := KitTextures.tile("masonry")
 	var concrete := KitTextures.tile("concrete")
+	var masonry_texel := KitTextures.texel("masonry")
+	var concrete_texel := KitTextures.texel("concrete")
 	var iron := WorldData.color(_world, "iron")
 	var edge_light := WorldData.color(_world, "iron_edge").darkened(0.3)
 	var edge := float(_world.get("edge_px", 6))
@@ -70,15 +72,24 @@ func _draw() -> void:
 			while x < bounds.end.x and is_solid(Vector2i(x, y)) and _is_concrete(Vector2i(x, y)) == hard:
 				x += 1
 			var rect := Rect2(Vector2(start, y) * _cell, Vector2(x - start, 1) * _cell)
-			draw_texture_rect_region(concrete if hard else masonry, rect, rect)
-	# Sides and lower faces: an iron angle along every face that meets air.
+			draw_texture_rect_region(concrete if hard else masonry, rect,
+				KitTextures.region(rect, concrete_texel if hard else masonry_texel))
+	# Sides and lower faces: an iron angle along every face that meets air
+	# (the side of a ledge from its picture, N-2d).
+	var side := KitTextures.piece("ledge_side")
 	for cell: Vector2i in _cells:
 		var at := Vector2(cell) * _cell
 		if not is_solid(cell + Vector2i.LEFT):
-			draw_rect(Rect2(at, Vector2(edge, _cell.y)), iron)
-			draw_rect(Rect2(at, Vector2(1.5, _cell.y)), edge_light)
+			if side != null:
+				_side(side, Rect2(at, Vector2(edge, _cell.y)))
+			else:
+				draw_rect(Rect2(at, Vector2(edge, _cell.y)), iron)
+				draw_rect(Rect2(at, Vector2(1.5, _cell.y)), edge_light)
 		if not is_solid(cell + Vector2i.RIGHT):
-			draw_rect(Rect2(at + Vector2(_cell.x - edge, 0), Vector2(edge, _cell.y)), iron)
+			if side != null:
+				_side(side, Rect2(at + Vector2(_cell.x - edge, 0), Vector2(edge, _cell.y)))
+			else:
+				draw_rect(Rect2(at + Vector2(_cell.x - edge, 0), Vector2(edge, _cell.y)), iron)
 		if not is_solid(cell + Vector2i.DOWN):
 			draw_rect(Rect2(at + Vector2(0, _cell.y - edge), Vector2(_cell.x, edge)), iron)
 			draw_rect(Rect2(at + Vector2(0, _cell.y - 1.5), Vector2(_cell.x, 1.5)), edge_light.darkened(0.3))
@@ -90,7 +101,11 @@ func _draw() -> void:
 		if is_solid(cell + Vector2i.UP):
 			continue
 		var at := Vector2(cell) * _cell
-		var picture := concrete_top if _is_concrete(cell) else floor_top
+		var hard := _is_concrete(cell)
+		var picture := concrete_top if hard else floor_top
+		if KitTextures.piece("concrete_top" if hard else "floor_top") != null:
+			_top(picture, KitTextures.piece("concrete_edge" if hard else "floor_edge"), at, face, strip, iron)
+			continue
 		var scale_y := float(picture.get_height()) / strip
 		var dest := Rect2(at.x, at.y - face / 2.0, _cell.x, strip)
 		draw_texture_rect_region(picture, dest, Rect2(at.x, 0.0, _cell.x, strip * scale_y))
@@ -98,12 +113,34 @@ func _draw() -> void:
 		_front_piece(piece)
 
 
+## A Gemini top of a cell (D109): the flat picture seen from above squeezed
+## into the top face, her feet on its middle; the front edge under it.
+func _top(picture: Texture2D, edge_picture: Texture2D, at: Vector2, face: float, strip: float, iron: Color) -> void:
+	var texel := float(_world.get("kit_texel", 2))
+	draw_texture_rect_region(picture, Rect2(at.x, at.y - face / 2.0, _cell.x, face),
+		Rect2(at.x * texel, 0.0, _cell.x * texel, picture.get_height()))
+	var edge := Rect2(at.x, at.y + face / 2.0, _cell.x, strip - face)
+	if edge_picture == null:
+		draw_rect(edge, iron)
+		return
+	var s := float(edge_picture.get_height()) / edge.size.y
+	draw_texture_rect_region(edge_picture, edge, Rect2(at.x * s, 0.0, _cell.x * s, edge_picture.get_height()))
+
+
+## The side of a ledge: the picture squeezed to the edge's width, repeating
+## down the room.
+func _side(picture: Texture2D, r: Rect2) -> void:
+	var s := float(picture.get_width()) / r.size.x
+	draw_texture_rect_region(picture, r, Rect2(0.0, r.position.y * s, picture.get_width(), r.size.y * s))
+
+
 func _front_piece(piece: Dictionary) -> void:
 	var kind := str(piece.get("kind"))
 	var r := WorldData.piece_rect(piece)
 	var picture := KitTextures.piece(kind)
 	if picture != null:
-		draw_texture_rect(picture, r, false)
+		var dest := KitTextures.fit_bottom(picture, r) if WorldData.KEEP_ASPECT.has(kind) else r
+		draw_texture_rect(picture, dest, false)
 		return
 	var seed := int(r.position.x + r.position.y * 7.0)
 	match kind:
@@ -120,6 +157,10 @@ func _front_piece(piece: Dictionary) -> void:
 			draw_colored_polygon(PackedVector2Array([Vector2(r.position.x, r.end.y - 6.0), Vector2(r.end.x, r.position.y),
 				Vector2(r.end.x, r.position.y + 10.0), Vector2(r.position.x + 6.0, r.end.y)]), iron.lightened(0.04))
 			draw_line(Vector2(r.position.x, r.end.y - 6.0), Vector2(r.end.x, r.position.y), WorldData.color(_world, "iron_edge").darkened(0.4), 1.5)
+		"lump":
+			var lump := WorldData.color(_world, "concrete").lightened(0.1)
+			draw_colored_polygon(PackedVector2Array([Vector2(r.position.x, r.end.y), Vector2(r.position.x + r.size.x * 0.2, r.position.y),
+				Vector2(r.position.x + r.size.x * 0.7, r.position.y + 1.0), Vector2(r.end.x, r.end.y)]), lump)
 		"glass":
 			var glass := WorldData.color(_world, "glass").lightened(0.2)
 			for i in 7:

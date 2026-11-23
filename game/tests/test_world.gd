@@ -152,3 +152,71 @@ func _reset_time() -> void:
 	var manager := _tree.root.get_node_or_null("TimeManager")
 	if manager != null:
 		manager.call("reset")
+
+
+## Every Gemini picture of the kit in look.json loads (tools/cut_kit.py).
+func test_kit_pictures_load() -> void:
+	var textures: Dictionary = WorldData.look().get("textures", {})
+	for key: String in textures:
+		var path := str(textures[key])
+		if path.is_empty():
+			continue
+		var picture := KitTextures.kept(path)
+		check(picture != null and picture.get_width() > 0, "kit picture %s loads from %s" % [key, path])
+	check(KitTextures.texel("brick") == float(WorldData.look().get("kit_texel", 2)) or textures.get("brick", "") == "",
+		"a brick picture from a file is drawn at kit_texel texture pixels per room pixel")
+
+
+## Tiles and the pieces that repeat along their length meet themselves
+## without a seam: the step from the last line to the first is no bigger than
+## an ordinary step between two neighbouring lines.
+func test_kit_tiles_repeat_without_a_seam() -> void:
+	# picture -> the axes it repeats along: 0 across (x), 1 down (y)
+	var repeats := {"brick": [0, 1], "masonry": [0, 1], "concrete": [0, 1], "floor_top": [0],
+		"floor_edge": [0], "concrete_top": [0], "concrete_edge": [0], "ledge_side": [1],
+		"column": [1], "pipe": [1], "lamp_chain": [1], "truss": [0], "crane_beam": [0]}
+	var textures: Dictionary = WorldData.look().get("textures", {})
+	for key: String in repeats:
+		var path := str(textures.get(key, ""))
+		if path.is_empty():
+			continue
+		var image := KitTextures.kept(path).get_image()
+		if image.is_compressed():
+			image.decompress()
+		for axis: int in repeats[key]:
+			var seam := _line_step(image, axis, -1)
+			var usual := 0.0
+			var n := image.get_size()[axis]
+			for i in range(0, n - 1):
+				usual += _line_step(image, axis, i)
+			usual /= float(n - 1)
+			check(seam <= usual * 2.0 + 0.02, "%s repeats along %s without a seam (seam %.3f, usual step %.3f)"
+				% [key, "x" if axis == 0 else "y", seam, usual])
+
+
+## The mean colour step between line `i` and the next one along `axis` (x: 0,
+## y: 1); line -1 is the last line, its next one the first.
+func _line_step(image: Image, axis: int, i: int) -> float:
+	var size := image.get_size()
+	var n := size[axis]
+	var a := n - 1 if i < 0 else i
+	var b := 0 if i < 0 else i + 1
+	var total := 0.0
+	var count := size[1 - axis]
+	for j in count:
+		var p := image.get_pixel(a, j) if axis == 0 else image.get_pixel(j, a)
+		var q := image.get_pixel(b, j) if axis == 0 else image.get_pixel(j, b)
+		total += (absf(p.r * p.a - q.r * q.a) + absf(p.g * p.a - q.g * q.a) + absf(p.b * p.a - q.b * q.a)) / 3.0
+	return total / float(count)
+
+
+func test_broken_kit_numbers_are_reported() -> void:
+	var look := WorldData.look().duplicate(true)
+	look["kit_texel"] = 0
+	check(not WorldData.validate_look(look).is_empty(), "a kit_texel below 1 is reported")
+	look = WorldData.look().duplicate(true)
+	(look["lamp"] as Dictionary)["picture_bulb"] = 1.5
+	check(not WorldData.validate_look(look).is_empty(), "a bulb outside the lamp picture is reported")
+	look = WorldData.look().duplicate(true)
+	(look["colors"] as Dictionary).erase("rust_stain")
+	check(not WorldData.validate_look(look).is_empty(), "a missing stain colour is reported")
