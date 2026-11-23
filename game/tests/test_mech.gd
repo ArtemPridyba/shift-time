@@ -4,7 +4,7 @@ extends RefCounted
 ## in the showcase the same frame of history shows the same gear angle and the
 ## same particles, forward and after Shift. Run by test_runner.gd.
 
-const SHOWCASE_PATH := "res://levels/mech_test.tscn"
+const SHOWCASE_PATH := "res://tests/rooms/mech_test.tscn"
 
 var failures: Array[String] = []
 var _tree: SceneTree

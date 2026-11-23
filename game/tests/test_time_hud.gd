@@ -5,7 +5,7 @@ extends RefCounted
 ## the arrows, the sweep, the flicker and the flight of the motes all differ.
 ## Run by test_runner.gd.
 
-const ROOM_PATH := "res://levels/test_room.tscn"
+const ROOM_PATH := "res://tests/rooms/test_room.tscn"
 const STEP := 1.0 / 60.0
 const ACTIONS: Array[String] = [
 	"move_left", "move_right", "jump", "interact", "rewind", "reset_level", "pause",

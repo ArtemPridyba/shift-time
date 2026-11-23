@@ -5,7 +5,7 @@ extends RefCounted
 ## the player rides the platform both ways, the world waits instead of crushing.
 ## Run by test_runner.gd.
 
-const ROOM_PATH := "res://levels/test_room.tscn"
+const ROOM_PATH := "res://tests/rooms/test_room.tscn"
 const DOOR_PATH := "res://objects/door.tscn"
 const PLATFORM_PATH := "res://objects/platform.tscn"
 ## The methods every temporal object has (docs/architecture.md, section 4.1).

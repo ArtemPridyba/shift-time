@@ -112,12 +112,13 @@ game/
   autoload/        # узлы-синглтоны: time_manager.gd, game_data.gd
   core/            # RefCounted без узлов: timeline.gd, temporal_recorder.gd, time_world.gd, content.gd, level_data.gd, input_log.gd
   objects/         # временные объекты и игрок: player.tscn/.gd, platform_moving, door, button, lever, water, water_float, crate
-  levels/          # test_room.tscn, level_01.tscn … level_10.tscn, room_time.gd
+  levels/          # только уровни: level_01.tscn … level_10.tscn; test_room.gd (база всех уровней), level_room.gd, room_time.gd
   ui/              # HUD, устройство на руке, меню
   data/            # time.json, player.json, objects.json, levels.json, texts.json
   art/             # backgrounds, decals, characters, objects, ui, particles
   audio/
-  tests/           # test_runner.gd, script_errors.gd, test_core.gd, ui_smoke_test.gd, solutions/
+  tests/           # test_runner.gd, script_errors.gd, test_core.gd, ui_smoke_test.gd, solutions/,
+                   # rooms/ — тестовые комнаты (test_room*, mech_test) и их rooms.json; не в меню и не в экспорте
 ```
 
 `core/` не наследует `Node` (правило из [CLAUDE.md](../CLAUDE.md)). Всё, что должно быть узлом-синглтоном, лежит в `autoload/`.

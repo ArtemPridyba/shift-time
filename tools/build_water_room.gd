@@ -1,5 +1,5 @@
 extends SceneTree
-## Builds the water test room `levels/test_room_water.tscn` (task 2.3): a high
+## Builds the water test room `tests/rooms/test_room_water.tscn` (task 2.3): a high
 ## well with a ledge for the player and the lever on the left, a float on the
 ## water and the exit ledge at the rim on the right. The well starts full and
 ## drains through the prelude (8 s and the event that opens the valve at 1 s
@@ -13,7 +13,7 @@ extends SceneTree
 
 const CELL := 64
 const TILESET_RES := "res://levels/blockout/blockout_tileset.tres"
-const SCENE_PATH := "res://levels/test_room_water.tscn"
+const SCENE_PATH := "res://tests/rooms/test_room_water.tscn"
 ## The cells of the water: from column 1, row 5, twenty wide and ten high.
 const TANK_CELLS := Rect2i(1, 5, 20, 10)  # columns 1-20, rows 5-14
 ## The full surface stands this far above the exit ledge, so water that lifts

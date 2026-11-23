@@ -3,7 +3,7 @@ extends RefCounted
 ## Every method named `test_*` is run by test_runner.gd. A test may `await`
 ## physics frames; it reports problems through `check`.
 
-const ROOM_PATH := "res://levels/test_room.tscn"
+const ROOM_PATH := "res://tests/rooms/test_room.tscn"
 const DT := 1.0 / 60.0
 const ACTIONS: Array[String] = [
 	"move_left", "move_right", "jump", "interact", "rewind", "reset_level", "pause",
@@ -79,7 +79,17 @@ func test_data_check_catches_broken_data() -> void:
 	check(not Content.validate_levels([long_prelude], 20.0).is_empty(), "prelude above history length must be reported")
 	check(not Content.validate_levels([], 20.0).is_empty(), "an empty level list must be reported")
 	check(not Content.validate_levels({}, 20.0).is_empty(), "levels.json that is not a list must be reported")
-	check(not Content.levels().is_empty(), "levels.json must list the test rooms")
+	check(not Content.levels().is_empty(), "levels.json must list the levels")
+
+
+## Test rooms live next to the tests: their settings are found by scene, but
+## the level list shows only real levels.
+func test_test_rooms_stay_out_of_the_level_list() -> void:
+	check(not Content.test_rooms().is_empty(), "tests/rooms/rooms.json must list the test rooms")
+	for entry: Variant in Content.levels():
+		check(not str((entry as Dictionary)["scene"]).begins_with("res://tests/"), "a test room must not be in levels.json: %s" % [entry])
+	check(str(Content.level_for_scene(ROOM_PATH).get("id", "")) == "test_room", "the settings of a test room must be found by its scene")
+	check(Content.validate_levels(Content.test_rooms(), 20.0, "rooms.json").is_empty(), "the shipped test rooms must be valid")
 
 
 func test_art_palettes_are_checked() -> void:

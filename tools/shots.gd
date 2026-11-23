@@ -17,12 +17,12 @@ extends SceneTree
 ## Arguments after `--`:
 ##   --solution NAME   a file in tests/solutions (`level_01` or `level_01.json`)
 ##   --level ID        instead of a solution: this level from levels.json ...
-##   --scene NAME      ... or this scene of `game/levels/` that is no level
-##                     (`style_test`), played without a solution ...
+##   --scene NAME      ... or this scene of `game/levels/` or `game/tests/rooms/`
+##                     that is no level (`mech_test`), played without a solution ...
 ##   --ticks N         ... for N ticks ...
 ##   --hold A,B        ... holding these input actions (for example `rewind`)
 ##   --plan P          ... or by segments instead of --ticks/--hold:
-##                     `60:;1:next_palette;60:;120:rewind` — ticks, a colon,
+##                     `60:;30:interact;60:;120:rewind` — ticks, a colon,
 ##                     the actions held (comma-separated), segments by `;`
 ##   --every N         save a frame every N ticks (default 60; 1 for a video)
 ##   --at T1,T2        also save these ticks
@@ -147,7 +147,10 @@ func _load_input() -> Dictionary:
 			printerr("shots: --plan must look like 60:;30:rewind (ticks:actions;...)")
 			return {}
 		if _args.has("scene"):
-			var path := "res://levels/%s.tscn" % str(_args["scene"]).trim_suffix(".tscn")
+			var scene_name := str(_args["scene"]).trim_suffix(".tscn")
+			var path := "res://levels/%s.tscn" % scene_name
+			if not ResourceLoader.exists(path):
+				path = "res://tests/rooms/%s.tscn" % scene_name
 			if not ResourceLoader.exists(path):
 				printerr("shots: no scene %s" % path)
 				return {}

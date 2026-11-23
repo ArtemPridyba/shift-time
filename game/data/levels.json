@@ -96,41 +96,5 @@
 			"wall_c": { "start": "open" }
 		},
 		"title": "08 Plates"
-	},
-	{
-		"id": "test_room",
-		"scene": "res://levels/test_room.tscn",
-		"prelude_seconds": 0,
-		"title": "Test room"
-	},
-	{
-		"id": "test_room_buttons",
-		"scene": "res://levels/test_room_buttons.tscn",
-		"prelude_seconds": 0,
-		"title": "Test room: buttons and lever"
-	},
-	{
-		"id": "test_room_dark",
-		"scene": "res://levels/test_room_dark.tscn",
-		"prelude_seconds": 0,
-		"title": "Test room: dark and lamp"
-	},
-	{
-		"id": "test_room_water",
-		"scene": "res://levels/test_room_water.tscn",
-		"prelude_seconds": 8,
-		"prelude_events": [
-			{ "second": 1, "press": "valve" }
-		],
-		"title": "Test room: water and float"
-	},
-	{
-		"id": "test_room_fire",
-		"scene": "res://levels/test_room_fire.tscn",
-		"prelude_seconds": 6,
-		"prelude_events": [
-			{ "second": 1, "id": "bridge", "state": { "phase": 1 } }
-		],
-		"title": "Test room: fire and flamethrower"
 	}
 ]

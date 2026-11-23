@@ -7,7 +7,7 @@ extends RefCounted
 const WATER_PATH := "res://objects/water.tscn"
 const FLOAT_PATH := "res://objects/water_float.tscn"
 const LEVER_PATH := "res://objects/lever.tscn"
-const ROOM_PATH := "res://levels/test_room_water.tscn"
+const ROOM_PATH := "res://tests/rooms/test_room_water.tscn"
 const FWD := TimeWorld.FORWARD
 const BACK := TimeWorld.BACKWARD
 const DT := 1.0 / 60.0
