@@ -35,7 +35,11 @@ const TILE_TEXTURES: Array[String] = ["brick", "masonry", "concrete", "floor_top
 	"floor_edge", "concrete_edge", "ledge_side"]
 const PIECE_TEXTURES: Array[String] = ["window", "column", "truss", "crane", "crane_beam", "plaster",
 	"soot", "rust", "cracks", "stain", "tank", "hopper", "pipe", "catwalk", "bricks", "beam", "glass",
-	"lump", "lamp", "lamp_chain", "stairs"]
+	"lump", "lamp", "lamp_chain", "stairs",
+	# Objects of a level (task Д4, ObjectLook).
+	"shutter_slab", "shutter_wheel", "shutter_gear_small", "exit_frame", "exit_leaf", "exit_wheel",
+	"exit_rail", "exit_stairs", "beacon", "platform", "platform_rack", "platform_chain", "clock",
+	"clock_hand_hour", "clock_hand_minute"]
 
 const COLORS: Array[String] = ["brick", "mortar", "masonry", "iron", "iron_edge", "concrete",
 	"sky_top", "sky_bottom", "glass", "machine", "rust", "lamp_shade", "bulb", "darkness",

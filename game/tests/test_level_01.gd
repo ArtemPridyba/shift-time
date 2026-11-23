@@ -575,3 +575,89 @@ func _reset_time() -> void:
 	var manager := _tree.root.get_node_or_null("TimeManager")
 	if manager != null:
 		manager.call("reset")
+
+
+func test_level_01_shutter_wheel_turns_with_the_recorded_door() -> void:
+	var room := await _load()
+	var door: Door = room.get_node("Door")
+	check(door.housing_height > 0.0, "the shutter of level 01 hangs under a brick housing")
+	check(door.z_index > 0, "the housing is drawn over the room's ground")
+	var turns := ObjectLook.number(ObjectLook.of("shutter"), "wheel_turns", 0.0)
+	await _ticks(1)
+	var housing := door.position + door.housing_rect().position
+	var last := door.wheel_angle()
+	for i in 3 * 60:
+		await _ticks(1)
+		check(is_equal_approx(door.wheel_angle(), door.mech_fraction() * turns * TAU), "the wheel turns by the recorded open")
+		check(door.wheel_angle() <= last + 0.0001, "the wheel turns back while the shutter closes")
+		last = door.wheel_angle()
+		check((door.position + door.housing_rect().position).distance_to(housing) < 0.01, "the housing stays where it is")
+	Input.action_press("rewind")
+	await _ticks(5 * 60)
+	check(door.wheel_angle() > last, "under Shift the wheel turns the other way with the shutter")
+	await _free(room)
+
+
+func test_level_01_platforms_ride_on_their_tracks() -> void:
+	var room := await _load()
+	var one: MovingPlatform = room.get_node("Platform1")
+	var two: MovingPlatform = room.get_node("Platform2")
+	check(one.track == "chain" and two.track == "rack", "platform 1 rides a chain, platform 2 a toothed column")
+	check(ObjectLook.picture("platform") != null, "the plank picture of the kit loads")
+	await _ticks(2 * 60)
+	var r := ObjectLook.number(ObjectLook.of("platform"), "gear_px", 0.0) / 2.0
+	check(one.mech_travel() > 0.0 and is_equal_approx(one.gear_angle(), one.mech_travel() / r),
+			"the drums turn by the recorded travel")
+	await _free(room)
+
+
+func test_level_01_exit_door_opens_on_the_ledge_and_then_lets_her_out() -> void:
+	var room := await _load()
+	var zone: ExitZone = room.get_node("Exit")
+	var door: ExitDoor = room.get_node("Exit/ExitDoor")
+	var player: Player = room.get_node("Player")
+	# After her walk-in: from then on she stands where she is put.
+	await _ticks(60)
+	check(door.elapsed < 0.0, "the exit door is shut while she is far from it")
+	player.global_position = zone.global_position + Vector2(0.0, zone.size.y / 2.0)
+	await _ticks(3)
+	check(door.elapsed >= 0.0, "the exit door starts to open when she stands on the ledge")
+	check(not bool(room.get("is_completed")), "a shut door does not let her out")
+	Input.action_press("rewind")
+	await _ticks(int(ceil(door.open_seconds() * 60.0)) + 5)
+	check(door.is_open(), "the exit door opens under Shift too: it is not a temporal object")
+	check(door.wheel_turns_done() == ObjectLook.number(ObjectLook.of("exit_door"), "wheel_turns", 0.0),
+			"the wheel made its turns")
+	check(bool(room.get("is_completed")), "standing in the open doorway she is out")
+	await _free(room)
+
+
+func test_level_01_clock_and_beacon_run_by_world_time() -> void:
+	var room := await _load()
+	var time: RoomTime = room.get_node("RoomTime")
+	var clock: WallClock = room.get_node("Clock")
+	var beacon: Beacon = room.get_node("Exit/Beacon")
+	var turn := ObjectLook.number(ObjectLook.of("clock"), "minute_turn_seconds", 0.0)
+	check(is_equal_approx(clock.minute_angle(turn) - clock.minute_angle(0.0), TAU), "the minute hand turns once in minute_turn_seconds")
+	await _ticks(2 * 60)
+	var ahead := time.world_seconds()
+	check(ahead > 1.0, "world time runs forward, is %.2f" % ahead)
+	Input.action_press("rewind")
+	await _ticks(60)
+	check(time.world_seconds() < ahead, "under Shift world time and the clock's hands go back")
+	await _ticks(20 * 60)
+	var still := time.world_seconds()
+	await _ticks(30)
+	check(time.world_seconds() == still, "at frame 0 the clock and the beacon stand")
+	check(beacon.facing(still) >= 0.0 and beacon.facing(still) <= 1.0, "the beacon's pulse is 0 to 1")
+	await _free(room)
+
+
+func test_kit_objects_data_is_checked() -> void:
+	check(Content.validate_kit_objects(Content.look().get("kit_objects")).is_empty(), "kit_objects of look.json passes the check")
+	var broken := (Content.look()["kit_objects"] as Dictionary).duplicate(true)
+	broken["shutter"]["blade_region"] = [0, 0, 64]
+	broken["clock"]["minute_turn_seconds"] = 0
+	broken["beacon"]["color"] = "red-ish"
+	broken["exit_door"].erase("wheel_turns")
+	check(Content.validate_kit_objects(broken).size() == 4, "a broken region, a zero, a bad colour and a missing key are caught: %s" % [Content.validate_kit_objects(broken)])

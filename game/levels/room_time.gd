@@ -23,6 +23,7 @@ var world: TimeWorld
 var last_step := TimeWorld.Step.STARTED
 
 var _recorder := TemporalRecorder.new()
+var _world_ticks_per_second := 0.0
 var _initial := {}
 var _prelude_ticks := 0
 ## The prelude's scripted events from the same entry, in ticks.
@@ -50,6 +51,18 @@ func _ready() -> void:
 	_initial = _recorder.capture(objects)
 	world.start(objects)
 	world.run_prelude(objects, _prelude_ticks, _prelude_events)
+
+
+## The world time the room shows, in world seconds (D96): the tick of the
+## frame at the cursor. It runs back under Shift and stands at frame 0; the
+## clock and the beacon of a level read it (task Д4). 0 before the first tick.
+func world_seconds() -> float:
+	if world == null or world.timeline.cursor() < 0:
+		return 0.0
+	var tick := world.timeline.tick_of(world.timeline.cursor())
+	if _world_ticks_per_second <= 0.0:
+		_world_ticks_per_second = Content.world_ticks_per_second(Content.time())
+	return maxf(float(tick), 0.0) / _world_ticks_per_second
 
 
 func _physics_process(_delta: float) -> void:

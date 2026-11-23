@@ -3,11 +3,18 @@ extends Area2D
 ## The way out of a level: the player's body inside it ends the level. It is
 ## not a temporal object: it keeps no state and Shift does not touch it.
 ## `size` is the zone in pixels, centred on the node.
+##
+## A door may lock the zone (`lock_until`, the ExitDoor of task Д4): then the
+## player inside it reaches the exit only once the door has opened, and the
+## zone draws nothing, the door is its look.
 
 signal reached
 
 const FRAME_COLOR := Color("#c9ced6")
 const PLAYER_LAYER := 2
+
+## The door that must open first; null: the zone is always open.
+var _door: Node2D
 
 @export var size := Vector2(128, 192):
 	set(value):
@@ -41,12 +48,28 @@ func _fit() -> void:
 
 
 func _on_body_entered(body: Node) -> void:
-	if body is Player:
+	if body is Player and (_door == null or bool(_door.call("is_open"))):
 		reached.emit()
+
+
+## Locks the zone until `door` emits `opened`.
+func lock_until(door: Node2D) -> void:
+	_door = door
+	door.connect("opened", _on_door_opened)
+	queue_redraw()
+
+
+func _on_door_opened() -> void:
+	for body in get_overlapping_bodies():
+		if body is Player:
+			reached.emit()
+			return
 
 
 ## A doorway frame with an arrow: blockout look until the art comes.
 func _draw() -> void:
+	if _door != null:
+		return
 	var half := size / 2.0
 	draw_rect(Rect2(-half, size), FRAME_COLOR, false, 4.0)
 	var mid := Vector2.ZERO

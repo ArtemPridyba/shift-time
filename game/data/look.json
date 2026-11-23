@@ -158,6 +158,58 @@
     "yellow": "#d4a21e",
     "outline_px": 1.8
   },
+  "kit_objects": {
+    "_about": "Objects of a level dressed from the Night shop kit (task Д4): pictures by name from world.textures, sizes in room pixels. A mechanism turns by the recorded travel of its object; the exit door, the clock and the beacon keep no history.",
+    "shutter": {
+      "blade_region": [0, 96, 64, 256],
+      "stripe_region": [64, 452, 64, 44],
+      "housing_frame_px": 6,
+      "rivet_px": 2.5,
+      "rivet_step_px": 14,
+      "brick_tint": "#6e625c",
+      "wheel_px": 40,
+      "wheel_turns": 1.5,
+      "gear_px": 22
+    },
+    "platform": {
+      "cap_px": 24,
+      "rack_px": 18,
+      "chain_px": 10,
+      "gear_px": 22,
+      "track_above_px": 64,
+      "track_below_px": 64,
+      "chain_below_px": 12,
+      "track_tint": "#b0a8a0"
+    },
+    "exit_door": {
+      "height_px": 150,
+      "open_distance_px": 260,
+      "floor_tolerance_px": 10,
+      "wheel_px": 30,
+      "wheel_turns": 2.5,
+      "wheel_seconds": 0.6,
+      "out_seconds": 0.15,
+      "out_px": 8,
+      "slide_seconds": 0.45,
+      "rail_px": 20,
+      "light": "#9fd0ff",
+      "light_energy": 0.9,
+      "light_radius_px": 180
+    },
+    "clock": {
+      "diameter_px": 44,
+      "minute_turn_seconds": 60,
+      "hours_per_minute_turn": 1,
+      "start_minutes": 465
+    },
+    "beacon": {
+      "size_px": 22,
+      "color": "#ff3a24",
+      "turn_seconds": 1.6,
+      "energy": 0.8,
+      "radius_px": 150
+    }
+  },
   "pipe": {
     "shell": "#5a6068",
     "shell_light": "#767c84",
@@ -225,6 +277,21 @@
       "lump": "res://assets/art/kit/lump.png",
       "lamp": "res://assets/art/kit/lamp.png",
       "lamp_chain": "res://assets/art/kit/lamp_chain.png",
+      "shutter_slab": "res://assets/art/kit/shutter_slab.png",
+      "shutter_wheel": "res://assets/art/kit/shutter_wheel.png",
+      "shutter_gear_small": "res://assets/art/kit/shutter_gear_small.png",
+      "exit_frame": "res://assets/art/kit/exit_frame.png",
+      "exit_leaf": "res://assets/art/kit/exit_leaf.png",
+      "exit_wheel": "res://assets/art/kit/exit_wheel.png",
+      "exit_rail": "res://assets/art/kit/exit_rail.png",
+      "exit_stairs": "res://assets/art/kit/exit_stairs.png",
+      "beacon": "res://assets/art/kit/beacon.png",
+      "platform": "res://assets/art/kit/platform.png",
+      "platform_rack": "res://assets/art/kit/platform_rack.png",
+      "platform_chain": "res://assets/art/kit/platform_chain.png",
+      "clock": "res://assets/art/kit/clock.png",
+      "clock_hand_hour": "res://assets/art/kit/clock_hand_hour.png",
+      "clock_hand_minute": "res://assets/art/kit/clock_hand_minute.png",
       "stairs": ""
     },
     "brick_px": [28, 10],

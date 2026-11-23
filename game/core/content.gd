@@ -668,6 +668,14 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 
 ## A number between `low` and `high` (`low` itself is allowed unless `above_low`).
 const LOOK_PIPE_COLORS: Array[String] = ["shell", "shell_light", "empty", "water", "dash"]
+const LOOK_KIT_OBJECTS := {
+	"shutter": ["blade_region", "stripe_region", "housing_frame_px", "brick_tint", "wheel_px", "wheel_turns", "gear_px"],
+	"platform": ["cap_px", "rack_px", "chain_px", "gear_px", "track_above_px", "track_below_px", "chain_below_px"],
+	"exit_door": ["height_px", "open_distance_px", "floor_tolerance_px", "wheel_px", "wheel_turns",
+		"wheel_seconds", "out_seconds", "out_px", "slide_seconds", "rail_px", "light", "light_energy", "light_radius_px"],
+	"clock": ["diameter_px", "minute_turn_seconds", "start_minutes"],
+	"beacon": ["size_px", "color", "turn_seconds", "energy", "radius_px"],
+}
 const LOOK_PIPE_NUMBERS: Array[String] = ["feed_width_px", "main_width_px", "wall_px", "flange_every_px", "flange_px", "dash_length_px", "dash_gap_px", "dash_speed_px"]
 const LOOK_MECH_COLORS: Array[String] = ["iron", "iron_light", "iron_shadow", "iron_dark", "outline", "valve", "valve_light", "rust", "yellow"]
 const LOOK_PAIRS: Array[String] = ["velocity", "velocity_jitter", "gravity", "wobble_px", "wobble_hz", "size", "burst_area"]
@@ -707,6 +715,42 @@ static func validate_look(data: Variant) -> PackedStringArray:
 	if _is_number(pipe.get("wall_px")) and _is_number(pipe.get("feed_width_px")) and 2.0 * float(pipe["wall_px"]) >= float(pipe["feed_width_px"]):
 		errors.append("look.json: 'pipe.wall_px' leaves no channel inside the feed pipe")
 	errors.append_array(WorldData.validate_look(data.get("world")))
+	errors.append_array(validate_kit_objects(data.get("kit_objects")))
+	return errors
+
+
+## The objects of a level dressed from the kit (task Д4): every object of
+## LOOK_KIT_OBJECTS with its keys; `*_region` are [x, y, w, h] of a picture,
+## strings are colours, other numbers are above 0 (`start_minutes` from 0).
+static func validate_kit_objects(objects: Variant) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not objects is Dictionary:
+		errors.append("look.json: 'kit_objects' must be an object")
+		return errors
+	for name: String in LOOK_KIT_OBJECTS:
+		var one: Variant = objects.get(name)
+		var where := "look.json: 'kit_objects.%s'" % name
+		if not one is Dictionary:
+			errors.append("%s must be an object" % where)
+			continue
+		for key: String in LOOK_KIT_OBJECTS[name]:
+			if not one.has(key):
+				errors.append("%s needs '%s'" % [where, key])
+		for key: String in one:
+			var value: Variant = one[key]
+			if key.begins_with("_"):
+				continue
+			if key.ends_with("_region"):
+				var ok: bool = value is Array and value.size() == 4
+				for n: Variant in (value if value is Array else []):
+					ok = ok and _is_number(n) and float(n) >= 0.0
+				if not ok or float(value[2]) <= 0.0 or float(value[3]) <= 0.0:
+					errors.append("%s: '%s' must be [x, y, w, h] with w and h above 0" % [where, key])
+			elif value is String:
+				if not Color.html_is_valid(value):
+					errors.append("%s: '%s' must be a color like \"#9fd0ff\"" % [where, key])
+			elif not _is_number(value) or float(value) < 0.0 or (float(value) == 0.0 and key != "start_minutes"):
+				errors.append("%s: '%s' must be a number above 0" % [where, key])
 	return errors
 
 
