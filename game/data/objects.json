@@ -29,6 +29,12 @@
     "player_outline_alpha": 0.3
   },
   "carry_margin_px": 8,
+  "shutter": {
+    "move_seconds": 0.6
+  },
+  "time_plate": {
+    "contact_px": 6
+  },
   "water": {
     "full_seconds": 12,
     "float_draft_px": 8

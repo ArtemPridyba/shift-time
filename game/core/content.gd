@@ -60,6 +60,10 @@ const WATER_LOOK_KEYS: Array[String] = [
 	"jet_drops", "jet_cycles_per_second", "splash_drops", "outlet_inset_px", "valve_turns_per_tank",
 ]
 const BUTTON_KEYS: Array[String] = ["interact_radius_px"]
+const SHUTTER_KEYS: Array[String] = ["move_seconds"]
+const TIME_PLATE_KEYS: Array[String] = ["contact_px"]
+## Where a shutter of a level starts (level 08).
+const SHUTTER_STARTS: Array[String] = ["open", "closed"]
 const LEVER_KEYS: Array[String] = ["interact_radius_px"]
 const LAMP_KEYS: Array[String] = ["break_seconds", "fall_seconds", "shatter_seconds", "fall_distance_px", "flash_seconds", "flash_radius_px", "light_radius_px"]
 const DARKNESS_KEYS: Array[String] = ["ambient", "player_outline_alpha"]
@@ -359,6 +363,8 @@ static func _object_settings_problems(settings: Variant, where: String) -> Packe
 				errors.append("%s: 'objects.%s.outlet_inset_px' must be a number, 0 or more" % [where, id])
 			elif str(key) == "open_level" and (not _is_number(value) or float(value) < 0.0 or float(value) > 10000.0):
 				errors.append("%s: 'objects.%s.open_level' must be a number from 0 to 10000" % [where, id])
+			elif str(key) == "start" and not value in SHUTTER_STARTS:
+				errors.append("%s: 'objects.%s.start' must be one of %s" % [where, id, SHUTTER_STARTS])
 			elif str(key) == "cycle" and not value in LEVEL_DOOR_CYCLES:
 				errors.append("%s: 'objects.%s.cycle' must be one of %s" % [where, id, LEVEL_DOOR_CYCLES])
 	return errors
@@ -439,7 +445,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	# 10000 is Water.LEVEL_MAX (core/ does not refer to objects/).
 	if 10000.0 / (float(data["water"]["full_seconds"]) * ticks) > max_step:
 		errors.append("objects.json: 'water.full_seconds' is too short: the level would jump more than max_state_step per tick")
-	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS]]:
+	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS]]:
 		var isec := interact_section as Array
 		var isec_name: String = isec[0]
 		var ientry: Variant = data.get(isec_name)
@@ -450,6 +456,8 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 			if not ientry.has(key) or not _is_number(ientry[key]) or float(ientry[key]) <= 0.0:
 				errors.append("objects.json: '%s.%s' must be a number above 0" % [isec_name, key])
 	if errors.is_empty():
+		if 1000.0 / (float(data["shutter"]["move_seconds"]) * ticks) > max_step:
+			errors.append("objects.json: 'shutter.move_seconds' is too short: the shutter would jump more than max_state_step per tick")
 		if float(data["lamp"]["break_seconds"]) < MIN_WINDOW_SECONDS:
 			errors.append("objects.json: 'lamp.break_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
 		var lamp: Dictionary = data["lamp"]
