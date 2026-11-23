@@ -252,10 +252,10 @@ Request N-12: things the player uses. Separate pieces on one sheet with wide emp
 
 ### Н-13. Лестница в яму
 
-Спуск из верхнего яруса в яму, как на эталоне `raw/e2_room_v1.jpg` (D120). В игре героиня идёт по наклону шагом, а картинка лежит на этом наклоне: 3 клетки вниз на 4 вбок. Игра растягивает картинку под наклон, поэтому точные пропорции не важны (D109); важно, чтобы ступени шли ровно от левого верхнего угла к правому нижнему. Готовую картинку — в `raw/` как `n13_stairs.jpg`.
+Спуск из верхнего яруса в яму, как на эталоне `raw/e2_room_v2.jpg` (D120, D121). В игре героиня идёт по наклону шагом, а картинка лежит на этом наклоне: 3 клетки вниз на 5 вбок (около 31°). Игра растягивает картинку под наклон, поэтому точные пропорции не важны (D109); важно, чтобы ступени шли ровно от левого верхнего угла к правому нижнему. Готовую картинку — в `raw/` как `n13_stairs.jpg`.
 
 ```text
-Request N-13: the staircase into the pit. A broken brick staircase going down from left to right, seen exactly from the side like a technical drawing, flat even light, on flat green #00FF00. About 20 steps run in a straight line from the top left corner of the picture to the bottom right corner, the slope about 3 high to 4 across. Steps of worn sooty red brick with a riveted iron angle on the edge of each step; a few steps chipped, a few loose bricks lying on them. Under the steps, the side of the staircase: brick down to the bottom edge of the picture, darker than the steps. Above the steps: flat green only. Only the staircase, nothing else.
+Request N-13: the staircase into the pit. A broken brick staircase going down from left to right, seen exactly from the side like a technical drawing, flat even light, on flat green #00FF00. About 20 steps run in a straight line from the top left corner of the picture to the bottom right corner, the slope about 3 high to 5 across. Steps of worn sooty red brick with a riveted iron angle on the edge of each step; a few steps chipped, a few loose bricks lying on them. Under the steps, the side of the staircase: brick down to the bottom edge of the picture, darker than the steps. Above the steps: flat green only. Only the staircase, nothing else.
 ```
 
 ## 5. Проверка и правки

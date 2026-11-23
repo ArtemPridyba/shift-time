@@ -40,6 +40,11 @@ func _ready() -> void:
 	_breath = Breath.new(params)
 	_scorch = Scorch.new(params)
 	_head_px = float(params.get("head_px", 28))
+	# Stairs are slopes (D120): she keeps to a slope going down and walks it
+	# at her own speed both ways.
+	floor_snap_length = float(params.get("floor_snap_px", 1))
+	floor_max_angle = deg_to_rad(float(params.get("floor_max_angle_deg", 45)))
+	floor_constant_speed = true
 	_size = (_shape.shape as RectangleShape2D).size
 	_bubbles = _make_bubbles()
 	add_child(_bubbles)

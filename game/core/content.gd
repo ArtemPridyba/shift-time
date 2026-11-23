@@ -37,7 +37,7 @@ const PLAYER_KEYS: Array[String] = [
 	"water_walk_factor", "water_gravity", "water_max_sink_speed", "water_drag",
 	"water_jump_velocity", "water_float_up_speed", "head_px",
 	"breath_seconds", "breath_refill_seconds", "breath_vignette_alpha", "breath_vignette_radius",
-	"fire_seconds", "fire_cool_seconds",
+	"fire_seconds", "fire_cool_seconds", "floor_snap_px", "floor_max_angle_deg",
 ]
 ## Bounds of `world_tempo` in `time.json` (D96).
 const WORLD_TEMPO_MIN := 0.5
@@ -245,6 +245,12 @@ static func validate_player(data: Variant) -> PackedStringArray:
 	for key in ["water_walk_factor", "breath_vignette_alpha", "breath_vignette_radius"]:
 		if float(data[key]) > 1.0:
 			errors.append("player.json: '%s' must be at most 1" % key)
+	# Stairs are slopes (D120): she walks them, she does not climb walls; the
+	# snap keeps her on a slope going down and never pulls her off a ledge.
+	if float(data["floor_max_angle_deg"]) >= 60.0:
+		errors.append("player.json: 'floor_max_angle_deg' must be below 60")
+	if float(data["floor_snap_px"]) > 32.0:
+		errors.append("player.json: 'floor_snap_px' must be at most 32 (half a cell)")
 	if float(data["breath_seconds"]) < MIN_WINDOW_SECONDS:
 		errors.append("player.json: 'breath_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
 	if float(data["fire_seconds"]) < MIN_WINDOW_SECONDS:

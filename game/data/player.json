@@ -20,5 +20,7 @@
   "breath_vignette_radius": 0.9,
   "fire_seconds": 3,
   "fire_cool_seconds": 1.5,
-  "fire_vignette_color": "#5c1800"
+  "fire_vignette_color": "#5c1800",
+  "floor_snap_px": 24,
+  "floor_max_angle_deg": 46
 }

@@ -1,13 +1,18 @@
 extends SceneTree
 ## Builds level 01 `levels/level_01.tscn` (task 2.5, merged with the platform
 ## level 03 on 16.11.2026, widened the same day, rebuilt to the heroine's size
-## on 22.11.2026, D112; card docs/levels/01.md): a room of 32x17 cells, a tall
-## hall a little wider than the screen, the camera follows the hero. Everything
+## on 22.11.2026, D112; rebuilt to the Gemini reference frame
+## docs/art/gemini/raw/e2_room_v2.jpg on 23.11.2026, D120; card
+## docs/levels/01.md): a room of 32x17 cells a little wider than the screen,
+## the camera follows the hero. The hall is 6 cells high over the upper floor;
+## the rows above it are solid and drawn as the dark roof. Stairs lead down
+## into the pit: a slope she walks, 3 cells down over 5 across. Everything
 ## she uses is sized to her (92 px tall): the door and the platforms are two
 ## cells, the pit is a little over four jumps wide. She walks
 ## out of a doorway on the left, then comes a door that is closing, a long pit,
 ## platform 1 that has already left and rides across it once, and platform 2
-## that sinks beside the exit pillar. The timing (door, platforms, prelude, the
+## that sinks beside the exit pillar. Stairs lead from the ground down into
+## the pit, under the start of platform 1. The timing (door, platforms, prelude, the
 ## hero's walk-in) lives in data/levels.json.
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
@@ -15,7 +20,8 @@ extends SceneTree
 ##
 ## Map legend: '#' block, '.' empty, 'S' spawn point (inside the entrance),
 ## 'D' the doorway (the door stands in these cells), 'E' the exit zone (centred
-## on its cells).
+## on its cells), 's' the cells of the stairs (`Stairs`): a slope from the
+## top-left corner of their rect down to the bottom-right one.
 
 const CELL := 64
 const TILESET_RES := "res://levels/blockout/blockout_tileset.tres"
@@ -24,20 +30,20 @@ const LEVEL_ID := "level_01"
 
 const MAP := [
 	"################################",
-	"#.......#......................#",
-	"#.......#......................#",
-	"#.......#......................#",
-	"#.......#......................#",
-	"#.......#......................#",
+	"################################",
+	"################################",
+	"################################",
+	"################################",
+	"################################",
 	"#.......#......................#",
 	"#.......#..................EE..#",
 	"#.......#..................EE..#",
 	"#.......#...............########",
 	"#.......D...............########",
 	"#S......D...............########",
-	"##############..........########",
-	"###############.........########",
-	"################........########",
+	"##############sssss.....########",
+	"##############sssss.....########",
+	"##############sssss.....########",
 	"################################",
 	"################################",
 ]
@@ -74,6 +80,7 @@ func _initialize() -> void:
 
 	var door_cells := Rect2i()
 	var exit_cells := Rect2i()
+	var stair_cells := Rect2i()
 	for y in MAP.size():
 		var row: String = MAP[y]
 		for x in row.length():
@@ -87,6 +94,8 @@ func _initialize() -> void:
 					door_cells = Rect2i(cell, Vector2i.ONE) if door_cells.size == Vector2i.ZERO else door_cells.expand(cell + Vector2i.ONE)
 				"E":
 					exit_cells = Rect2i(cell, Vector2i.ONE) if exit_cells.size == Vector2i.ZERO else exit_cells.expand(cell + Vector2i.ONE)
+				"s":
+					stair_cells = Rect2i(cell, Vector2i.ONE) if stair_cells.size == Vector2i.ZERO else stair_cells.expand(cell + Vector2i.ONE)
 
 	# The Night shop world (task Д3): the back wall behind everything, the
 	# ground after the doors and platforms, the light; the blockout tiles stay
@@ -103,6 +112,14 @@ func _initialize() -> void:
 	entrance.set("size", Vector2(ENTRANCE_CELLS.size * CELL))
 	entrance.position = Vector2(ENTRANCE_CELLS.position * CELL)
 	_own(root, entrance)
+
+	# Before the platforms: platform 1 starts over the top of the flight and
+	# is drawn in front of it.
+	var stairs := Stairs.new()
+	stairs.name = "Stairs"
+	stairs.cells = stair_cells
+	stairs.descends_right = true
+	_own(root, stairs)
 
 	var door: Door = (load("res://objects/door.tscn") as PackedScene).instantiate()
 	door.object_id = "door"
