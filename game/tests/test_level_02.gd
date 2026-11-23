@@ -10,7 +10,7 @@ extends RefCounted
 ## `tests/solutions/` and run by test_solutions.gd.
 
 const LEVEL_PATH := "res://levels/level_02.tscn"
-const BUTTONS_ROOM := "res://levels/test_room_buttons.tscn"
+const BUTTONS_ROOM := "res://tests/rooms/test_room_buttons.tscn"
 const CELL := 64
 const WELL_FLOOR_ROW := 15
 const POOL_FLOOR_ROW := 10

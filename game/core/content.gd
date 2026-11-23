@@ -6,6 +6,9 @@ extends RefCounted
 const PLAYER_PATH := "res://data/player.json"
 const TIME_PATH := "res://data/time.json"
 const LEVELS_PATH := "res://data/levels.json"
+## Test rooms: same entries as levels.json, never in the level list. They live
+## next to the tests and stay out of the export, where this file is missing.
+const TEST_ROOMS_PATH := "res://tests/rooms/rooms.json"
 const OBJECTS_PATH := "res://data/objects.json"
 const TIME_HUD_PATH := "res://data/time_hud.json"
 const ART_PATH := "res://data/art.json"
@@ -173,19 +176,28 @@ static func active_palette() -> Dictionary:
 	return palettes[data["active_palette"]]
 
 
-## The entry of `levels.json` whose scene is `scene_path`, or an empty
-## dictionary (a room opened on its own, a test scene).
+## The entry of `levels.json` or of the test rooms whose scene is
+## `scene_path`, or an empty dictionary (a scene opened on its own).
 static func level_for_scene(scene_path: String) -> Dictionary:
 	if scene_path.is_empty():
 		return {}
-	for entry: Variant in levels():
+	for entry: Variant in levels() + test_rooms():
 		if entry is Dictionary and str((entry as Dictionary).get("scene", "")) == scene_path:
 			return entry
 	return {}
 
 
+## The levels of the level list.
 static func levels() -> Array:
 	var data: Variant = load_json(LEVELS_PATH)
+	return data if data is Array else []
+
+
+## The test rooms; empty in the exported game.
+static func test_rooms() -> Array:
+	if not FileAccess.file_exists(TEST_ROOMS_PATH):
+		return []
+	var data: Variant = load_json(TEST_ROOMS_PATH)
 	return data if data is Array else []
 
 
@@ -199,6 +211,8 @@ static func validate() -> PackedStringArray:
 	if time_data is Dictionary and time_data.has("history_seconds") and _is_number(time_data["history_seconds"]):
 		history_seconds = float(time_data["history_seconds"])
 	errors.append_array(validate_levels(load_json(LEVELS_PATH), history_seconds))
+	if FileAccess.file_exists(TEST_ROOMS_PATH):
+		errors.append_array(validate_levels(load_json(TEST_ROOMS_PATH), history_seconds, "rooms.json"))
 	if time_data is Dictionary and validate_time(time_data).is_empty():
 		errors.append_array(validate_objects(load_json(OBJECTS_PATH), time_data))
 	errors.append_array(validate_time_hud(load_json(TIME_HUD_PATH)))
@@ -292,18 +306,18 @@ static func validate_time(data: Variant) -> PackedStringArray:
 	return errors
 
 
-static func validate_levels(data: Variant, history_seconds: float) -> PackedStringArray:
+static func validate_levels(data: Variant, history_seconds: float, file := "levels.json") -> PackedStringArray:
 	var errors := PackedStringArray()
 	if not data is Array:
-		errors.append("levels.json: expected a list")
+		errors.append("%s: expected a list" % file)
 		return errors
 	if data.is_empty():
-		errors.append("levels.json: the list must hold at least one level")
+		errors.append("%s: the list must hold at least one level" % file)
 		return errors
 	var seen := {}
 	for i in data.size():
 		var entry: Variant = data[i]
-		var where := "levels.json[%d]" % i
+		var where := "%s[%d]" % [file, i]
 		if not entry is Dictionary:
 			errors.append("%s: expected an object" % where)
 			continue

@@ -1,5 +1,5 @@
 extends SceneTree
-## Builds the fire test room `levels/test_room_fire.tscn` (task 2.7), left to
+## Builds the fire test room `tests/rooms/test_room_fire.tscn` (task 2.7), left to
 ## right: the spawn, a pit with a wooden bridge that the prelude burns (6 s and
 ## the event that lights it at 1 s live in data/levels.json), a basin with a
 ## wooden post standing on its bottom and the valve right of it (light the
@@ -14,7 +14,7 @@ extends SceneTree
 
 const CELL := 64
 const TILESET_RES := "res://levels/blockout/blockout_tileset.tres"
-const SCENE_PATH := "res://levels/test_room_fire.tscn"
+const SCENE_PATH := "res://tests/rooms/test_room_fire.tscn"
 ## The bridge over the pit: columns 6-9, the top of row 12, 32 px thick.
 const BRIDGE := Rect2(6 * CELL, 12 * CELL, 4 * CELL, 32)
 ## The basin: columns 12-15, rows 12-13; the post stands on its bottom in the

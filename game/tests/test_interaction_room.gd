@@ -4,7 +4,7 @@ extends RefCounted
 ## lever toggles it. Unlike test_interaction.gd this uses the real Door,
 ## PushButton, Lever and RoomTime, not fakes. Run by test_runner.gd.
 
-const ROOM_PATH := "res://levels/test_room_buttons.tscn"
+const ROOM_PATH := "res://tests/rooms/test_room_buttons.tscn"
 
 var failures: Array[String] = []
 var _tree: SceneTree

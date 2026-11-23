@@ -3,7 +3,7 @@ extends RefCounted
 ## the signal fires once per change, a reset brings forward time back, and the
 ## player is not subscribed to time. Run by test_runner.gd.
 
-const ROOM_PATH := "res://levels/test_room.tscn"
+const ROOM_PATH := "res://tests/rooms/test_room.tscn"
 const ACTIONS: Array[String] = [
 	"move_left", "move_right", "jump", "interact", "rewind", "reset_level", "pause",
 ]

@@ -1,6 +1,6 @@
 [gd_scene load_steps=11 format=3]
 
-[ext_resource type="Script" path="res://levels/mech_test.gd" id="1_show"]
+[ext_resource type="Script" path="res://tests/rooms/mech_test.gd" id="1_show"]
 [ext_resource type="PackedScene" path="res://objects/door.tscn" id="2_door"]
 [ext_resource type="PackedScene" path="res://objects/platform.tscn" id="3_platform"]
 [ext_resource type="Script" path="res://levels/room_time.gd" id="4_room"]

@@ -8,7 +8,7 @@ extends RefCounted
 ## player, its fire is never recorded, and letting it go never makes it jump.
 ## Run by test_runner.gd.
 
-const ROOM_PATH := "res://levels/test_room_fire.tscn"
+const ROOM_PATH := "res://tests/rooms/test_room_fire.tscn"
 const FLOOR_Y := 768.0
 const WHOLE := WoodBurn.Phase.WHOLE
 const BURNING := WoodBurn.Phase.BURNING
