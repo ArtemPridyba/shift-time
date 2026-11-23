@@ -57,6 +57,13 @@ const ENTRANCE_CELLS := Rect2i(1, 10, 1, 2)
 ## on its way it passes the level of platform 1's end (row 12) at the moment
 ## platform 1 arrives there (the delays are in data/levels.json, checked by a
 ## test). Centres, in cells. Both are two cells wide (D112).
+## The factory clock hangs on the column after the shutter, over her head.
+const CLOCK_CELL := Vector2(13.55, 9.5)
+## The beacon sits on the wall by the exit door's upper left corner, from the
+## door's foot: over the door there is no room under the truss.
+const BEACON_FROM_DOOR := Vector2(-66.0, -118.0)
+## The first row of the hall under the roof.
+const HALL_TOP_ROW := 6
 const PLATFORM_HEIGHT := 32.0
 const PLATFORM_WIDTH_CELLS := 2
 const PLATFORM_1_CENTRE := Vector2(15.0, 12.0)
@@ -125,11 +132,14 @@ func _initialize() -> void:
 	door.object_id = "door"
 	door.travel = float(door_cells.size.y * CELL)
 	door.height = float(door_cells.size.y * CELL)
+	# The brick housing fills the solid cells over the doorway up to the roof.
+	door.housing_height = float((door_cells.position.y - HALL_TOP_ROW) * CELL)
+	door.housing_width = float(CELL)
 	door.position = (Vector2(door_cells.position) + Vector2(door_cells.size) / 2.0) * CELL
 	_own(root, door)
 
-	_add_platform(root, "platform_1", PLATFORM_1_CENTRE, PLATFORM_1_TRAVEL)
-	_add_platform(root, "platform_2", PLATFORM_2_CENTRE, PLATFORM_2_TRAVEL)
+	_add_platform(root, "platform_1", PLATFORM_1_CENTRE, PLATFORM_1_TRAVEL, "chain")
+	_add_platform(root, "platform_2", PLATFORM_2_CENTRE, PLATFORM_2_TRAVEL, "rack")
 
 	var ground := WorldGround.new()
 	ground.name = "WorldGround"
@@ -144,6 +154,21 @@ func _initialize() -> void:
 	exit.size = Vector2(exit_cells.size * CELL)
 	exit.position = (Vector2(exit_cells.position) + Vector2(exit_cells.size) / 2.0) * CELL
 	_own(root, exit)
+	# The pressure door of the way out stands on the zone's lower edge.
+	var exit_door := ExitDoor.new()
+	exit_door.name = "ExitDoor"
+	exit_door.position = Vector2(0.0, exit.size.y / 2.0)
+	exit.add_child(exit_door)
+	exit_door.owner = root
+	var beacon := Beacon.new()
+	beacon.name = "Beacon"
+	beacon.position = exit_door.position + BEACON_FROM_DOOR
+	exit.add_child(beacon)
+	beacon.owner = root
+	var clock := WallClock.new()
+	clock.name = "Clock"
+	clock.position = CLOCK_CELL * CELL
+	_own(root, clock)
 
 	var player: Node2D = (load("res://objects/player.tscn") as PackedScene).instantiate()
 	_own(root, player)
@@ -162,12 +187,13 @@ func _initialize() -> void:
 
 ## `centre` is where the platform's top edge meets the cell grid: the middle of
 ## the platform in x and the top surface at the given row.
-func _add_platform(root: Node, id: String, centre: Vector2, travel_cells: Vector2) -> void:
+func _add_platform(root: Node, id: String, centre: Vector2, travel_cells: Vector2, track: String) -> void:
 	var platform: MovingPlatform = (load("res://objects/platform.tscn") as PackedScene).instantiate()
 	platform.object_id = id
 	platform.name = id.to_pascal_case()
 	platform.travel = travel_cells * CELL
 	platform.width = float(PLATFORM_WIDTH_CELLS * CELL)
+	platform.track = track
 	platform.position = Vector2(centre.x * CELL, centre.y * CELL + PLATFORM_HEIGHT / 2.0)
 	_own(root, platform)
 

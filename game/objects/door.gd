@@ -20,8 +20,14 @@ extends AnimatableBody2D
 ## opens in `open_seconds` and then stays open (the gate of level 04). Both run
 ## by the door's own phase, so a new branch of history plays them again.
 ##
-## The gauge beside the doorway shows how open the door is: a ring that fills
-## as the door opens and empties as it closes, so it reads by shape.
+## Dressed from the Night shop kit (task Д4): the blade is a strip of the
+## steel shutter `shutter_slab` with its rack and yellow-black stripes. A door
+## with `housing_height` hangs under a fixed brick housing in a riveted frame
+## (D115, `docs/art/gemini/ref_shutter.jpg`) and rises into it; a wheel and a
+## gear on the housing turn by the recorded `open`, so under Shift they turn
+## back with the blade. Numbers: `kit_objects.shutter` of `data/look.json`.
+## Without the kit picture the blockout look stays: a grey blade and a gauge
+## ring beside the doorway that fills as the door opens.
 ##
 ## Temporal object contract: docs/architecture.md, section 4.1.
 
@@ -45,6 +51,11 @@ const GAUGE_BACK_COLOR := Color("#23272d")
 ## When set, this door is driven by a button or lever with this object_id.
 ## The cycle runs for looks (open/close speed) but hold times are ignored.
 @export var linked_id := ""
+## Height in pixels of the brick housing over the closed blade; 0: no housing.
+## The housing is drawn over the room's ground (z 1), so the blade hides in it.
+@export var housing_height := 0.0
+## Width of the housing; 0: twice the blade.
+@export var housing_width := 0.0
 
 var open := 0
 var locked := false
@@ -115,6 +126,9 @@ func _ready() -> void:
 		var own := (shape.shape as RectangleShape2D).duplicate() as RectangleShape2D
 		own.size.y = height
 		shape.shape = own
+	if housing_height > 0.0:
+		z_index = 1
+		texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	_base()
 
 
@@ -239,6 +253,10 @@ func _size() -> Vector2:
 
 func _draw() -> void:
 	var size := _size()
+	var slab := ObjectLook.picture("shutter_slab")
+	if slab != null:
+		_draw_kit(slab, size)
+		return
 	draw_rect(Rect2(-size / 2.0, size), BODY_COLOR)
 	draw_rect(Rect2(Vector2(-4.0, -size.y / 2.0 + 8.0), Vector2(8.0, size.y - 16.0)), ACCENT_COLOR)
 	# The gauge stays on the wall above the doorway while the door slides.
@@ -247,3 +265,49 @@ func _draw() -> void:
 	draw_arc(center, GAUGE_RADIUS, 0.0, TAU, 32, GAUGE_BACK_COLOR, GAUGE_WIDTH + 4.0)
 	if ratio > 0.0:
 		draw_arc(center, GAUGE_RADIUS, -PI / 2.0, -PI / 2.0 + TAU * ratio, 32, ACCENT_COLOR, GAUGE_WIDTH)
+
+
+## The housing's rect in this node's coordinates: it stays where it is while
+## the blade moves.
+func housing_rect() -> Rect2:
+	var size := _size()
+	var w := housing_width if housing_width > 0.0 else size.x * 2.0
+	return Rect2(Vector2(-w / 2.0, -size.y / 2.0 - housing_height + mech_travel()), Vector2(w, housing_height))
+
+
+## The wheel's angle on the housing: `wheel_turns` turns from closed to open.
+func wheel_angle() -> float:
+	return mech_fraction() * ObjectLook.number(ObjectLook.of("shutter"), "wheel_turns", 1.5) * TAU
+
+
+func _draw_kit(slab: Texture2D, size: Vector2) -> void:
+	var look := ObjectLook.of("shutter")
+	var blade := Rect2(-size / 2.0, size)
+	ObjectLook.draw_region_down(self, slab, ObjectLook.rect(look, "blade_region", Rect2(0, 96, 64, 256)), blade)
+	var stripes := ObjectLook.rect(look, "stripe_region", Rect2(64, 452, 64, 44))
+	var stripe_h := size.x * stripes.size.y / maxf(stripes.size.x, 1.0)
+	draw_texture_rect_region(slab, Rect2(blade.position.x, blade.end.y - stripe_h, size.x, stripe_h), stripes)
+	if housing_height <= 0.0:
+		return
+	var mech := ObjectLook.mech()
+	var iron := Color(str(mech.get("iron_shadow", "#35353a")))
+	var rivet := Color(str(mech.get("iron_light", "#6c6c72")))
+	var box := housing_rect()
+	var brick := ObjectLook.tile("brick")
+	var texel := ObjectLook.texel("brick")
+	var room := Rect2(box.position + position, box.size)
+	draw_texture_rect_region(brick, box, KitTextures.region(room, texel),
+			ObjectLook.color(look, "brick_tint", Color("#8a7a72")))
+	ObjectLook.draw_riveted_frame(self, box, ObjectLook.number(look, "housing_frame_px", 6.0), iron, rivet,
+			ObjectLook.number(look, "rivet_px", 2.5), ObjectLook.number(look, "rivet_step_px", 14.0))
+	var wheel := ObjectLook.picture("shutter_wheel")
+	var gear := ObjectLook.picture("shutter_gear_small")
+	var wheel_px := ObjectLook.number(look, "wheel_px", 40.0)
+	var gear_px := ObjectLook.number(look, "gear_px", 22.0)
+	var hub := Vector2(0.0, box.end.y - wheel_px / 2.0 - 4.0)
+	var angle := wheel_angle()
+	if gear != null:
+		var at := hub + Vector2(wheel_px / 2.0 - 2.0, wheel_px / 2.0 - gear_px / 2.0 + 2.0)
+		ObjectLook.draw_turned(self, gear, at, Vector2(gear_px, gear_px), -angle * wheel_px / gear_px)
+	if wheel != null:
+		ObjectLook.draw_turned(self, wheel, hub, Vector2(wheel_px, wheel_px), angle)

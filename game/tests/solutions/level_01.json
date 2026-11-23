@@ -11,6 +11,6 @@
 		{ "actions": ["move_right"], "ticks": 30 },
 		{ "actions": [], "ticks": 150 },
 		{ "actions": ["rewind"], "ticks": 300 },
-		{ "actions": ["move_right", "rewind"], "ticks": 120 }
+		{ "actions": ["move_right", "rewind"], "ticks": 180 }
 	]
 }

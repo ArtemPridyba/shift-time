@@ -14,6 +14,14 @@ extends AnimatableBody2D
 ## has not left its start yet stays there. The latch only holds, it never moves
 ## the platform: once the platform has left its start, `powered` does nothing.
 ##
+## Dressed from the Night shop kit (task Д4): the plank is the `platform`
+## picture (its ends kept, its middle stretched to the width). `track` adds the
+## fixed way it rides: "rack" — a toothed column along a vertical path,
+## "chain" — a chain between two drums along a horizontal one; a gear on the
+## platform and the drums turn by the recorded travel, the chain's links run
+## with it, so under Shift they go back exactly. Numbers:
+## `kit_objects.platform` of `data/look.json`.
+##
 ## Temporal object contract: docs/architecture.md, section 4.1.
 
 const BODY_COLOR := Color("#6b717a")
@@ -28,6 +36,8 @@ const CYCLE_ONCE := "once"
 ## The platform's width in pixels; 0 keeps the width of its scene (a bridge
 ## of level 04 is wider).
 @export var width := 0.0
+## The fixed way the platform rides, drawn behind it: "", "rack" or "chain".
+@export var track := ""
 
 ## Tick on the path: there, pause, back, pause. In `once` mode: wait, ride, stay.
 var phase := 0
@@ -94,6 +104,7 @@ func capture_state() -> Dictionary:
 func restore_state(state: Dictionary) -> void:
 	phase = int(state["phase"])
 	position = state["position"]
+	queue_redraw()
 	if holdable:
 		powered = bool(state.get("powered", false))
 
@@ -106,6 +117,7 @@ func simulate_tick(_tick: int) -> void:
 	else:
 		phase = (phase + 1) % cycle_ticks()
 	position = position_at(phase)
+	queue_redraw()
 
 
 func on_time_direction_changed(direction: int) -> void:
@@ -194,5 +206,62 @@ func _size() -> Vector2:
 
 func _draw() -> void:
 	var size := _size()
+	var plank := ObjectLook.picture("platform")
+	if plank != null:
+		_draw_kit(plank, size)
+		return
 	draw_rect(Rect2(-size / 2.0, size), BODY_COLOR)
 	draw_rect(Rect2(Vector2(-size.x / 2.0 + 8.0, -size.y / 2.0), Vector2(size.x - 16.0, 6.0)), ACCENT_COLOR)
+
+
+## The gear on the platform rolls along its track: the travel over its radius.
+func gear_angle() -> float:
+	var r := ObjectLook.number(ObjectLook.of("platform"), "gear_px", 22.0) / 2.0
+	return mech_travel() / maxf(r, 1.0)
+
+
+func _draw_kit(plank: Texture2D, size: Vector2) -> void:
+	var look := ObjectLook.of("platform")
+	var top := -size.y / 2.0
+	var shift := _base() - position
+	var gear := ObjectLook.picture("shutter_gear_small")
+	var gear_px := ObjectLook.number(look, "gear_px", 22.0)
+	var tint := ObjectLook.color(look, "track_tint", Color.WHITE)
+	if track == "rack":
+		var rack := ObjectLook.picture("platform_rack")
+		var w := ObjectLook.number(look, "rack_px", 18.0)
+		var y0 := shift.y + minf(0.0, travel.y) - ObjectLook.number(look, "track_above_px", 64.0)
+		var y1 := shift.y + maxf(0.0, travel.y) + ObjectLook.number(look, "track_below_px", 64.0)
+		if rack != null:
+			ObjectLook.draw_region_down(self, rack, Rect2(Vector2.ZERO, rack.get_size()),
+					Rect2(shift.x - w / 2.0, y0, w, y1 - y0), tint)
+	elif track == "chain":
+		var chain := ObjectLook.picture("platform_chain")
+		var h := ObjectLook.number(look, "chain_px", 10.0)
+		var x0 := shift.x + minf(0.0, travel.x)
+		var x1 := shift.x + maxf(0.0, travel.x)
+		var y := top + ObjectLook.number(look, "chain_below_px", 12.0)
+		if chain != null:
+			ObjectLook.draw_region_across(self, chain, Rect2(Vector2.ZERO, chain.get_size()),
+					Rect2(x0, y - h / 2.0, x1 - x0, h), tint, -mech_travel() * signf(travel.x))
+		if gear != null:
+			for x: float in [x0, x1]:
+				ObjectLook.draw_turned(self, gear, Vector2(x, y), Vector2(gear_px, gear_px), gear_angle() * signf(travel.x), tint)
+	var plank_h := float(plank.get_height()) / ObjectLook.texel("platform")
+	_draw_plank(plank, Rect2(-size.x / 2.0, top, size.x, plank_h), ObjectLook.number(look, "cap_px", 24.0))
+	if track == "rack" and gear != null:
+		ObjectLook.draw_turned(self, gear, Vector2(0.0, top + plank_h), Vector2(gear_px, gear_px), gear_angle())
+
+
+## The plank with its ends as drawn and its middle stretched between them.
+func _draw_plank(plank: Texture2D, r: Rect2, cap: float) -> void:
+	var texel := float(plank.get_height()) / maxf(r.size.y, 1.0)
+	var cap_tex := cap * texel
+	var w := float(plank.get_width())
+	var h := float(plank.get_height())
+	cap = minf(cap, r.size.x / 2.0)
+	draw_texture_rect_region(plank, Rect2(r.position, Vector2(cap, r.size.y)), Rect2(0, 0, cap_tex, h))
+	draw_texture_rect_region(plank, Rect2(r.position + Vector2(cap, 0.0), Vector2(r.size.x - 2.0 * cap, r.size.y)),
+			Rect2(cap_tex, 0, w - 2.0 * cap_tex, h))
+	draw_texture_rect_region(plank, Rect2(Vector2(r.end.x - cap, r.position.y), Vector2(cap, r.size.y)),
+			Rect2(w - cap_tex, 0, cap_tex, h))
