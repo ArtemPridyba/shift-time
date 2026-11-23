@@ -4,7 +4,7 @@ extends RefCounted
 ## (rule «A»), only lit places glow, the darkness mask follows the lamp, and
 ## the data check catches broken lamp and darkness numbers. Run by test_runner.gd.
 
-const ROOM_PATH := "res://levels/test_room_dark.tscn"
+const ROOM_PATH := "res://tests/rooms/test_room_dark.tscn"
 const BACK := TimeWorld.BACKWARD
 const FWD := TimeWorld.FORWARD
 

@@ -1,6 +1,6 @@
 [gd_scene format=3]
 
-[ext_resource type="PackedScene" path="res://levels/test_room.tscn" id="1_room"]
+[ext_resource type="PackedScene" path="res://tests/rooms/test_room.tscn" id="1_room"]
 [ext_resource type="PackedScene" path="res://objects/lamp.tscn" id="2_lamp"]
 [ext_resource type="Script" path="res://objects/glow_item.gd" id="3_glow"]
 [ext_resource type="Script" path="res://ui/darkness.gd" id="4_dark"]

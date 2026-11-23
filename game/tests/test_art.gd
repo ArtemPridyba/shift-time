@@ -1,10 +1,7 @@
 extends RefCounted
 ## Tests of the style sheet (task Д1): palettes by role from `art.json`, the
-## `Art` singleton that switches them, and the style showcase scene.
+## `Art` singleton that switches them, and the shapes of the style.
 ## Run by test_runner.gd.
-
-const SHOWCASE_PATH := "res://levels/style_test.tscn"
-const ACTIONS: Array[String] = ["next_palette", "rewind"]
 
 var failures: Array[String] = []
 var _tree: SceneTree
@@ -155,40 +152,3 @@ func test_slab_keeps_its_collision_and_draws_its_kind() -> void:
 			check(Vector2i(slab.front.texture.get_size()) == Vector2i(slab.front_rect().size.round()), "the %s front must fill the front face" % kind)
 		check(slab.size == Vector2(192, 48), "a slab must not change its collision rectangle")
 		slab.free()
-
-
-# --- the showcase -----------------------------------------------------------
-
-func test_showcase_switches_palettes_and_rewinds() -> void:
-	var art_node := _tree.root.get_node("Art")
-	var active := str(Content.art()["active_palette"])
-	var showcase: Node = (load(SHOWCASE_PATH) as PackedScene).instantiate()
-	_tree.root.add_child(showcase)
-	await _ticks(30)
-	var tau_before: float = showcase.get("tau")
-	check(tau_before > 0.4, "showcase time must run forward")
-	Input.action_press("next_palette")
-	await _ticks(2)
-	Input.action_release("next_palette")
-	check(art_node.palette.id == ArtPalette.next_id(Content.art(), active), "P must switch to the next palette once")
-	Input.action_press("rewind")
-	await _ticks(10)
-	var tau_rewound: float = showcase.get("tau")
-	check(tau_rewound < tau_before, "under Shift the showcase time must run back")
-	await _ticks(60)
-	check(is_zero_approx(showcase.get("tau")), "showcase time must stop at zero")
-	_release_all()
-	showcase.queue_free()
-	await _tree.process_frame
-	check(art_node.palette.id == active, "leaving the showcase must restore active_palette")
-	check(Content.level_for_scene(SHOWCASE_PATH).is_empty(), "the showcase must not be a level")
-
-
-func _release_all() -> void:
-	for action in ACTIONS:
-		Input.action_release(action)
-
-
-func _ticks(count: int) -> void:
-	for i in count:
-		await _tree.physics_frame

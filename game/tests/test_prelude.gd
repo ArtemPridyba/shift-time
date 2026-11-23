@@ -4,7 +4,7 @@ extends RefCounted
 ## the same room records the same prelude every time and after a reset, and
 ## broken event data is reported. Run by test_runner.gd.
 
-const ROOM_PATH := "res://levels/test_room_water.tscn"
+const ROOM_PATH := "res://tests/rooms/test_room_water.tscn"
 const BACK := TimeWorld.BACKWARD
 
 var failures: Array[String] = []

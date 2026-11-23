@@ -14,7 +14,7 @@ extends SceneTree
 const CELL := 64
 const TILE_PNG := "res://levels/blockout/gray_block.png"
 const TILESET_RES := "res://levels/blockout/blockout_tileset.tres"
-const SCENE_PATH := "res://levels/test_room.tscn"
+const SCENE_PATH := "res://tests/rooms/test_room.tscn"
 
 const MAP := [
 	"########################################",
