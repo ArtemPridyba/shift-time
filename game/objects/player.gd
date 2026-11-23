@@ -62,7 +62,11 @@ func _physics_process(delta: float) -> void:
 	velocity = _motion.step(velocity, axis, jump, is_on_floor(), delta, water)
 	move_and_slide()
 	_rig.set_exit(float(_intro_left) / float(_intro_total) if _intro_left > 0 else 0.0)
-	_rig.step(get_real_velocity(), is_on_floor(), delta)
+	# Her gait reads her own speed: a platform carrying her is not her walk (D120).
+	var own := get_real_velocity()
+	if is_on_floor():
+		own -= get_platform_velocity()
+	_rig.step(own, is_on_floor(), delta)
 	if axis != 0.0 and signf(axis) != _facing:
 		_facing = signf(axis)
 		_rig.set_facing(_facing)

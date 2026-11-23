@@ -265,6 +265,35 @@ func test_level_01_stairs_are_walked_down_and_up_without_a_jump() -> void:
 	await _free(room)
 
 
+## On a moving platform she stands (D120): the gait reads her own speed, not
+## the platform's, so the ride does not make her run. Platform 1 has nearly
+## arrived after the walk-in, so Shift rides it back.
+func test_level_01_hero_stands_still_on_a_moving_platform() -> void:
+	var room := await _load()
+	var player: Player = room.get_node("Player")
+	var first: MovingPlatform = room.get_node("Platform1")
+	await _ticks(int(round(float(Content.level_for_scene(LEVEL_PATH)["intro_seconds"]) * 60.0)) + 5)
+	var top := first.rect_at(first.position_at(first.phase))
+	player.global_position = Vector2(top.get_center().x, top.position.y)
+	player.velocity = Vector2.ZERO
+	await _ticks(10)
+	var rig := player.rig()
+	var start_x := player.global_position.x
+	var walked := rig.distance()
+	var running := 0
+	Input.action_press("rewind")
+	for i in 60:
+		await _ticks(1)
+		if rig.pose() != "idle":
+			running += 1
+	Input.action_release("rewind")
+	var ridden := player.global_position.x - start_x
+	check(player.is_on_floor() and absf(ridden) > 40.0, "she rides platform 1, %.0f px in a second" % ridden)
+	check(running == 0, "riding without a key she stands, %d ticks not idle" % running)
+	check(is_equal_approx(rig.distance(), walked), "riding does not advance her walk, %.1f px" % (rig.distance() - walked))
+	await _free(room)
+
+
 func test_level_01_reset_brings_the_hero_in_again() -> void:
 	var room := await _load()
 	var player: Player = room.get_node("Player")
