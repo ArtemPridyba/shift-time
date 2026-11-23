@@ -58,8 +58,22 @@ func _physics_process(_delta: float) -> void:
 	# A long hold of Shift rewinds several frames a tick (D62).
 	var frames: int = manager.rewind_frames if manager != null else 1
 	last_step = world.tick(direction, temporal_objects(), _player_rect(), frames)
+	_tell_plates(direction)
 	_tell_live_sources(direction)
 	_tell_world_clock()
+
+
+## Time plates (group `plate`, level 08) feel the player's step after the
+## world moved, by the direction of this tick, and change their shutters
+## through `apply_change`.
+func _tell_plates(direction: int) -> void:
+	var room := get_parent()
+	if room == null:
+		return
+	var rect := _player_rect()
+	for node in get_tree().get_nodes_in_group("plate"):
+		if room.is_ancestor_of(node) and node.has_method("sense"):
+			node.call("sense", self, direction, rect)
 
 
 ## Live sources (group `live`, reverse items) act after the world moved, by
@@ -153,16 +167,23 @@ func player_interact(player_pos: Vector2) -> void:
 	for change: Variant in changes:
 		var ch := change as Dictionary
 		var id := str(ch.get("id", ""))
-		var state := (ch.get("state", {}) as Dictionary).duplicate(true)
-		for obj: Variant in objects:
-			if obj is Object and (obj as Object).has_method("capture_state") and str((obj as Object).get("object_id")) == id:
-				var full_state: Dictionary = ((obj as Object).call("capture_state") as Dictionary).duplicate(true)
-				full_state.merge(state, true)
-				state = full_state
-				break
-		player_action(id, state)
+		apply_change(id, ch.get("state", {}) as Dictionary)
 		if bool(ch.get("rewrite_past", false)):
 			world.rewrite_past(temporal_objects(), id)
+
+
+## A player's change to one object: `partial` is merged over the object's
+## present state and goes through `player_action` (interference left of the
+## head, ordinary recording at it).
+func apply_change(id: String, partial: Dictionary) -> bool:
+	var state := partial.duplicate(true)
+	for obj: Variant in temporal_objects():
+		if obj is Object and (obj as Object).has_method("capture_state") and str((obj as Object).get("object_id")) == id:
+			var full_state: Dictionary = ((obj as Object).call("capture_state") as Dictionary).duplicate(true)
+			full_state.merge(state, true)
+			state = full_state
+			break
+	return player_action(id, state)
 
 
 ## Back to the room as it was loaded, with a fresh history and its prelude
@@ -172,6 +193,9 @@ func reset() -> void:
 	for node in get_tree().get_nodes_in_group("carried"):
 		if room != null and room.is_ancestor_of(node) and node.has_method("forget_hands"):
 			node.call("forget_hands")
+	for node in get_tree().get_nodes_in_group("plate"):
+		if room != null and room.is_ancestor_of(node) and node.has_method("forget_step"):
+			node.call("forget_step")
 	var objects := temporal_objects()
 	_recorder.restore(_initial, objects)
 	world.start(objects)
