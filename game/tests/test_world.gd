@@ -34,6 +34,15 @@ func test_broken_world_data_is_reported() -> void:
 	check(not WorldData.validate_layout(bad_rect, "x").is_empty(), "a rect without width is reported")
 	var bad_lamp := {"lamps": [{"x": 3, "drop": 0}]}
 	check(not WorldData.validate_layout(bad_lamp, "x").is_empty(), "a lamp without cable is reported")
+	check(not WorldData.validate_layout({"ground": {"roof": [[0, 0, 32]]}}, "x").is_empty(), "a roof rect without height is reported")
+	check(not WorldData.validate_layout({"ceiling": "high"}, "x").is_empty(), "a ceiling that is not a row is reported")
+	check(is_equal_approx(WorldData.lamp_at({"x": 2, "drop": 3}, 6.0).y, 9.0 * WorldData.CELL), "a lamp hangs its drop below the ceiling row")
+	var player := Content.player().duplicate()
+	player["floor_max_angle_deg"] = 70
+	check(not Content.validate_player(player).is_empty(), "a floor angle that would let her walk up walls is reported")
+	var steps := WorldData.look().duplicate(true)
+	steps["stair_rise_px"] = 2
+	check(not WorldData.validate_look(steps).is_empty(), "a stair step below the range is reported")
 	var look := WorldData.look().duplicate(true)
 	(look["colors"] as Dictionary).erase("darkness")
 	check(not WorldData.validate_look(look).is_empty(), "a missing colour is reported")

@@ -5,7 +5,11 @@ extends Node2D
 ## cell with air above — its top face is centred on the collision line, so her
 ## feet stand on the middle of the face (collision unchanged) — an iron angle on
 ## the sides and lower faces, then the rubble of `world.front` lying on the
-## floor. Placed after the doors and platforms: a shutter that slides into the
+## floor. Cells inside `world.ground.roof` are the dark roof over the hall
+## (D120): no masonry, no top face, only an eave along their lower face and
+## the dim beams of the roof. The cells of a flight of stairs (`Stairs`, a
+## sibling) count as solid for their neighbours, the flight draws itself.
+## Placed after the doors and platforms: a shutter that slides into the
 ## floor goes behind it. Decoration only, it collides with nothing: the
 ## blockout tiles stay the collision and are hidden.
 
@@ -15,6 +19,8 @@ extends Node2D
 var _world: Dictionary
 var _cells := {}
 var _concrete: Array[Rect2i] = []
+var _roof: Array[Rect2i] = []
+var _stair_cells := {}
 var _front: Array = []
 var _cell := Vector2(64, 64)
 
@@ -26,6 +32,15 @@ func _ready() -> void:
 	var ground: Variant = layout.get("ground", {})
 	for r: Variant in (ground as Dictionary).get("concrete", []) if ground is Dictionary else []:
 		_concrete.append(Rect2i(int(r[0]), int(r[1]), int(r[2]), int(r[3])))
+	for r: Variant in (ground as Dictionary).get("roof", []) if ground is Dictionary else []:
+		_roof.append(Rect2i(int(r[0]), int(r[1]), int(r[2]), int(r[3])))
+	if get_parent() != null:
+		for node in get_parent().get_children():
+			if node is Stairs:
+				var flight := (node as Stairs).cells
+				for x in range(flight.position.x, flight.end.x):
+					for y in range(flight.position.y, flight.end.y):
+						_stair_cells[Vector2i(x, y)] = true
 	var blocks := get_node_or_null(blocks_path) as TileMapLayer
 	if blocks != null:
 		_cell = Vector2(blocks.tile_set.tile_size)
@@ -45,6 +60,18 @@ func _is_concrete(cell: Vector2i) -> bool:
 	return false
 
 
+func is_roof(cell: Vector2i) -> bool:
+	for r in _roof:
+		if r.has_point(cell):
+			return true
+	return false
+
+
+## Solid for its neighbours: a solid cell or a cell of a flight of stairs.
+func _covered(cell: Vector2i) -> bool:
+	return _cells.has(cell) or _stair_cells.has(cell)
+
+
 func _draw() -> void:
 	if _cells.is_empty():
 		return
@@ -61,15 +88,18 @@ func _draw() -> void:
 		bounds = Rect2i(cell, Vector2i.ONE) if bounds.size == Vector2i.ZERO else bounds.expand(cell + Vector2i.ONE)
 	# Fill, by runs of one material along each row, aligned to the room so
 	# the tiles meet without seams.
+	for r in _roof:
+		_roof_fill(Rect2(Vector2(r.position) * _cell, Vector2(r.size) * _cell))
 	for y in range(bounds.position.y, bounds.end.y):
 		var x := bounds.position.x
 		while x < bounds.end.x:
-			if not is_solid(Vector2i(x, y)):
+			if not is_solid(Vector2i(x, y)) or is_roof(Vector2i(x, y)):
 				x += 1
 				continue
 			var hard := _is_concrete(Vector2i(x, y))
 			var start := x
-			while x < bounds.end.x and is_solid(Vector2i(x, y)) and _is_concrete(Vector2i(x, y)) == hard:
+			while x < bounds.end.x and is_solid(Vector2i(x, y)) and not is_roof(Vector2i(x, y)) \
+					and _is_concrete(Vector2i(x, y)) == hard:
 				x += 1
 			var rect := Rect2(Vector2(start, y) * _cell, Vector2(x - start, 1) * _cell)
 			draw_texture_rect_region(concrete if hard else masonry, rect,
@@ -79,18 +109,22 @@ func _draw() -> void:
 	var side := KitTextures.piece("ledge_side")
 	for cell: Vector2i in _cells:
 		var at := Vector2(cell) * _cell
-		if not is_solid(cell + Vector2i.LEFT):
+		if is_roof(cell):
+			if not _covered(cell + Vector2i.DOWN):
+				draw_rect(Rect2(at + Vector2(0, _cell.y - edge * 2.0), Vector2(_cell.x, edge * 2.0)), iron.darkened(0.2))
+			continue
+		if not _covered(cell + Vector2i.LEFT):
 			if side != null:
 				_side(side, Rect2(at, Vector2(edge, _cell.y)))
 			else:
 				draw_rect(Rect2(at, Vector2(edge, _cell.y)), iron)
 				draw_rect(Rect2(at, Vector2(1.5, _cell.y)), edge_light)
-		if not is_solid(cell + Vector2i.RIGHT):
+		if not _covered(cell + Vector2i.RIGHT):
 			if side != null:
 				_side(side, Rect2(at + Vector2(_cell.x - edge, 0), Vector2(edge, _cell.y)))
 			else:
 				draw_rect(Rect2(at + Vector2(_cell.x - edge, 0), Vector2(edge, _cell.y)), iron)
-		if not is_solid(cell + Vector2i.DOWN):
+		if not _covered(cell + Vector2i.DOWN):
 			draw_rect(Rect2(at + Vector2(0, _cell.y - edge), Vector2(_cell.x, edge)), iron)
 			draw_rect(Rect2(at + Vector2(0, _cell.y - 1.5), Vector2(_cell.x, 1.5)), edge_light.darkened(0.3))
 	# Top faces last: they reach half a face above the cell.
@@ -98,7 +132,7 @@ func _draw() -> void:
 	var concrete_top := KitTextures.tile("concrete_top")
 	var strip := float(KitTextures.top_strip_px(_world))
 	for cell: Vector2i in _cells:
-		if is_solid(cell + Vector2i.UP):
+		if _covered(cell + Vector2i.UP) or is_roof(cell):
 			continue
 		var at := Vector2(cell) * _cell
 		var hard := _is_concrete(cell)
@@ -111,6 +145,26 @@ func _draw() -> void:
 		draw_texture_rect_region(picture, dest, Rect2(at.x, 0.0, _cell.x, strip * scale_y))
 	for piece: Dictionary in _front:
 		_front_piece(piece)
+
+
+## The dark roof over the hall (D120): darker towards the top, the dim
+## rafters and purlins of the roof in it; the lamps hardly reach it.
+func _roof_fill(r: Rect2) -> void:
+	var roof := WorldData.color(_world, "roof")
+	var bands := 6
+	for i in bands:
+		var band := Rect2(r.position.x, r.position.y + r.size.y * float(i) / bands, r.size.x, r.size.y / bands + 1.0)
+		draw_rect(band, roof.darkened(0.5 * (1.0 - float(i) / float(bands - 1))))
+	var beam := roof.lightened(0.04)
+	var y := r.end.y - _cell.y * 0.9
+	while y > r.position.y + _cell.y * 0.5:
+		draw_rect(Rect2(r.position.x, y, r.size.x, 6.0), beam)
+		y -= _cell.y * 1.6
+	var x := r.position.x + _cell.x * 2.0
+	while x < r.end.x:
+		draw_line(Vector2(x, r.end.y), Vector2(x + _cell.x * 1.5, r.position.y + _cell.y), beam, 5.0)
+		draw_line(Vector2(x, r.end.y), Vector2(x - _cell.x * 1.5, r.position.y + _cell.y), beam, 5.0)
+		x += _cell.x * 4.0
 
 
 ## A Gemini top of a cell (D109): the flat picture seen from above squeezed

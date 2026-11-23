@@ -174,7 +174,7 @@
     "dash_speed_px": 240
   },
   "world": {
-    "_about": "The Night shop kit (task Д3, D61, D64, D106). colors: the code placeholders of the kit and darkness, the colour the dark room multiplies everything by (CanvasModulate). textures: a Gemini picture per piece, res:// path, empty draws the code placeholder; tools/cut_kit.py cuts them from docs/art/gemini/raw (kit_texel texture pixels per room pixel); brick, masonry and concrete repeat as tiles; floor_top and concrete_top are the flat top seen from above, squeezed into top_face_px (D109), floor_edge and concrete_edge the front edge under it, ledge_side the side of a ledge; column, pipe, truss, crane_beam and lamp_chain repeat along their length; crane is the trolley with the hook, lamp the caged lamp, both at their own size; machines and rubble keep their proportions, as wide as their rect and standing on its lower edge; soot, rust, cracks and stain are white masks painted with the colours of the same name (rust: rust_stain, cracks: crack); the rest fill their rect. brick_px: one brick of the placeholder wall; masonry_px and concrete_px: one block of the masonry and concrete placeholders, each dividing 256 (D112: the kit is sized to the heroine, 92 px = 1.75 m, about 52 px a metre; docs/art/scale.md). top_face_px: the visible top face of floors and ledges, her feet on its middle (collision unchanged). edge_px: the iron angle along the sides and lower faces of solid cells. machine_dim: background machines are this much darker than the wall pieces. lamp: every lamp of a layout (lamps in levels.json): the warm colour and energy of its light, radius_px of the island, below_px how far below the bulb the island's centre lies, flicker depth (0..1) and flicker_hz, a formula of world time; halo_px and halo_alpha: the soft glow round the bulb; picture_bulb: where the bulb is in the lamp picture, a fraction of its height from the top. heroine_light: a weak light that lights only the heroine, so she reads between the islands (D76).",
+    "_about": "The Night shop kit (task Д3, D61, D64, D106). colors: the code placeholders of the kit and darkness, the colour the dark room multiplies everything by (CanvasModulate). textures: a Gemini picture per piece, res:// path, empty draws the code placeholder; tools/cut_kit.py cuts them from docs/art/gemini/raw (kit_texel texture pixels per room pixel); brick, masonry and concrete repeat as tiles; floor_top and concrete_top are the flat top seen from above, squeezed into top_face_px (D109), floor_edge and concrete_edge the front edge under it, ledge_side the side of a ledge; column, pipe, truss, crane_beam and lamp_chain repeat along their length; crane is the trolley with the hook, lamp the caged lamp, both at their own size; machines and rubble keep their proportions, as wide as their rect and standing on its lower edge; soot, rust, cracks and stain are white masks painted with the colours of the same name (rust: rust_stain, cracks: crack); the rest fill their rect. brick_px: one brick of the placeholder wall; masonry_px and concrete_px: one block of the masonry and concrete placeholders, each dividing 256 (D112: the kit is sized to the heroine, 92 px = 1.75 m, about 52 px a metre; docs/art/scale.md). top_face_px: the visible top face of floors and ledges, her feet on its middle (collision unchanged). edge_px: the iron angle along the sides and lower faces of solid cells. machine_dim: background machines are this much darker than the wall pieces. lamp: every lamp of a layout (lamps in levels.json): the warm colour and energy of its light, radius_px of the island, below_px how far below the bulb the island's centre lies, flicker depth (0..1) and flicker_hz, a formula of world time; halo_px and halo_alpha: the soft glow round the bulb; picture_bulb: where the bulb is in the lamp picture, a fraction of its height from the top. heroine_light: a weak light that lights only the heroine, so she reads between the islands (D76). roof: the dark roof over the hall (ground.roof of a layout, D120). stairs: the picture of a flight of stairs (N-13) over its rect, empty: steps of the kit tiles, each about stair_rise_px high.",
     "colors": {
       "brick": "#74382a",
       "mortar": "#2e221f",
@@ -193,7 +193,8 @@
       "soot": "#0b0908b8",
       "rust_stain": "#6e3018c0",
       "crack": "#140f0ed0",
-      "stain": "#1e1a16a0"
+      "stain": "#1e1a16a0",
+      "roof": "#16141a"
     },
     "textures": {
       "brick": "res://assets/art/kit/brick.png",
@@ -223,7 +224,8 @@
       "glass": "res://assets/art/kit/glass.png",
       "lump": "res://assets/art/kit/lump.png",
       "lamp": "res://assets/art/kit/lamp.png",
-      "lamp_chain": "res://assets/art/kit/lamp_chain.png"
+      "lamp_chain": "res://assets/art/kit/lamp_chain.png",
+      "stairs": ""
     },
     "brick_px": [28, 10],
     "masonry_px": [32, 16],
@@ -232,11 +234,12 @@
     "edge_px": 6,
     "machine_dim": 0.35,
     "kit_texel": 2,
+    "stair_rise_px": 20,
     "lamp": {
       "color": "#ffb066",
       "energy": 1.4,
-      "radius_px": 280,
-      "below_px": 120,
+      "radius_px": 300,
+      "below_px": 170,
       "flicker": 0.08,
       "flicker_hz": 0.6,
       "halo_px": 46,

@@ -9,8 +9,9 @@ extends RefCounted
 ## A layout places pieces by grid cells: `{"kind": "window", "rect": [x, y, w, h]}`.
 ## `back` pieces stand on the back wall behind everything, `front` pieces lie
 ## on the floor in front of it; `lamps` hang from the ceiling (`x` cell, `drop`
-## cells of cable); `ground.concrete` lists the rects of solid cells drawn as
-## concrete instead of iron plates on masonry.
+## cells of cable from row `ceiling`, 1 when it is not given); `ground.concrete`
+## lists the rects of solid cells drawn as concrete instead of iron plates on
+## masonry, `ground.roof` those drawn as the dark roof over the hall (D120).
 
 const CELL := 64.0
 
@@ -34,11 +35,11 @@ const TILE_TEXTURES: Array[String] = ["brick", "masonry", "concrete", "floor_top
 	"floor_edge", "concrete_edge", "ledge_side"]
 const PIECE_TEXTURES: Array[String] = ["window", "column", "truss", "crane", "crane_beam", "plaster",
 	"soot", "rust", "cracks", "stain", "tank", "hopper", "pipe", "catwalk", "bricks", "beam", "glass",
-	"lump", "lamp", "lamp_chain"]
+	"lump", "lamp", "lamp_chain", "stairs"]
 
 const COLORS: Array[String] = ["brick", "mortar", "masonry", "iron", "iron_edge", "concrete",
 	"sky_top", "sky_bottom", "glass", "machine", "rust", "lamp_shade", "bulb", "darkness",
-	"soot", "rust_stain", "crack", "stain"]
+	"soot", "rust_stain", "crack", "stain", "roof"]
 
 
 static func look() -> Dictionary:
@@ -74,9 +75,14 @@ static func piece_rect(piece: Dictionary) -> Rect2:
 
 
 ## Where lamp `lamp` of a layout hangs: the bulb, in room pixels. The cable
-## starts at the ceiling's lower face (row 1).
-static func lamp_at(lamp: Dictionary) -> Vector2:
-	return Vector2(float(lamp.get("x", 0.0)) * CELL, CELL + float(lamp.get("drop", 1.0)) * CELL)
+## starts at the ceiling's lower face, row `ceiling` (1 by default).
+static func lamp_at(lamp: Dictionary, ceiling := 1.0) -> Vector2:
+	return Vector2(float(lamp.get("x", 0.0)) * CELL, (ceiling + float(lamp.get("drop", 1.0))) * CELL)
+
+
+## The row of the ceiling's lower face in a layout: lamp cables start there.
+static func ceiling(layout: Dictionary) -> float:
+	return float(layout.get("ceiling", 1.0)) if _is_number(layout.get("ceiling", 1.0)) else 1.0
 
 
 ## The energy of lamp number `index` at world second `seconds`: a slow uneven
@@ -121,6 +127,7 @@ static func validate_look(world: Variant) -> PackedStringArray:
 	_number(errors, world, where, "edge_px", 1.0, 32.0)
 	_number(errors, world, where, "machine_dim", 0.0, 1.0)
 	_number(errors, world, where, "kit_texel", 1.0, 8.0)
+	_number(errors, world, where, "stair_rise_px", 8.0, 48.0)
 	var brick: Variant = world.get("brick_px")
 	if not brick is Array or brick.size() != 2 or not _is_number(brick[0]) or not _is_number(brick[1]) \
 			or float(brick[0]) < 8.0 or float(brick[1]) < 4.0:
@@ -189,13 +196,16 @@ static func validate_layout(layout: Variant, where: String) -> PackedStringArray
 	if not ground is Dictionary:
 		errors.append("%s: world.ground must be an object" % where)
 	else:
-		var concrete: Variant = (ground as Dictionary).get("concrete", [])
-		if not concrete is Array:
-			errors.append("%s: world.ground.concrete must be a list of rects" % where)
-		else:
-			for rect: Variant in concrete:
+		for zone: String in ["concrete", "roof"]:
+			var rects: Variant = (ground as Dictionary).get(zone, [])
+			if not rects is Array:
+				errors.append("%s: world.ground.%s must be a list of rects" % [where, zone])
+				continue
+			for rect: Variant in rects:
 				if not _is_rect(rect):
-					errors.append("%s: world.ground.concrete: %s is not [x, y, w, h]" % [where, rect])
+					errors.append("%s: world.ground.%s: %s is not [x, y, w, h]" % [where, zone, rect])
+	if layout.has("ceiling") and (not _is_number(layout["ceiling"]) or float(layout["ceiling"]) < 0.0):
+		errors.append("%s: world.ceiling must be a row, 0 or more" % where)
 	return errors
 
 
