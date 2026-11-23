@@ -62,7 +62,11 @@ func _physics_process(delta: float) -> void:
 	velocity = _motion.step(velocity, axis, jump, is_on_floor(), delta, water)
 	move_and_slide()
 	_rig.set_exit(float(_intro_left) / float(_intro_total) if _intro_left > 0 else 0.0)
-	_rig.step(get_real_velocity(), is_on_floor(), delta)
+	# Her gait reads her own speed: a platform carrying her is not her walk (D120).
+	var own := get_real_velocity()
+	if is_on_floor():
+		own -= get_platform_velocity()
+	_rig.step(own, is_on_floor(), delta, _footing())
 	if axis != 0.0 and signf(axis) != _facing:
 		_facing = signf(axis)
 		_rig.set_facing(_facing)
@@ -77,6 +81,31 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("interact"):
 		_rig.play("press")
 		_try_interact()
+
+
+## The flight of stairs under her feet for the doll (D120): the top of the
+## tread under a rig x, in her own pixels, and where she is in the room;
+## empty away from stairs.
+func _footing() -> Dictionary:
+	if not is_inside_tree():
+		return {}
+	var at := global_position
+	for node in get_tree().get_nodes_in_group("stairs"):
+		var stairs := node as Stairs
+		var flight := stairs.rect_px() if stairs != null else Rect2()
+		# The feet reach about half a hitbox beyond her middle.
+		if stairs == null or at.x < flight.position.x - _size.x or at.x > flight.end.x + _size.x \
+				or at.y < flight.position.y - _size.y or at.y > flight.end.y + _size.y:
+			continue
+		var origin := stairs.global_position
+		return {
+			"ground": func(x: float) -> float: return origin.y + stairs.tread_y(at.x + x - origin.x) - at.y,
+			"tread_px": stairs.tread_px(),
+			"tread_x": origin.x + flight.position.x - at.x,
+			"at": at,
+			"slope": origin.y + stairs.surface_y(at.x - origin.x) - at.y,
+		}
+	return {}
 
 
 func set_camera_limits(rect: Rect2i) -> void:

@@ -35,10 +35,10 @@ static func pose_lift(data: Dictionary, pose: String) -> float:
 
 
 ## The run at `phase` (cycles of the run, any real number): the keys of
-## `run.keys` follow each other evenly and blend linearly, the last into the
-## first. Returns {"angles", "lift"}.
-static func run_pose(data: Dictionary, phase: float) -> Dictionary:
-	var keys: Array = (data.get("run", {}) as Dictionary).get("keys", [])
+## `run.keys` (or of another cycle, `stairs.keys`) follow each other evenly and
+## blend linearly, the last into the first. Returns {"angles", "lift"}.
+static func run_pose(data: Dictionary, phase: float, cycle := "run") -> Dictionary:
+	var keys: Array = (data.get(cycle, {}) as Dictionary).get("keys", [])
 	if keys.is_empty():
 		return {"angles": pose_angles(data, "idle"), "lift": pose_lift(data, "idle")}
 	var at: float = fposmod(phase, 1.0) * keys.size()
@@ -216,6 +216,7 @@ static func validate(data: Variant) -> PackedStringArray:
 				errors.append("heroine.json: run.%s must be a number above 0" % number)
 		if not _number(run.get("blend_seconds")) or float(run.get("blend_seconds")) < 0.0:
 			errors.append("heroine.json: run.blend_seconds must be 0 or more")
+	errors.append_array(_validate_stairs(data, poses))
 	errors.append_array(_validate_motion(data, poses))
 	var soles: Variant = data.get("soles")
 	if not soles is Dictionary or (soles as Dictionary).is_empty():
@@ -291,6 +292,46 @@ static func spiral(motes: Dictionary, angle: float, from: float, along: float) -
 
 
 ## The air, the overlays, the walk out of the doorway and the light.
+## `stairs` (D120): the walk on a flight, its own cycle of poses and how her
+## legs find the treads.
+static func _validate_stairs(data: Dictionary, poses: Dictionary) -> PackedStringArray:
+	var errors := PackedStringArray()
+	var stairs: Variant = data.get("stairs")
+	if not stairs is Dictionary:
+		errors.append("heroine.json: stairs must be an object")
+		return errors
+	var keys: Variant = stairs.get("keys")
+	if not keys is Array or (keys as Array).size() < 2:
+		errors.append("heroine.json: stairs.keys must list at least two poses")
+	else:
+		for key: Variant in keys:
+			if not poses.has(String(key)):
+				errors.append("heroine.json: stairs key %s is not a pose" % key)
+	var legs: Variant = stairs.get("legs")
+	var parts: Dictionary = data.get("parts", {})
+	if not legs is Array or (legs as Array).size() != 2:
+		errors.append("heroine.json: stairs.legs must name two legs")
+	else:
+		for leg: Variant in legs:
+			if not leg is Array or (leg as Array).size() != 2 or not parts.has(String(leg[0])) or not parts.has(String(leg[1])):
+				errors.append("heroine.json: stairs.legs: each leg is [thigh, shin] of the parts")
+			elif not (data.get("soles", {}) as Dictionary).has(String(leg[1])):
+				errors.append("heroine.json: stairs.legs: the shin %s must have soles" % leg[1])
+	if not _number(stairs.get("treads_per_step")) or int(stairs.get("treads_per_step")) < 1 \
+			or float(stairs.get("treads_per_step")) != float(int(stairs.get("treads_per_step"))):
+		errors.append("heroine.json: stairs.treads_per_step must be a whole number, 1 or more")
+	for key in ["lock_seconds", "blend_seconds"]:
+		if not _positive(stairs.get(key)):
+			errors.append("heroine.json: stairs.%s must be a number above 0" % key)
+	if not _number(stairs.get("contact_phase")) or float(stairs.get("contact_phase")) <= 0.0 or float(stairs.get("contact_phase")) > 0.25:
+		errors.append("heroine.json: stairs.contact_phase must be above 0 and at most 0.25")
+	if not _number(stairs.get("max_crouch_px")) or float(stairs.get("max_crouch_px")) < 0.0:
+		errors.append("heroine.json: stairs.max_crouch_px must be 0 or more")
+	if not _number(stairs.get("max_reach")) or float(stairs.get("max_reach")) <= 0.0 or float(stairs.get("max_reach")) >= 1.0:
+		errors.append("heroine.json: stairs.max_reach must be above 0 and below 1")
+	return errors
+
+
 static func _validate_motion(data: Dictionary, poses: Dictionary) -> PackedStringArray:
 	var errors := PackedStringArray()
 	var air: Variant = data.get("air")

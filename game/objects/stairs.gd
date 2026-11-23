@@ -19,6 +19,8 @@ var _world: Dictionary
 
 func _ready() -> void:
 	_world = WorldData.look()
+	# The player finds the flight under her feet by this group (D120).
+	add_to_group("stairs")
 	collision_layer = 1
 	collision_mask = 0
 	var shape := CollisionPolygon2D.new()
@@ -45,6 +47,26 @@ func surface_y(x: float) -> float:
 	var r := rect_px()
 	var k := clampf((x - r.position.x) / maxf(r.size.x, 1.0), 0.0, 1.0)
 	return r.position.y + r.size.y * (k if descends_right else 1.0 - k)
+
+
+## The top of the tread at room x, where her soles stand (D120): steps of
+## `tread_px` across, each level with the slope at its middle, as `_draw`
+## draws them; left and right of the flight, the floor at its ends.
+func tread_y(x: float) -> float:
+	var r := rect_px()
+	if x < r.position.x:
+		return r.position.y if descends_right else r.end.y
+	if x >= r.end.x:
+		return r.end.y if descends_right else r.position.y
+	var n := step_count()
+	var column := mini(int(floor((x - r.position.x) / tread_px())), n - 1)
+	var from_top := column if descends_right else n - 1 - column
+	return r.position.y + r.size.y / float(n) * (float(from_top) + 0.5)
+
+
+## How deep one tread is across, in room pixels.
+func tread_px() -> float:
+	return rect_px().size.x / float(step_count())
 
 
 ## How many steps: each about `stair_rise_px` of look.json high.

@@ -265,6 +265,124 @@ func test_level_01_stairs_are_walked_down_and_up_without_a_jump() -> void:
 	await _free(room)
 
 
+## On a moving platform she stands (D120): the gait reads her own speed, not
+## the platform's, so the ride does not make her run. Platform 1 has nearly
+## arrived after the walk-in, so Shift rides it back.
+func test_level_01_hero_stands_still_on_a_moving_platform() -> void:
+	var room := await _load()
+	var player: Player = room.get_node("Player")
+	var first: MovingPlatform = room.get_node("Platform1")
+	await _ticks(int(round(float(Content.level_for_scene(LEVEL_PATH)["intro_seconds"]) * 60.0)) + 5)
+	var top := first.rect_at(first.position_at(first.phase))
+	player.global_position = Vector2(top.get_center().x, top.position.y)
+	player.velocity = Vector2.ZERO
+	await _ticks(10)
+	var rig := player.rig()
+	var start_x := player.global_position.x
+	var walked := rig.distance()
+	var running := 0
+	Input.action_press("rewind")
+	for i in 60:
+		await _ticks(1)
+		if rig.pose() != "idle":
+			running += 1
+	Input.action_release("rewind")
+	var ridden := player.global_position.x - start_x
+	check(player.is_on_floor() and absf(ridden) > 40.0, "she rides platform 1, %.0f px in a second" % ridden)
+	check(running == 0, "riding without a key she stands, %d ticks not idle" % running)
+	check(is_equal_approx(rig.distance(), walked), "riding does not advance her walk, %.1f px" % (rig.distance() - walked))
+	await _free(room)
+
+
+## On the stairs her feet stand on the treads (D120): no boot goes into a
+## tread, one always stands on its tread, each step lands in the middle of a
+## tread, and standing still both boots stand on their treads.
+func test_level_01_hero_feet_stand_on_the_treads() -> void:
+	var room := await _load()
+	var player: Player = room.get_node("Player")
+	var stairs: Stairs = room.get_node("Stairs")
+	var rig := player.rig()
+	var flight := stairs.rect_px()
+	var tread := stairs.tread_px()
+	var legs: Array = HeroineData.load_data()["stairs"]["legs"]
+	await _ticks(int(round(float(Content.level_for_scene(LEVEL_PATH)["intro_seconds"]) * 60.0)) + 5)
+	player.global_position = Vector2(flight.position.x - 64.0, flight.position.y)
+	player.velocity = Vector2.ZERO
+	await _ticks(5)
+	for action: String in ["move_right", "move_left"]:
+		var goal := flight.end.x + 48.0 if action == "move_right" else flight.position.x - 48.0
+		var deepest := 0.0
+		var hanging := 0.0
+		var landings := 0
+		var off_middle := 0
+		var ticks := 0
+		Input.action_press(action)
+		while ticks < 4 * 60 and (player.global_position.x < goal if action == "move_right" else player.global_position.x > goal):
+			await _ticks(1)
+			ticks += 1
+			var x := player.global_position.x
+			if not player.is_on_floor() or x < flight.position.x + tread or x > flight.end.x - tread:
+				continue
+			var feet := _boots_on_treads(rig, stairs)
+			deepest = maxf(deepest, maxf(feet["shin_near"]["sink"], feet["shin_far"]["sink"]))
+			hanging = maxf(hanging, minf(feet["shin_near"]["gap"], feet["shin_far"]["gap"]))
+			var phase := rig.run_phase()
+			for i in 2:
+				# Just after the landing of leg i: its foot is down.
+				var since := wrapf(phase - 0.5 * float(i), -0.5, 0.5)
+				if since < 0.0 or since > 0.035:
+					continue
+				var boot: Dictionary = feet[String(legs[i][1])]
+				var from: float = boot["from"]
+				var to: float = boot["to"]
+				var column := floorf((from - flight.position.x) / tread)
+				if column < 1.0 or column > float(stairs.step_count()) - 2.0:
+					continue
+				landings += 1
+				var left := flight.position.x + column * tread
+				if to > left + tread or from < left + 2.0 or to > left + tread - 2.0:
+					off_middle += 1
+		Input.action_release(action)
+		check(ticks < 4 * 60, "%s: she gets across the stairs in time" % action)
+		check(deepest <= 2.0, "%s: no boot goes into a tread, %.1f px at most" % [action, deepest])
+		check(hanging <= 2.0, "%s: a boot always stands on its tread, the lower one hangs %.1f px at most" % [action, hanging])
+		check(landings >= 3, "%s: she lands on the treads step by step, %d landings seen" % [action, landings])
+		check(off_middle == 0, "%s: every step lands within a tread, %d of %d on an edge" % [action, off_middle, landings])
+	# Standing in the middle of the flight, both boots stand on their treads.
+	for offset in [0.0, tread * 0.3, tread * 0.6]:
+		player.global_position = Vector2(flight.get_center().x + offset, flight.position.y)
+		player.velocity = Vector2.ZERO
+		await _ticks(30)
+		var feet := _boots_on_treads(rig, stairs)
+		for boot: String in feet:
+			check(feet[boot]["sink"] <= 2.0 and feet[boot]["gap"] <= 2.0, "standing at +%.0f px, %s stands on its tread: %.1f px above, %.1f px into it" % [offset, boot, feet[boot]["gap"], feet[boot]["sink"]])
+	await _free(room)
+
+
+## Each boot against the treads under it: gap (its lowest point above the
+## highest tread under it), sink (its deepest point into a tread), the room x
+## of its sole from and to.
+func _boots_on_treads(rig: HeroineRig, stairs: Stairs) -> Dictionary:
+	var boots := {}
+	var points: Dictionary = rig.sole_points()
+	for boot: String in points:
+		var lowest := -INF
+		var top := INF
+		var sink := -INF
+		var from := INF
+		var to := -INF
+		for point: Vector2 in points[boot]:
+			var at := rig.to_global(point)
+			var tread_top := stairs.tread_y(at.x - stairs.global_position.x) + stairs.global_position.y
+			lowest = maxf(lowest, at.y)
+			top = minf(top, tread_top)
+			sink = maxf(sink, at.y - tread_top)
+			from = minf(from, at.x)
+			to = maxf(to, at.x)
+		boots[boot] = {"gap": top - lowest, "sink": sink, "from": from, "to": to}
+	return boots
+
+
 func test_level_01_reset_brings_the_hero_in_again() -> void:
 	var room := await _load()
 	var player: Player = room.get_node("Player")
