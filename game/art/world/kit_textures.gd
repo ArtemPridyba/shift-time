@@ -70,6 +70,40 @@ static func soft_disc() -> Texture2D:
 	return texture
 
 
+## Texture pixels per room pixel of picture `name`: `kit_texel` for a Gemini
+## file (tools/cut_kit.py cuts them so), 1 for a code placeholder.
+static func texel(name: String) -> float:
+	if _file(name) != null:
+		return float(WorldData.look().get("kit_texel", 2))
+	return 1.0
+
+
+## The part of a tile under `rect` of the room: tiles are aligned to the room,
+## so neighbouring rects meet without a seam.
+static func region(rect: Rect2, texel_scale: float) -> Rect2:
+	return Rect2(rect.position * texel_scale, rect.size * texel_scale)
+
+
+## `picture` repeated down `r` (column, pipe, chain), as wide as `r`. The
+## node that draws it has texture repeat on.
+static func draw_down(item: CanvasItem, picture: Texture2D, r: Rect2, modulate := Color.WHITE) -> void:
+	var s := float(picture.get_width()) / maxf(r.size.x, 0.001)
+	item.draw_texture_rect_region(picture, r, Rect2(0, 0, picture.get_width(), r.size.y * s), modulate)
+
+
+## `picture` repeated along `r` (truss, crane beam), as tall as `r`.
+static func draw_across(item: CanvasItem, picture: Texture2D, r: Rect2, modulate := Color.WHITE) -> void:
+	var s := float(picture.get_height()) / maxf(r.size.y, 0.001)
+	item.draw_texture_rect_region(picture, r, Rect2(0, 0, r.size.x * s, picture.get_height()), modulate)
+
+
+## Where a picture that keeps its proportions goes: as wide as `r`, standing
+## on its lower edge (machines, rubble).
+static func fit_bottom(picture: Texture2D, r: Rect2) -> Rect2:
+	var h := r.size.x * float(picture.get_height()) / maxf(float(picture.get_width()), 1.0)
+	return Rect2(r.position.x, r.end.y - h, r.size.x, h)
+
+
 ## The height of the top strip (floor_top, concrete_top) in room pixels.
 static func top_strip_px(world: Dictionary) -> int:
 	return int(world.get("top_face_px", 16)) + int(world.get("edge_px", 6)) + 4
