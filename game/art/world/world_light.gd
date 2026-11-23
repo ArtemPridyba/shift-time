@@ -18,6 +18,8 @@ const HEROINE_MASK := 2
 
 var lights: Array[PointLight2D] = []
 var _lamps: Array = []
+## The row the lamp cables hang from (`ceiling` of the layout).
+var _ceiling := 1.0
 var _lamp: Dictionary
 var _world: Dictionary
 var _glow: Node2D
@@ -31,7 +33,9 @@ func _ready() -> void:
 	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	_world = WorldData.look()
 	_lamp = _world.get("lamp", {})
-	_lamps = WorldData.layout(WorldData.entry(level_id)).get("lamps", [])
+	var layout := WorldData.layout(WorldData.entry(level_id))
+	_lamps = layout.get("lamps", [])
+	_ceiling = WorldData.ceiling(layout)
 	var time_data := Content.time()
 	_seconds_per_frame = float(time_data.get("snapshot_every_ticks", 1)) \
 		/ maxf(float(time_data.get("physics_ticks_per_second", 60)), 1.0)
@@ -42,7 +46,7 @@ func _ready() -> void:
 	var disc := KitTextures.soft_disc()
 	var radius := float(_lamp.get("radius_px", 300))
 	for i in _lamps.size():
-		var at := WorldData.lamp_at(_lamps[i])
+		var at := WorldData.lamp_at(_lamps[i], _ceiling)
 		var light := PointLight2D.new()
 		light.name = "Light%d" % (i + 1)
 		light.texture = disc
@@ -92,16 +96,16 @@ func _draw() -> void:
 	var picture := KitTextures.piece("lamp")
 	var chain := KitTextures.piece("lamp_chain")
 	for lamp: Dictionary in _lamps:
-		var at := WorldData.lamp_at(lamp)
+		var at := WorldData.lamp_at(lamp, _ceiling)
 		# The lamp picture at its own size, the bulb where the glow is.
 		var size := Vector2(picture.get_size()) / KitTextures.texel("lamp") if picture != null else Vector2.ZERO
 		var top := at.y + 7.0 - size.y * float(_lamp.get("picture_bulb", 0.66)) if picture != null else at.y - 14.0
 		# The chain it hangs on.
 		if chain != null:
 			var width := float(chain.get_width()) / KitTextures.texel("lamp_chain")
-			KitTextures.draw_down(self, chain, Rect2(at.x - width / 2.0, WorldData.CELL, width, top + 2.0 - WorldData.CELL))
+			KitTextures.draw_down(self, chain, Rect2(at.x - width / 2.0, _ceiling * WorldData.CELL, width, top + 2.0 - _ceiling * WorldData.CELL))
 		else:
-			var link := Vector2(at.x, WorldData.CELL)
+			var link := Vector2(at.x, _ceiling * WorldData.CELL)
 			while link.y < top:
 				draw_rect(Rect2(link - Vector2(1.5, 0), Vector2(3, 5)), WorldData.color(_world, "iron").lightened(0.1), false, 1.0)
 				link.y += 6.0
@@ -127,7 +131,7 @@ func _draw_glow() -> void:
 	var disc := KitTextures.soft_disc()
 	var light_color := Color.from_string(str(_lamp.get("color", "#ffb066")), Color.ORANGE)
 	for i in _lamps.size():
-		var at := WorldData.lamp_at(_lamps[i]) + Vector2(0, 7)
+		var at := WorldData.lamp_at(_lamps[i], _ceiling) + Vector2(0, 7)
 		var halo := light_color
 		halo.a = halo_alpha * _shine[i]
 		_glow.draw_texture_rect(disc, Rect2(at - Vector2(halo_px, halo_px), Vector2(halo_px, halo_px) * 2.0), false, halo)

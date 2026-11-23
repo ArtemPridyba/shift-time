@@ -225,6 +225,46 @@ func test_level_01_hero_walks_in_and_then_is_free() -> void:
 	await _free(room)
 
 
+## Stairs lead into the pit (D120): a slope no steeper than 40 degrees that she
+## walks down and up step by step, without a jump and without leaving it.
+func test_level_01_stairs_are_walked_down_and_up_without_a_jump() -> void:
+	var room := await _load()
+	var player: Player = room.get_node("Player")
+	var stairs := room.get_node_or_null("Stairs") as Stairs
+	check(stairs != null, "level 01 has stairs into the pit")
+	if stairs == null:
+		await _free(room)
+		return
+	var flight := stairs.rect_px()
+	check(rad_to_deg(atan(flight.size.y / flight.size.x)) <= 40.0, "the stairs are no steeper than 40 degrees")
+	await _ticks(int(round(float(Content.level_for_scene(LEVEL_PATH)["intro_seconds"]) * 60.0)) + 5)
+	player.global_position = Vector2(flight.position.x - 64.0, flight.position.y)
+	player.velocity = Vector2.ZERO
+	await _ticks(5)
+	var trips := [["move_right", flight.end.x + 48.0], ["move_left", flight.position.x - 48.0]]
+	for trip: Array in trips:
+		var action: String = trip[0]
+		var goal: float = trip[1]
+		var off_floor := 0
+		var worst := 0.0
+		var ticks := 0
+		Input.action_press(action)
+		while ticks < 4 * 60 and (player.global_position.x < goal if action == "move_right" else player.global_position.x > goal):
+			await _ticks(1)
+			ticks += 1
+			if not player.is_on_floor():
+				off_floor += 1
+			var x := player.global_position.x
+			if x > flight.position.x + 22.0 and x < flight.end.x - 22.0:
+				worst = maxf(worst, absf(player.global_position.y - stairs.surface_y(x)))
+		Input.action_release(action)
+		check(ticks < 4 * 60, "%s: she gets across the stairs in time, at x %.0f" % [action, player.global_position.x])
+		check(off_floor <= 2, "%s: she keeps to the stairs, %d ticks off the floor" % [action, off_floor])
+		check(worst < 16.0, "%s: her feet stay on the slope, %.1f px at most" % [action, worst])
+	check(absf(player.global_position.y - flight.position.y) < 2.0, "back up, she stands on the upper floor, y %.1f" % player.global_position.y)
+	await _free(room)
+
+
 func test_level_01_reset_brings_the_hero_in_again() -> void:
 	var room := await _load()
 	var player: Player = room.get_node("Player")
