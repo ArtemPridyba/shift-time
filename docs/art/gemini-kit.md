@@ -280,3 +280,20 @@ Request N-13: the staircase into the pit. A broken brick staircase going down fr
 ```text
 Edit this picture and keep everything else exactly as it is: lower the camera to the height of the floor, so the top surface of the floor becomes a thin strip no thicker than the heroine's boots are tall, and she stands on the middle of that strip. Keep the front face of the floor below as it is. The seams between the plates are straight and vertical, with no perspective.
 ```
+
+## 6. Фон комнаты целиком (Ф-1, 24.11.2026)
+
+**Зачем.** Уровень, собранный кодом из деталей набора, выглядит топорно: повторы, стыки, нет теней и потолка (Артём, 24.11). Эталон всей комнаты — `docs/art/gemini/raw/e2_room_v2.jpg`. Новый способ (D131): неподвижное в комнате — одна картинка Gemini на всю комнату; всё, что движется (заслонка, платформы, створка гермодвери, лампы, маяк, героиня), — вырезки поверх, их двигает код. Столкновения — по-прежнему из блокаута, поэтому картинка рисуется **по схеме** `docs/art/level01_layout.png`.
+
+**Что не так с эталоном** (наложение — `docs/art/level01_e2_overlay.jpg`): пол слева, нижний пол и заслонка совпадают; лестница начинается на 5 клеток левее нашей (у нас после заслонки ещё 5 клеток пола); правый уступ ниже нашего на клетку и левее на две. Лампы крупноваты; входная дверь и ниша у гермодвери странные (Артём).
+
+**Запрос Ф-1** (приложить две картинки: схему `level01_layout.png` и эталон `e2_room_v2.jpg`):
+
+> Paint a 2D side-view game background, 16:9, 3840×2160 if possible. Use the FIRST image as an exact layout: keep every edge exactly where it is — the white lines are the top faces of floors, the green line is a flight of stairs going down, grey is solid masonry, dark is the open room. Use the SECOND image only for the look: a night factory hall of dark red brick and black cast iron, arched windows with broken panes, iron trusses and hanging cables under the roof, riveted steel floor plates on brick plinths with rust streaks, warm light cones from lamps, dust in the light, deep shadows between the cones.
+> Leave out everything that moves, the game draws it on top: no lamps (paint only their warm light cones on the wall and floor, with the bulb at each yellow dot), no platforms, no gate in the pink gap (paint it as a dark empty opening), no door leaf in the exit doorway (paint only a steel frame around a dark opening, flat in the wall, no recess), no people, no text, no labels. The entrance at the left is a simple open doorway in the brick wall with a steel frame. The top part above the room is the hall ceiling: trusses, beams, cables, darkness. Flat, even painting with no perspective distortion, side view.
+
+**Запрос Ф-1т** (та же картинка, свет выключен; приложить готовый Ф-1):
+
+> The same image, exactly the same, but every lamp is off: no light cones, no glow, the whole hall in deep darkness, details still faintly visible. Change nothing else.
+
+**Если Gemini сдвинул края:** не переделывать вручную — прислать как есть, код покажет наложение (как `level01_e2_overlay.jpg`), и запрос повторяется с поправкой «move X to Y». Положить в `docs/art/gemini/raw/` как `f1_room_v1.jpg` и `f1_room_dark_v1.jpg`.
