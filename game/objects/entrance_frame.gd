@@ -9,8 +9,19 @@ const FRAME_COLOR := Color("#7FE8FF")
 
 @export var size := Vector2(64, 192)
 
+## True when the level's picture has the doorway (D131): nothing is drawn.
+var painted := false
+
+
+## The level's picture has the doorway (`world.backdrop`, D131).
+func use_backdrop(_config: Dictionary) -> void:
+	painted = true
+	queue_redraw()
+
 
 func _draw() -> void:
+	if painted:
+		return
 	draw_rect(Rect2(Vector2.ZERO, size), RECESS_COLOR)
 	var frame := Color(FRAME_COLOR, 0.55)
 	draw_rect(Rect2(Vector2.ZERO, size), frame, false, 3.0)

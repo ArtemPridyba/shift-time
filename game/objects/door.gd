@@ -82,6 +82,9 @@ var _close_ticks := 1
 var _hold_closed_ticks := 1
 ## Ticks an `opens_once` door waits closed before it opens.
 var _delay_ticks := 0
+## The level's picture has the housing (`world.backdrop`, D131): {"clip_y",
+## "wheel": [x, y, size]} in room pixels; empty when the kit draws it.
+var _painted := {}
 
 
 func _init() -> void:
@@ -275,18 +278,71 @@ func housing_rect() -> Rect2:
 	return Rect2(Vector2(-w / 2.0, -size.y / 2.0 - housing_height + mech_travel()), Vector2(w, housing_height))
 
 
+## A point of the room (the level's pixels) in this body's coordinates.
+func _room_point(at: Vector2) -> Vector2:
+	var level := get_parent() as Node2D
+	return to_local(level.to_global(at) if level != null else at)
+
+
+## The part of `r` below `cut`, showing the same part of `region`.
+func _draw_below(slab: Texture2D, r: Rect2, region: Rect2, cut: float) -> void:
+	var top := clampf(cut, r.position.y, r.end.y)
+	if top >= r.end.y:
+		return
+	var scale := region.size.x / maxf(r.size.x, 0.001)
+	var from := (top - r.position.y) * scale
+	var h := minf((r.end.y - top) * scale, region.size.y - from)
+	if h <= 0.0:
+		return
+	draw_texture_rect_region(slab, Rect2(r.position.x, top, r.size.x, h / scale),
+			Rect2(region.position + Vector2(0.0, from), Vector2(region.size.x, h)))
+
+
+func _draw_painted(slab: Texture2D, blade: Rect2, blade_region: Rect2, stripe_rect: Rect2, stripes: Rect2) -> void:
+	var cut := _room_point(Vector2(0.0, float(_painted.get("clip_y", -100000.0)))).y
+	_draw_below(slab, blade, blade_region, cut)
+	_draw_below(slab, stripe_rect, stripes, cut)
+	var wheel_data: Variant = _painted.get("wheel")
+	if not wheel_data is Array or (wheel_data as Array).size() != 3:
+		return
+	var look := ObjectLook.of("shutter")
+	var wheel := ObjectLook.picture("shutter_wheel")
+	var gear := ObjectLook.picture("shutter_gear_small")
+	var wheel_px := float(wheel_data[2])
+	var gear_px := wheel_px * ObjectLook.number(look, "gear_px", 22.0) / maxf(ObjectLook.number(look, "wheel_px", 40.0), 1.0)
+	var hub := _room_point(Vector2(float(wheel_data[0]), float(wheel_data[1])))
+	var angle := wheel_angle()
+	if gear != null:
+		var at := hub + Vector2(wheel_px / 2.0 - 2.0, wheel_px / 2.0 - gear_px / 2.0 + 2.0)
+		ObjectLook.draw_turned(self, gear, at, Vector2(gear_px, gear_px), -angle * wheel_px / gear_px)
+	if wheel != null:
+		ObjectLook.draw_turned(self, wheel, hub, Vector2(wheel_px, wheel_px), angle)
+
+
 ## The wheel's angle on the housing: `wheel_turns` turns from closed to open.
 func wheel_angle() -> float:
 	return mech_fraction() * ObjectLook.number(ObjectLook.of("shutter"), "wheel_turns", 1.5) * TAU
 
 
+## The level's picture has the housing (D131): the blade hides above
+## `clip_y` under the painted gearbox, the wheel turns over the painted one.
+func use_backdrop(config: Dictionary) -> void:
+	_painted = config
+	queue_redraw()
+
+
 func _draw_kit(slab: Texture2D, size: Vector2) -> void:
 	var look := ObjectLook.of("shutter")
 	var blade := Rect2(-size / 2.0, size)
-	ObjectLook.draw_region_down(self, slab, ObjectLook.rect(look, "blade_region", Rect2(0, 96, 64, 256)), blade)
+	var blade_region := ObjectLook.rect(look, "blade_region", Rect2(0, 96, 64, 256))
 	var stripes := ObjectLook.rect(look, "stripe_region", Rect2(64, 452, 64, 44))
 	var stripe_h := size.x * stripes.size.y / maxf(stripes.size.x, 1.0)
-	draw_texture_rect_region(slab, Rect2(blade.position.x, blade.end.y - stripe_h, size.x, stripe_h), stripes)
+	var stripe_rect := Rect2(blade.position.x, blade.end.y - stripe_h, size.x, stripe_h)
+	if not _painted.is_empty():
+		_draw_painted(slab, blade, blade_region, stripe_rect, stripes)
+		return
+	ObjectLook.draw_region_down(self, slab, blade_region, blade)
+	draw_texture_rect_region(slab, stripe_rect, stripes)
 	if housing_height <= 0.0:
 		return
 	var mech := ObjectLook.mech()

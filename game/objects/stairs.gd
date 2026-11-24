@@ -15,6 +15,8 @@ extends StaticBody2D
 @export var descends_right := true
 
 var _world: Dictionary
+## True when the level's picture draws the flight (D131).
+var painted := false
 
 
 func _ready() -> void:
@@ -98,7 +100,16 @@ func step_count() -> int:
 	return maxi(1, roundi(rect_px().size.y / maxf(rise, 1.0)))
 
 
+## The level's picture has the flight (`world.backdrop`, D131): only the
+## collision stays.
+func use_backdrop(_config: Dictionary) -> void:
+	painted = true
+	queue_redraw()
+
+
 func _draw() -> void:
+	if painted:
+		return
 	var r := rect_px()
 	var picture := KitTextures.piece("stairs")
 	if picture != null:
