@@ -633,13 +633,14 @@ func test_level_01_shutter_wheel_turns_with_the_recorded_door() -> void:
 	var door: Door = room.get_node("Door")
 	check(door.housing_height > 0.0, "the shutter of level 01 hangs under a brick housing")
 	check(door.z_index > 0, "the housing is drawn over the room's ground")
-	var turns := ObjectLook.number(ObjectLook.of("shutter"), "wheel_turns", 0.0)
+	var painted: Dictionary = WorldData.backdrop(WorldData.layout(WorldData.entry("level_01")))["painted"]["Door"]
+	var wheel_radius := float(painted["wheel"][2]) / 2.0
 	await _ticks(1)
 	var housing := door.position + door.housing_rect().position
 	var last := door.wheel_angle()
 	for i in 3 * 60:
 		await _ticks(1)
-		check(is_equal_approx(door.wheel_angle(), door.mech_fraction() * turns * TAU), "the wheel turns by the recorded open")
+		check(is_equal_approx(door.wheel_angle(), door.mech_travel() / wheel_radius), "the wheel rolls with the gear by the recorded travel")
 		check(door.wheel_angle() <= last + 0.0001, "the wheel turns back while the shutter closes")
 		last = door.wheel_angle()
 		check((door.position + door.housing_rect().position).distance_to(housing) < 0.01, "the housing stays where it is")
@@ -761,7 +762,15 @@ func test_level_01_quake_drops_the_lamp_and_shift_lifts_it_back_without_a_jump()
 			"its painted cone is dark, the next lamp's still shines")
 	check(_largest_step(drops) < 0.2, "it falls without a jump, largest step %.2f" % _largest_step(drops))
 	var look := ObjectLook.of("quake")
-	var origin := Vector2(WorldData.lamp_at(WorldData.layout(WorldData.entry("level_01"))["lamps"][lamp]).x, 12.6 * WorldData.CELL - 8.0)
+	var falls: Array = WorldData.entry("level_01")["quakes"]["falls"]
+	var origin := Vector2(WorldData.lamp_at(WorldData.layout(WorldData.entry("level_01"))["lamps"][lamp]).x, float(falls[0]["to_row"]) * WorldData.CELL - 8.0)
+	# 24.11 notes: the lamp and the lump land on the tread under them, not in the air.
+	var stairs: Stairs = room.get_node("Stairs")
+	check(absf(float(falls[0]["to_row"]) * WorldData.CELL - stairs.tread_y(origin.x)) < 2.0,
+			"the lamp lands on the tread under it: row %.2f, tread %.1f px" % [float(falls[0]["to_row"]), stairs.tread_y(origin.x)])
+	var lump_x := float(falls[1]["at"][0]) * WorldData.CELL
+	check(absf(float(falls[1]["to_row"]) * WorldData.CELL - stairs.tread_y(lump_x)) < 2.0,
+			"the lump lands on the tread under it: row %.2f, tread %.1f px" % [float(falls[1]["to_row"]), stairs.tread_y(lump_x)])
 	var lying := 0
 	var left := origin.x
 	var right := origin.x
@@ -773,7 +782,8 @@ func test_level_01_quake_drops_the_lamp_and_shift_lifts_it_back_without_a_jump()
 		left = minf(left, at.x)
 		right = maxf(right, at.x)
 	check(lying == int(ObjectLook.number(look, "lamp_shards", 14.0)), "every shard lies on a tread or the floor: %d" % lying)
-	check(left < origin.x - 30.0 and right > origin.x + 30.0, "they spread to both sides: %.0f..%.0f" % [left, right])
+	# Uphill (left) the risers of the higher treads stop them sooner.
+	check(left < origin.x - 15.0 and right > origin.x + 30.0, "they spread to both sides: %.0f..%.0f" % [left, right])
 	Input.action_press("rewind")
 	var back: Array[float] = []
 	while time.world_seconds() > 12.0:
@@ -809,7 +819,7 @@ func test_level_01_is_one_painted_room() -> void:
 			"the stairs and the entrance are the picture's")
 	var exit_door: ExitDoor = room.get_node("Exit/ExitDoor")
 	var opening := Rect2(exit_door.global_position + exit_door.opening_rect().position, exit_door.opening_rect().size)
-	check(opening.is_equal_approx(Rect2(1790, 328, 112, 184)), "the exit's leaf covers the painted opening: %s" % opening)
+	check(opening.is_equal_approx(Rect2(1790, 306, 112, 184)), "the exit's leaf covers the painted opening: %s" % opening)
 	var weights := painted.lamp_weights()
 	check(weights.size() == 5 and weights[0] > 0.5, "five lamps light five cones")
 	await _free(room)

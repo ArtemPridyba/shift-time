@@ -162,6 +162,7 @@
     "_about": "Objects of a level dressed from the Night shop kit (task Д4): pictures by name from world.textures, sizes in room pixels. A mechanism turns by the recorded travel of its object; the exit door, the clock and the beacon keep no history.",
     "shutter": {
       "blade_region": [0, 96, 64, 256],
+      "painted_blade_region": [0, 0, 64, 512],
       "stripe_region": [64, 452, 64, 44],
       "housing_frame_px": 6,
       "rivet_px": 2.5,

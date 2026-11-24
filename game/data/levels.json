@@ -37,35 +37,35 @@
 				{ "kind": "beam", "rect": [20.3, 14.84, 1.5, 0.16] }
 			],
 			"lamps": [
-				{ "x": 1.28, "drop": 3.4 },
-				{ "x": 5.2, "drop": 1.18 },
-				{ "x": 12.64, "drop": 2.38 },
-				{ "x": 18.56, "drop": 2.38 },
-				{ "x": 23.92, "drop": 1.18 }
+				{ "x": 1.28, "drop": 3.06 },
+				{ "x": 5.2, "drop": 0.84 },
+				{ "x": 12.64, "drop": 2.04 },
+				{ "x": 18.56, "drop": 2.04 },
+				{ "x": 23.92, "drop": 0.84 }
 			],
 			"ground": { "concrete": [[25, 8, 7, 9]], "roof": [[0, 0, 32, 2]] },
 			"backdrop": {
-				"_about": "The painted room (D131): one Gemini picture of the whole room in place of the kit pieces; back, front and ground are then not drawn. lit: the picture with the lamps' cones; dark: the same picture with the lamps off. rect: where it lies, in cells [x, y, w, h]. Under every lamp of lamps the lit picture shows through a soft cone as bright as the lamp is now (flicker, fall, Shift). cone: top_px the half width at the bulb, spread the half width it gains per pixel down, length_px how far down it reaches, soft the softness of its sides (0..1), above_px how far above the bulb it fades in. painted: nodes of the level whose still parts the picture already has; they draw only what moves (use_backdrop): the shutter's blade hides above clip_y (room px, under the painted gearbox) and its wheel turns over the painted one at wheel [x, y, size] in room px; the exit's leaf covers the painted opening [x, y, w, h] in room px.",
+				"_about": "The painted room (D131): one Gemini picture of the whole room in place of the kit pieces; back, front and ground are then not drawn. lit: the picture with the lamps' cones; dark: the same picture with the lamps off. rect: where it lies, in cells [x, y, w, h]. Under every lamp of lamps the lit picture shows through a soft cone as bright as the lamp is now (flicker, fall, Shift). cone: top_px the half width at the bulb, spread the half width it gains per pixel down, length_px how far down it reaches, soft the softness of its sides (0..1), above_px how far above the bulb it fades in. painted: nodes of the level whose still parts the picture already has; they draw only what moves (use_backdrop): the shutter's blade hangs up to clip_y (room px, the lower edge of the painted gearbox) and hides above it, its rack meshes with the painted gear at gear [x, y, size] and its wheel turns over the painted one at wheel [x, y, size] in room px. rect y -0.34: the picture lies 22 px higher than its cells so that the middle of its painted floors is where the hero's feet stand (24.11, level 01 notes); the lamps, the clock and the wire moved up with it; the exit's leaf covers the painted opening [x, y, w, h] in room px.",
 				"lit": "res://assets/art/backdrop/level_01_lit.jpg",
 				"dark": "res://assets/art/backdrop/level_01_dark.jpg",
-				"rect": [0, 0, 32, 18],
+				"rect": [0, -0.34, 32, 18],
 				"cone": { "top_px": 30, "spread": 0.42, "length_px": 760, "soft": 0.35, "above_px": 60 },
 				"painted": {
 					"Entrance": {},
 					"Stairs": {},
-					"Door": { "clip_y": 420, "wheel": [460, 381, 56] },
-					"Exit/ExitDoor": { "opening": [1790, 328, 112, 184] }
+					"Door": { "clip_y": 397, "wheel": [460, 359, 56], "gear": [488, 386, 36] },
+					"Exit/ExitDoor": { "opening": [1790, 306, 112, 184] }
 				}
 			}
 		},
 		"quakes": {
-			"_about": "Quakes of world time (Д4, D127): a weak one at 6 s, a strong one at 14 s that drops the third lamp and a lump of plaster beside it onto the stairs (rows 12.6-12.8), then weak ones every 13 s. Seconds are those of the WORLD timer. The look: kit_objects.quake in look.json.",
+			"_about": "Quakes of world time (Д4, D127): a weak one at 6 s, a strong one at 14 s that drops the third lamp and a lump of plaster beside it onto the treads of the stairs under them (rows 12.66 and 12.95: Stairs.tread_y), then weak ones every 13 s. Seconds are those of the WORLD timer. The look: kit_objects.quake in look.json.",
 			"list": [{ "second": 6, "strength": 0.35 }, { "second": 14, "strength": 1.0 }],
 			"repeat_every_seconds": 13,
 			"repeat_strength": 0.3,
 			"falls": [
-				{ "kind": "lamp", "lamp": 3, "quake": 2, "delay_seconds": 0.15, "to_row": 12.6 },
-				{ "kind": "lump", "at": [12.95, 5.4], "quake": 2, "delay_seconds": 0.45, "to_row": 12.8 }
+				{ "kind": "lamp", "lamp": 3, "quake": 2, "delay_seconds": 0.15, "to_row": 12.66 },
+				{ "kind": "lump", "at": [12.95, 5.4], "quake": 2, "delay_seconds": 0.45, "to_row": 12.95 }
 			]
 		},
 		"title": "01 Effect"
