@@ -245,6 +245,15 @@
     "crate": {
       "_about": "Signal-yellow crate from the kit, size_px a side; for the crate object of a later level.",
       "size_px": 64
+    },
+    "crane": {
+      "_about": "The runaway crane of level 09: the crane_beam picture as its rail, rail_px high under the ceiling and rail_over_px longer than the load's way at each end; the crane picture is the trolley with the hook; two slings cable_px wide in cable_color run from the hook's eye (hook_eye_px above its lower end) to the load, sling_inset_px in from its ends.",
+      "rail_px": 14,
+      "rail_over_px": 64,
+      "cable_px": 2,
+      "cable_color": "#2a2622",
+      "sling_inset_px": 10,
+      "hook_eye_px": 6
     }
   },
   "pipe": {

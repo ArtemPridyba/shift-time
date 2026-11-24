@@ -196,6 +196,8 @@ static func validate_layout(layout: Variant, where: String) -> PackedStringArray
 			if not lamp is Dictionary or not _is_number(lamp.get("x")) or not _is_number(lamp.get("drop")) \
 					or float(lamp["drop"]) <= 0.0:
 				errors.append("%s: world.lamps[%d] must be {\"x\": cell, \"drop\": cells above 0}" % [where, i])
+			elif lamp.has("radius_px") and (not _is_number(lamp["radius_px"]) or float(lamp["radius_px"]) <= 0.0):
+				errors.append("%s: world.lamps[%d].radius_px must be a number above 0" % [where, i])
 	var ground: Variant = layout.get("ground", {})
 	if not ground is Dictionary:
 		errors.append("%s: world.ground must be an object" % where)
@@ -208,6 +210,8 @@ static func validate_layout(layout: Variant, where: String) -> PackedStringArray
 			for rect: Variant in rects:
 				if not _is_rect(rect):
 					errors.append("%s: world.ground.%s: %s is not [x, y, w, h]" % [where, zone, rect])
+	if layout.has("darkness") and (not layout["darkness"] is String or not Color.html_is_valid(str(layout["darkness"]))):
+		errors.append("%s: world.darkness must be a color like \"#15151c\"" % where)
 	if layout.has("ceiling") and (not _is_number(layout["ceiling"]) or float(layout["ceiling"]) < 0.0):
 		errors.append("%s: world.ceiling must be a row, 0 or more" % where)
 	return errors

@@ -106,5 +106,58 @@
 			"wall_c": { "start": "open" }
 		},
 		"title": "08 Plates"
+	},
+	{
+		"id": "level_09",
+		"scene": "res://levels/level_09.tscn",
+		"prelude_seconds": 9.5,
+		"intro_seconds": 0.6,
+		"objects": {
+			"crane_load": { "cycle": "once", "speed": 120, "delay_seconds": 1.0 }
+		},
+		"crane": {
+			"_about": "The runaway crane of level 09 (card docs/levels/09.md): the load is the platform crane_load; its hook strikes a lamp of world.lamps when it comes within hook_lead_px of it, and the lamp falls to the floor row to_row. Fall and shatter seconds: kit_objects.quake in look.json. A test checks that the last lamp has shattered before the load stops.",
+			"load": "crane_load",
+			"hook_lead_px": 16,
+			"falls": [
+				{ "lamp": 0, "to_row": 14 },
+				{ "lamp": 1, "to_row": 14 },
+				{ "lamp": 2, "to_row": 14 }
+			]
+		},
+		"world": {
+			"_about": "Level 09 in the Night shop (same kit and scale as level 01, D112): the hall is 6 cells high under the dark roof; the lower hall floor is row 14. darkness: this room is darker than the kit, the dark is the difficulty. The three lamps hang on the crane's way (radius_px: a wider island than the kit's, so lamp 1 lights pillar A) and fall when its hook strikes them (crane above).",
+			"ceiling": 6,
+			"darkness": "#17171e",
+			"back": [
+				{ "kind": "window", "rect": [2.2, 7.3, 1.15, 3] },
+				{ "kind": "window", "rect": [8.4, 7.3, 1.15, 3] },
+				{ "kind": "window", "rect": [14.6, 7.3, 1.15, 3] },
+				{ "kind": "window", "rect": [20.0, 7.3, 1.15, 3] },
+				{ "kind": "soot", "rect": [8.1, 6.5, 1.7, 0.9] },
+				{ "kind": "column", "rect": [6.0, 6, 0.3, 8] },
+				{ "kind": "column", "rect": [13.0, 6, 0.3, 8] },
+				{ "kind": "column", "rect": [19.2, 6, 0.3, 8] },
+				{ "kind": "column", "rect": [25.4, 6, 0.3, 5] },
+				{ "kind": "rust", "rect": [16.0, 11.2, 1.3, 0.8] },
+				{ "kind": "cracks", "rect": [4.0, 8.6, 1.1, 0.8] },
+				{ "kind": "cracks", "rect": [23.0, 12.4, 1.1, 0.75] },
+				{ "kind": "plaster", "rect": [11.0, 12.2, 1.0, 1.0] },
+				{ "kind": "stain", "rect": [17.6, 12.6, 1.3, 0.9] },
+				{ "kind": "pipe", "rect": [27.4, 6, 0.18, 5] },
+				{ "kind": "pipe", "rect": [3.4, 6, 0.18, 4] }
+			],
+			"front": [
+				{ "kind": "bricks", "rect": [14.2, 13.78, 1.2, 0.22] },
+				{ "kind": "beam", "rect": [20.5, 13.84, 1.5, 0.16] }
+			],
+			"lamps": [
+				{ "x": 11.5, "drop": 1.1, "radius_px": 420 },
+				{ "x": 17.0, "drop": 1.0 },
+				{ "x": 22.4, "drop": 1.1 }
+			],
+			"ground": { "concrete": [[26, 11, 6, 6]], "roof": [[0, 0, 32, 6]] }
+		},
+		"title": "09 Crane"
 	}
 ]

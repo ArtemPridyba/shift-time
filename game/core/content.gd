@@ -360,6 +360,10 @@ static func validate_levels(data: Variant, history_seconds: float, file := "leve
 			var world: Variant = entry.get("world", {})
 			var lamps: Variant = world.get("lamps", []) if world is Dictionary else []
 			errors.append_array(QuakePlan.problems(entry["quakes"], where, lamps.size() if lamps is Array else 0))
+		if entry.has("crane"):
+			var crane_world: Variant = entry.get("world", {})
+			var crane_lamps: Variant = crane_world.get("lamps", []) if crane_world is Dictionary else []
+			errors.append_array(CranePlan.problems(entry["crane"], where, crane_lamps.size() if crane_lamps is Array else 0))
 	return errors
 
 
@@ -698,6 +702,7 @@ const LOOK_KIT_OBJECTS := {
 	"lever": ["base_px", "handle_px", "pivot_from_top", "angle_degrees"],
 	"button": ["base_px", "cap_px", "pressed_px"],
 	"crate": ["size_px"],
+	"crane": ["rail_px", "rail_over_px", "cable_px", "cable_color", "sling_inset_px", "hook_eye_px"],
 }
 const LOOK_PIPE_NUMBERS: Array[String] = ["feed_width_px", "main_width_px", "wall_px", "flange_every_px", "flange_px", "dash_length_px", "dash_gap_px", "dash_speed_px"]
 const LOOK_MECH_COLORS: Array[String] = ["iron", "iron_light", "iron_shadow", "iron_dark", "outline", "valve", "valve_light", "rust", "yellow"]
