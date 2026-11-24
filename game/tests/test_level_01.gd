@@ -808,6 +808,12 @@ func test_level_01_is_one_painted_room() -> void:
 	broken["backdrop"]["rect"] = [0, 0, 0, 18]
 	check(WorldData.validate_layout(broken, "x").size() == 3, "a missing picture, cone number and empty rect are caught: %s"
 			% [WorldData.validate_layout(broken, "x")])
+	var nodes := (layout.duplicate(true) as Dictionary)
+	nodes["backdrop"]["painted"]["Door"]["gear"] = [488, 386]
+	nodes["backdrop"]["painted"]["Door"]["clip_y"] = "high"
+	nodes["backdrop"]["painted"]["Platform1"]["patch"] = [494, 617, 0, 67]
+	check(WorldData.validate_layout(nodes, "x").size() == 3, "a broken gear, clip_y and patch of a painted node are caught: %s"
+			% [WorldData.validate_layout(nodes, "x")])
 	var room := await _load()
 	var painted := room.get_node_or_null("WorldBack/Backdrop") as WorldBackdrop
 	check(painted != null and painted.layer.layer < 0 and painted.layer.follow_viewport_enabled,
@@ -845,3 +851,25 @@ func test_level_01_world_timer_and_sparking_wire() -> void:
 	var wire: SparkingWire = room.get_node("SparkingWire")
 	check(wire.sparks != null and wire.sparks.preset == "sparks", "the torn wire sparks with the sparks preset")
 	await _free(room)
+
+
+## 24.11 notes: the platforms are pieces of the painted floor, on the picture's
+## layer with its light, their painted feet line on their top as they ride.
+func test_level_01_platforms_are_cut_from_the_painted_floor() -> void:
+	var room := await _load()
+	var painted := room.get_node("WorldBack/Backdrop") as WorldBackdrop
+	check(painted.canvases.size() == 2, "both platforms draw on the picture's layer: %d" % painted.canvases.size())
+	for canvas in painted.canvases:
+		check(canvas.material == painted.picture.material and canvas.get_parent() == painted.layer,
+				"%s has the picture's light" % canvas.name)
+	var config: Dictionary = WorldData.backdrop(WorldData.layout(WorldData.entry("level_01")))["painted"]["Platform1"]
+	var platform: MovingPlatform = room.get_node("Platform1")
+	var start := platform.position
+	await _ticks(4 * 60)
+	check(platform.position != start, "platform 1 has ridden")
+	var feet := platform.painted_rect().position.y + float(config["feet_y"]) - float(config["patch"][1])
+	var top := platform.position.y - platform._size().y / 2.0
+	check(absf(feet - top) < 0.5, "the painted feet line rides on the platform's top: %.1f, top %.1f" % [feet, top])
+	check(platform.painted_rect().size.x == 128.0, "the piece is as wide as the platform")
+	await _free(room)
+

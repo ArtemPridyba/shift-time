@@ -8,7 +8,10 @@ extends Node2D
 ## under every lamp, as bright as `WorldLight` says the lamp is now — it
 ## flickers, dies when the lamp falls and comes back under Shift. Nodes of the
 ## level whose still parts the picture already has (`painted` of
-## `world.backdrop`) are told to draw only what moves (`use_backdrop`).
+## `world.backdrop`) are told to draw only what moves (`use_backdrop`); a node
+## that moves in front of the picture and must be lit like it (a platform cut
+## from the painted floor) gets a canvas of its own on the picture's layer, with
+## the picture's light (`use_picture`).
 ## Decoration only: nothing is recorded, nothing collides.
 
 const MAX_LAMPS := 8
@@ -26,6 +29,8 @@ var _lit: Texture2D
 var _rect := Rect2()
 var _material: ShaderMaterial
 var _bulbs := PackedVector2Array()
+## Canvases of nodes drawn with the picture's light (`use_picture`).
+var canvases: Array[Node2D] = []
 
 
 func _ready() -> void:
@@ -99,6 +104,8 @@ func _follow_level() -> void:
 	var level := get_parent() as Node2D
 	if level != null and picture != null:
 		picture.transform = level.global_transform
+		for canvas in canvases:
+			canvas.transform = level.global_transform
 
 
 func _paint_nodes() -> void:
@@ -110,6 +117,13 @@ func _paint_nodes() -> void:
 		var node := level.get_node_or_null(NodePath(str(path)))
 		if node != null and node.has_method("use_backdrop"):
 			node.call("use_backdrop", nodes[path] as Dictionary)
+			if node.has_method("use_picture"):
+				var canvas := Node2D.new()
+				canvas.name = "Picture" + str(node.name)
+				canvas.material = _material
+				layer.add_child(canvas)
+				canvases.append(canvas)
+				node.call("use_picture", canvas, _lit, _rect)
 		else:
 			push_error("world.backdrop.painted: %s is not a node of the level with use_backdrop" % path)
 

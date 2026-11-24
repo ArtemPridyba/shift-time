@@ -45,7 +45,7 @@
 			],
 			"ground": { "concrete": [[25, 8, 7, 9]], "roof": [[0, 0, 32, 2]] },
 			"backdrop": {
-				"_about": "The painted room (D131): one Gemini picture of the whole room in place of the kit pieces; back, front and ground are then not drawn. lit: the picture with the lamps' cones; dark: the same picture with the lamps off. rect: where it lies, in cells [x, y, w, h]. Under every lamp of lamps the lit picture shows through a soft cone as bright as the lamp is now (flicker, fall, Shift). cone: top_px the half width at the bulb, spread the half width it gains per pixel down, length_px how far down it reaches, soft the softness of its sides (0..1), above_px how far above the bulb it fades in. painted: nodes of the level whose still parts the picture already has; they draw only what moves (use_backdrop): the shutter's blade hangs up to clip_y (room px, the lower edge of the painted gearbox) and hides above it, its rack meshes with the painted gear at gear [x, y, size] and its wheel turns over the painted one at wheel [x, y, size] in room px. rect y -0.34: the picture lies 22 px higher than its cells so that the middle of its painted floors is where the hero's feet stand (24.11, level 01 notes); the lamps, the clock and the wire moved up with it; the exit's leaf covers the painted opening [x, y, w, h] in room px.",
+				"_about": "The painted room (D131): one Gemini picture of the whole room in place of the kit pieces; back, front and ground are then not drawn. lit: the picture with the lamps' cones; dark: the same picture with the lamps off. rect: where it lies, in cells [x, y, w, h]. Under every lamp of lamps the lit picture shows through a soft cone as bright as the lamp is now (flicker, fall, Shift). cone: top_px the half width at the bulb, spread the half width it gains per pixel down, length_px how far down it reaches, soft the softness of its sides (0..1), above_px how far above the bulb it fades in. painted: nodes of the level whose still parts the picture already has; they draw only what moves (use_backdrop): the shutter's blade hangs up to clip_y (room px, the lower edge of the painted gearbox) and hides above it, its rack meshes with the painted gear at gear [x, y, size] and its wheel turns over the painted one at wheel [x, y, size] in room px. rect y -0.34: the picture lies 22 px higher than its cells so that the middle of its painted floors is where the hero's feet stand (24.11, level 01 notes); the lamps, the clock and the wire moved up with it; the exit's leaf covers the painted opening [x, y, w, h] in room px; a platform is cut from the picture's floor: patch [x, y, w, h] in room px is the right end of a floor plate (top face and riveted edge), drawn as its right half and mirrored as its left one, with its painted line feet_y on the platform's top, lit like the picture; the picture has the platforms' rail and chain.",
 				"lit": "res://assets/art/backdrop/level_01_lit.jpg",
 				"dark": "res://assets/art/backdrop/level_01_dark.jpg",
 				"rect": [0, -0.34, 32, 18],
@@ -54,6 +54,8 @@
 					"Entrance": {},
 					"Stairs": {},
 					"Door": { "clip_y": 397, "wheel": [460, 359, 56], "gear": [488, 386, 36] },
+					"Platform1": { "patch": [494, 617, 64, 67], "feet_y": 639 },
+					"Platform2": { "patch": [494, 617, 64, 67], "feet_y": 639 },
 					"Exit/ExitDoor": { "opening": [1790, 306, 112, 184] }
 				}
 			}
