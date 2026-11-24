@@ -2,11 +2,13 @@ extends SceneTree
 ## Builds level 01 `levels/level_01.tscn` (task 2.5, merged with the platform
 ## level 03 on 16.11.2026, widened the same day, rebuilt to the heroine's size
 ## on 22.11.2026, D112; rebuilt to the Gemini reference frame
-## docs/art/gemini/raw/e2_room_v2.jpg on 23.11.2026, D120; card
-## docs/levels/01.md): a room of 32x17 cells a little wider than the screen,
-## the camera follows the hero. The hall is 6 cells high over the upper floor;
-## the rows above it are solid and drawn as the dark roof. Stairs lead down
-## into the pit: a slope she walks, 3 cells down over 5 across. Everything
+## docs/art/gemini/raw/e2_room_v2.jpg on 23.11.2026, D120; rebuilt to the
+## Gemini picture of the whole room docs/art/gemini/raw/f1_room_v1.jpg on
+## 24.11.2026, D138; card docs/levels/01.md): a room of 32x17 cells a little
+## wider than the screen, the camera follows the hero. The hall is 8 cells
+## high over the upper floor; the two rows above it are solid and drawn as the
+## dark roof. Stairs of rubble lead down into the pit: a slope she walks,
+## 5 cells down over 7 across. Everything
 ## she uses is sized to her (92 px tall): the door and the platforms are two
 ## cells, the pit is a little over four jumps wide. She walks
 ## out of a doorway on the left, then comes a door that is closing, a long pit,
@@ -31,50 +33,51 @@ const LEVEL_ID := "level_01"
 const MAP := [
 	"################################",
 	"################################",
-	"################################",
-	"################################",
-	"################################",
-	"################################",
 	"#.......#......................#",
-	"#.......#..................EE..#",
-	"#.......#..................EE..#",
-	"#.......#...............########",
-	"#.......D...............########",
-	"#S......D...............########",
-	"##############sssss.....########",
-	"##############sssss.....########",
-	"##############sssss.....########",
+	"#.......#......................#",
+	"#.......#......................#",
+	"#.......#......................#",
+	"#.......#...................EE.#",
+	"#.......#...................EE.#",
+	"#.......D................#######",
+	"#S......D................#######",
+	"#########sssssss.........#######",
+	"#########sssssss.........#######",
+	"#########sssssss.........#######",
+	"#########sssssss.........#######",
+	"#########sssssss.........#######",
 	"################################",
 	"################################",
 ]
 
 ## The doorway the hero walks out of (decoration only), in cells.
-const ENTRANCE_CELLS := Rect2i(1, 10, 1, 2)
+const ENTRANCE_CELLS := Rect2i(1, 8, 1, 2)
 
-## Platform 1 starts flush with the left ground (columns 14-15, top at row 12)
-## and rides 6 cells right. Platform 2 starts flush with the exit ledge
-## (columns 22-23, top at row 9) and sinks 5 cells to just above the pit floor;
-## on its way it passes the level of platform 1's end (row 12) at the moment
-## platform 1 arrives there (the delays are in data/levels.json, checked by a
-## test). Centres, in cells. Both are two cells wide (D112).
-## The factory clock hangs on the column after the shutter, over her head.
-const CLOCK_CELL := Vector2(13.55, 9.5)
+## Platform 1 starts flush with the upper floor over the top of the stairs
+## (columns 9-10, top at row 10) and rides 12 cells right. Platform 2 starts
+## flush with the exit ledge on its column rail (columns 23-24, top at row 8)
+## and sinks 2 cells to the level of platform 1's end (row 10), beside it,
+## at the moment platform 1 arrives there (D136; the delays are in
+## data/levels.json, checked by a test). Centres, in cells. Both are two cells
+## wide (D112).
+## The factory clock hangs on the brick housing of the shutter, high up.
+const CLOCK_CELL := Vector2(7.75, 3.4)
 ## The torn cable that sparks (Д4): hangs from the truss here, its end this far
 ## below, the sparks die on the upper floor.
-const WIRE_CELL := Vector2(8.6, 6.6)
+const WIRE_CELL := Vector2(3.6, 3.3)
 const WIRE_END := Vector2(14.0, 84.0)
-const FLOOR_ROW := 12
+const FLOOR_ROW := 10
 ## The beacon sits on the wall by the exit door's upper left corner, from the
 ## door's foot: over the door there is no room under the truss.
 const BEACON_FROM_DOOR := Vector2(-66.0, -118.0)
 ## The first row of the hall under the roof.
-const HALL_TOP_ROW := 6
+const HALL_TOP_ROW := 2
 const PLATFORM_HEIGHT := 32.0
 const PLATFORM_WIDTH_CELLS := 2
-const PLATFORM_1_CENTRE := Vector2(15.0, 12.0)
-const PLATFORM_1_TRAVEL := Vector2(6.0, 0.0)
-const PLATFORM_2_CENTRE := Vector2(23.0, 9.0)
-const PLATFORM_2_TRAVEL := Vector2(0.0, 3.0)
+const PLATFORM_1_CENTRE := Vector2(10.0, 10.0)
+const PLATFORM_1_TRAVEL := Vector2(12.0, 0.0)
+const PLATFORM_2_CENTRE := Vector2(24.0, 8.0)
+const PLATFORM_2_TRAVEL := Vector2(0.0, 2.0)
 
 
 func _initialize() -> void:
