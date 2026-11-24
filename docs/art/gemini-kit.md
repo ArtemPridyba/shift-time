@@ -296,4 +296,14 @@ Edit this picture and keep everything else exactly as it is: lower the camera to
 
 > The same image, exactly the same, but every lamp is off: no light cones, no glow, the whole hall in deep darkness, details still faintly visible. Change nothing else.
 
-**Если Gemini сдвинул края:** не переделывать вручную — прислать как есть, код покажет наложение (как `level01_e2_overlay.jpg`), и запрос повторяется с поправкой «move X to Y». Положить в `docs/art/gemini/raw/` как `f1_room_v1.jpg` и `f1_room_dark_v1.jpg`.
+**Как проверить картинку** (любую версию): `python3 tools/check_backdrop.py level_01 путь/к/картинке.jpg` → `build/backdrop/level_01_check.jpg`: картинка, а поверх — геометрия уровня (голубое — верх пола и уступа, зелёное — лестница, пурпурное — проёмы и щель заслонки, оранжевое — пути платформ, жёлтые кружки — лампы). Годится, когда пол, лестница и уступ на картинке лежат на этих линиях с точностью до полклетки (32 px). Или прислать картинку в чат Claude Code — он сделает то же.
+
+**Попытка 1 (24.11, `raw/f1_room_v1.jpg`) — не годится:** Gemini перерисовал старый эталон, а не схему: убрал лампы и нишу у гермодвери (это хорошо), но пол слева на 2 клетки выше нашего, лестница начинается на 5 клеток левее, щели заслонки в полу нет, уступ выше на клетку, конусы света не под нашими лампами. Причина: при двух картинках Gemini берёт композицию у той, что красивее. Поэтому:
+
+**Запрос Ф-1, версия 2** — приложить **только** `docs/art/level01_layout_clean.png` (схема без надписей), эталон не прикладывать:
+
+> Repaint this image as a finished 2D game background, side view, 16:9, as large as you can. It is an exact layout: keep every shape in the same place and the same size. Grey is solid masonry: paint it as dark red brick walls and riveted steel floor plates on brick plinths with rust streaks. The cyan lines are the top faces of floors and ledges: the walking surface must be exactly on them. The green line is a flight of worn brick steps going down: steps exactly along it. The dark area is the inside of a night factory hall: dark red brick back wall, tall arched windows with broken panes, black cast-iron columns, iron trusses and hanging cables in the upper part. The pink rectangles are empty dark doorways (no doors). The orange rectangles are where moving platforms go: leave them empty, just the back wall. The small yellow dots on lines are lamp bulbs: paint no lamp, only a soft warm cone of light from each dot down onto the wall and floor, with dust in it; deep shadows between cones. No people, no text, no lines or colored marks left in the picture.
+
+Если вышло по местам, но вид беднее эталона — второй запрос в том же чате, приложив `raw/e2_room_v2.jpg`: «Make the painting style, materials and light like this second image, but do not move or resize anything in the first one.» Каждую версию — проверить командой выше.
+
+**Если Gemini сдвинул края:** не переделывать вручную — прислать как есть, код покажет наложение (как `level01_e2_overlay.jpg`), и запрос повторяется с поправкой «move X to Y». Положить в `docs/art/gemini/raw/` как `f1_room_v2.jpg` (v3, …) и `f1_room_dark_v2.jpg`.
