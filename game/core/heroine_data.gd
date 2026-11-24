@@ -172,6 +172,8 @@ static func validate(data: Variant) -> PackedStringArray:
 		for key in ["at", "pivot"]:
 			if not _point(part.get(key)):
 				errors.append(where + ": %s must be [x, y]" % key)
+		if part.has("top") and (not _number(part.get("top")) or float(part.get("top")) < 0.0 or (_point(part.get("pivot")) and float(part.get("top")) >= float((part.get("pivot") as Array)[1]))):
+			errors.append(where + ": top must be a number from 0 up to the pivot's y")
 		if part.has("size") and not _positive(part.get("size")):
 			errors.append(where + ": size must be a number above 0")
 		if not _number(part.get("z")):

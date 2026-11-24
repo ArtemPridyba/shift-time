@@ -32,6 +32,9 @@ extends SceneTree
 ##   --follow W,H      crop every frame to W x H screen pixels around the
 ##                     player (group `player`), before --scale: for close
 ##                     looks at the heroine's animations (`--follow 240,160 --scale 3`)
+##   --on-stairs DX@T  at tick T put the player DX px right of the left edge
+##                     of the room's `Stairs` flight, on its surface (to film
+##                     the walk on the stairs: `--on-stairs 28@185`)
 ##   --out DIR         absolute folder for the frames (default build/shots/NAME)
 ##
 ## Frame names: `t00120_fwd.png` / `t00120_rev.png` — the tick and the
@@ -89,6 +92,8 @@ func _run() -> void:
 		for i in int(segment["ticks"]):
 			await physics_frame
 			tick += 1
+			if _args.has("on-stairs"):
+				_place_on_stairs(room, tick)
 			if (tick % every == 0 or at.has(tick)) and tick >= from_tick and tick <= to_tick:
 				await RenderingServer.frame_post_draw
 				_save(out_dir, tick, manager, scale)
@@ -114,6 +119,22 @@ func _save(out_dir: String, tick: int, manager: Node, scale: float) -> void:
 		image.resize(int(image.get_width() * scale), int(image.get_height() * scale), Image.INTERPOLATE_LANCZOS)
 	var reverse := manager != null and bool(manager.call("is_rewinding"))
 	image.save_png(out_dir.path_join("t%05d_%s.png" % [tick, "rev" if reverse else "fwd"]))
+
+
+## `--on-stairs DX@T`: at tick T the player stands DX px right of the left edge
+## of the flight, at rest.
+func _place_on_stairs(room: Node, tick: int) -> void:
+	var spec := str(_args["on-stairs"]).split("@")
+	if spec.size() != 2 or int(spec[1]) != tick:
+		return
+	var stairs := room.get_node_or_null("Stairs") as Stairs
+	var player := get_first_node_in_group("player") as CharacterBody2D
+	if stairs == null or player == null:
+		printerr("shots: --on-stairs needs a Stairs node and a player")
+		return
+	var x := stairs.rect_px().position.x + float(spec[0])
+	player.global_position = Vector2(x, stairs.surface_y(x))
+	player.velocity = Vector2.ZERO
 
 
 ## The part of the frame around the player, kept inside the frame.
