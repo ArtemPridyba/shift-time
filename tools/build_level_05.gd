@@ -13,8 +13,11 @@ extends SceneTree
 ## rail over the pit while the lamps over it fall.
 ## Act 3: at the end of the rail the third quake. The crane sags; the ceiling
 ## ahead comes down in chunks, two lamps fall among them, and the world slows
-## down: she climbs the falling chunks to the exit ledge high on the right.
-## Shift lifts a chunk she stands on when she is late.
+## down: she climbs the falling chunks towards the exit ledge high on the
+## right (D149). Small chunks tumble across her jumps: Shift sends them back
+## up. The lip of the exit ledge breaks off and drops into the pit, so the
+## stair ends out of reach: on its last chunk she holds Shift, the lip flies
+## back up past her, she jumps onto it and rides it up to the ledge.
 ##
 ## The pit is open to the bottom: a fall is death. Timing: `collapse` of the
 ## level's entry in data/levels.json.
@@ -58,18 +61,22 @@ const MAP := [
 ## The doorway the hero walks out of (decoration only), in cells.
 const ENTRANCE_CELLS := Rect2i(1, 15, 1, 2)
 ## The falling pieces in the order of `collapse.pieces` (cells: x and row where
-## it hangs, width, height; x and row where it lies). Act 1: three platforms
-## onto their stubs (the third breaks and crumbles). Act 3: five chunks of the
-## ceiling, each its own size, lost to the bottom of the pit.
+## it hangs, width, height; x ("rest_x", absent: the same) and row where it
+## lies). Act 1: three platforms onto their stubs (the third breaks and
+## crumbles). Act 3 (D149), all lost to the bottom of the pit: three chunks of
+## the ceiling, each its own size, make a stair that ends below the exit
+## ledge; between them two small chunks tumble down across the jumps; the last
+## is the lip of the exit ledge, which breaks off and drops fast.
 const PIECES: Array[Dictionary] = [
 	{"x": 7.0, "row": 12.0, "width": 3.0, "height": 0.5, "rest_row": 16.5},
 	{"x": 10.8, "row": 12.0, "width": 3.0, "height": 0.5, "rest_row": 16.5},
 	{"x": 15.2, "row": 11.0, "width": 3.8, "height": 0.5, "rest_row": 16.5},
-	{"x": 43.8, "row": 4.2, "width": 1.6, "height": 0.8, "rest_row": 23.0, "lost": true},
-	{"x": 46.1, "row": 4.0, "width": 1.3, "height": 0.7, "rest_row": 23.0, "lost": true},
-	{"x": 48.2, "row": 4.4, "width": 2.0, "height": 1.0, "rest_row": 23.0, "lost": true},
-	{"x": 51.0, "row": 4.1, "width": 1.4, "height": 0.7, "rest_row": 23.0, "lost": true},
-	{"x": 53.3, "row": 4.0, "width": 1.8, "height": 0.9, "rest_row": 23.0, "lost": true},
+	{"x": 44.0, "row": 4.2, "width": 2.0, "height": 0.9, "rest_row": 23.0, "lost": true},
+	{"x": 46.0, "row": 4.1, "width": 0.7, "height": 0.7, "rest_x": 46.6, "rest_row": 26.0, "lost": true},
+	{"x": 47.3, "row": 4.0, "width": 1.5, "height": 0.7, "rest_row": 23.0, "lost": true},
+	{"x": 49.0, "row": 4.2, "width": 0.6, "height": 0.6, "rest_x": 49.5, "rest_row": 26.0, "lost": true},
+	{"x": 50.1, "row": 4.3, "width": 2.2, "height": 1.0, "rest_row": 23.0, "lost": true},
+	{"x": 54.0, "row": 9.0, "width": 2.0, "height": 1.0, "rest_row": 26.0, "lost": true},
 ]
 ## The crane's load where it waits by the ledge (cells: x, top row, width,
 ## height), how far it rides down the rail, the rail above its top, and how
@@ -133,7 +140,7 @@ func _initialize() -> void:
 		var p: Dictionary = PIECES[k]
 		var size := Vector2(float(p["width"]), float(p["height"])) * CELL
 		hangs.append(Rect2(Vector2(float(p["x"]), float(p["row"])) * CELL, size))
-		rests.append(Rect2(Vector2(float(p["x"]), float(p["rest_row"])) * CELL, size))
+		rests.append(Rect2(Vector2(float(p.get("rest_x", p["x"])), float(p["rest_row"])) * CELL, size))
 		if bool(p.get("lost", false)):
 			lost.append(k)
 	collapse.pieces = hangs

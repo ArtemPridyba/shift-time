@@ -11,13 +11,19 @@ extends Node2D
 ## 3. at the end of the rail the third quake: the crane sags and falls, the
 ##    ceiling comes down in chunks, two lamps fall among them still shining, an
 ##    explosion flares up in the background, and the world slows down while she
-##    climbs the falling chunks to the exit. She slows down too, less than the
-##    world (D148): this node sets the engine's time scale, which slows her
+##    climbs the falling chunks towards the exit. She slows down too, less than
+##    the world (D148): this node sets the engine's time scale, which slows her
 ##    moves, her animation and the particles but not the ticks of the world.
+##    The chunks are of different sizes and speeds and break off out of order
+##    (D149): the stair of big ones ends below the exit ledge; small ones
+##    tumble down across her jumps (Shift sends them back up); the lip of the
+##    exit ledge breaks off and drops fast, and under Shift it flies back up
+##    and lifts her to the ledge.
 ##
 ## Every piece and the crane hold the heroine, except a lost one lying at the
-## bottom of the pit and a crumbled one. Nothing crushes her: the world waits
-## instead.
+## bottom of the pit, a crumbled one and a tumbling chunk: that one is solid
+## only above her feet, so she hits it but never stands on it. Nothing crushes
+## her: the world waits instead.
 ##
 ## A recorded object. State: { "clock": ticks since the room began, "ride":
 ## ticks since her step onto the crane, -1 before it }; both stop counting once
@@ -61,8 +67,15 @@ var _crane_body: AnimatableBody2D
 var _blast_light: PointLight2D
 var _blast_glow: Node2D
 ## Pixels of the player's feet inside a piece that are standing, not crushing:
-## the kit's margin plus the most a piece moves in one tick.
+## the kit's margin plus the most that piece (`_margins`, one per piece) or
+## the crane moves in one tick.
 var _carry_margin := 8.0
+var _margins := PackedFloat32Array()
+## Per piece: true for a tumbling chunk, which she can never stand on.
+var _tumbling: Array[bool] = []
+## Her feet (the bottom of her rect) as `sense` last saw them.
+var _feet_y := INF
+var _crane_margin := 8.0
 var _contact_px := 6.0
 
 
@@ -74,14 +87,11 @@ func _ready() -> void:
 	_carry_margin = float(Content.objects().get("carry_margin_px", 8))
 	_contact_px = float(Content.objects().get("time_plate", {}).get("contact_px", 6))
 	_plan()
-	var fastest := plan.ride_step + 2.0 * crane_fall_px / float(plan.crane_fall_ticks)
-	for k in mini(pieces.size(), rests.size()):
-		var way := absf(rests[k].position.y - pieces[k].position.y)
-		var ticks := float(plan.pieces[k]["fall"]) if k < plan.pieces.size() else 1.0
-		fastest = maxf(fastest, 2.0 * way / ticks)
-	_carry_margin += ceilf(fastest)
-	for rest in pieces:
-		_bodies.append(_body(rest.size))
+	_margins = _fastest()
+	_crane_margin = _carry_margin + ceilf(plan.ride_step + 2.0 * crane_fall_px / float(plan.crane_fall_ticks))
+	for k in pieces.size():
+		_bodies.append(_body(pieces[k].size))
+		_tumbling.append(k < plan.pieces.size() and str(plan.pieces[k]["kind"]) == "tumble")
 	_crane_body = _body(crane_rect.size)
 	var disc := KitTextures.soft_disc()
 	_blast_light = PointLight2D.new()
@@ -106,6 +116,23 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	Engine.time_scale = 1.0
+
+
+## Per piece: the kit's margin plus the most it moves in one tick, found by
+## playing its act tick by tick (a fast piece moves fast only while the world
+## runs at full tempo).
+func _fastest() -> PackedFloat32Array:
+	var margins := PackedFloat32Array()
+	for k in mini(pieces.size(), plan.pieces.size()):
+		var most := 0.0
+		if int(plan.pieces[k]["act"]) == 1:
+			for c in plan.clock_end:
+				most = maxf(most, _rect(k, c + 1, -1).position.distance_to(_rect(k, c, -1).position))
+		else:
+			for r in range(plan.arrival(), plan.ride_end):
+				most = maxf(most, _rect(k, plan.clock_end, r + 1).position.distance_to(_rect(k, plan.clock_end, r).position))
+		margins.append(_carry_margin + ceilf(most))
+	return margins
 
 
 func _body(size: Vector2) -> AnimatableBody2D:
@@ -168,6 +195,8 @@ func on_time_direction_changed(_direction: int) -> void:
 ## Called by RoomTime after every tick (group `plate`): her feet on the crane
 ## in normal time set it going, once.
 func sense(room: Object, direction: int, player_rect: Rect2) -> void:
+	_feet_y = player_rect.end.y if player_rect.has_area() else INF
+	_show_bodies()
 	if direction > 0 and ride < 0 and stands_on_crane(player_rect):
 		room.call("apply_change", object_id, {"ride": 0})
 
@@ -193,13 +222,18 @@ func stands_on_crane(player_rect: Rect2) -> bool:
 func blocks_player_at(state: Dictionary, player_rect: Rect2) -> bool:
 	if not player_rect.has_area():
 		return false
-	var body := Rect2(player_rect.position, player_rect.size - Vector2(0.0, _carry_margin))
 	var c := int(state["clock"])
 	var r := int(state["ride"])
 	for k in pieces.size():
-		if _holds(k, c, r) and _rect(k, c, r).intersects(body):
+		var margin := _margins[k] if k < _margins.size() else _carry_margin
+		if _holds(k, c, r) and _rect(k, c, r).intersects(_above_feet(player_rect, margin)):
 			return true
-	return not plan.crane_down(r) and _crane_rect_at(r).intersects(body)
+	return not plan.crane_down(r) and _crane_rect_at(r).intersects(_above_feet(player_rect, _crane_margin))
+
+
+## The player's body without the lowest `margin` pixels of the feet.
+static func _above_feet(player_rect: Rect2, margin: float) -> Rect2:
+	return Rect2(player_rect.position, Vector2(player_rect.size.x, maxf(player_rect.size.y - margin, 1.0)))
 
 
 ## True while piece `k` hangs where it was built.
@@ -212,7 +246,8 @@ func piece_lies(k: int) -> bool:
 	return plan.drop(k, clock, ride) >= 1.0
 
 
-## True while piece `k` can be stood on.
+## True while piece `k` is solid (a tumbling chunk only above her feet, so
+## nobody ever stands on it).
 func piece_holds(k: int) -> bool:
 	return _holds(k, clock, ride)
 
@@ -269,8 +304,9 @@ func _holds(k: int, c: int, r: int) -> bool:
 func _rect(k: int, c: int, r: int) -> Rect2:
 	var hang := pieces[k]
 	var rest := rests[k] if k < rests.size() else hang
-	var way := plan.way(k, c, r)
-	return Rect2(hang.position.lerp(rest.position, way), hang.size)
+	var x := lerpf(hang.position.x, rest.position.x, plan.side(k, c, r))
+	var y := lerpf(hang.position.y, rest.position.y, plan.way(k, c, r))
+	return Rect2(Vector2(x, y), hang.size)
 
 
 func _crane_rect_at(r: int) -> Rect2:
@@ -289,9 +325,7 @@ func _process(_delta: float) -> void:
 
 
 func _show() -> void:
-	for k in _bodies.size():
-		_bodies[k].position = piece_rect(k).get_center()
-		(_bodies[k].get_child(0) as CollisionShape2D).set_deferred("disabled", not piece_holds(k))
+	_show_bodies()
 	# The heroine's clock: slower while the world is slow (D148).
 	var heroine := plan.heroine_scale(ride)
 	if Engine.time_scale != heroine:
@@ -303,6 +337,17 @@ func _show() -> void:
 		_crane_body.position = crane_load_rect().get_center()
 		(_crane_body.get_child(0) as CollisionShape2D).set_deferred("disabled", plan.crane_down(ride))
 	queue_redraw()
+
+
+## Moves the bodies of the pieces. A tumbling chunk is solid only while its
+## top is above her feet (D149): she hits it with her head or side and falls
+## short of her jump, but it never holds her up.
+func _show_bodies() -> void:
+	for k in _bodies.size():
+		var r := piece_rect(k)
+		_bodies[k].position = r.get_center()
+		var off := not piece_holds(k) or (_tumbling[k] and r.position.y >= _feet_y - _carry_margin)
+		(_bodies[k].get_child(0) as CollisionShape2D).set_deferred("disabled", off)
 
 
 func _draw() -> void:
@@ -429,6 +474,11 @@ func _draw_chunk(k: int) -> void:
 	var dark := stone.darkened(0.45)
 	var rebar := ObjectLook.color(_look, "rust", Color("#7a3a22"))
 	var r := piece_rect(k)
+	# A tumbling chunk turns about its middle (its body does not: D149).
+	var turn := plan.turn(k, clock, ride)
+	if turn != 0.0:
+		draw_set_transform(r.get_center(), turn)
+		r = Rect2(-r.size / 2.0, r.size)
 	var rough := func(i: int, amount: float) -> float:
 		return sin(float(k * 37 + i * 11) * 12.9898) * amount
 	var w := r.size.x
@@ -456,6 +506,7 @@ func _draw_chunk(k: int) -> void:
 	for i in 2 + (k % 2):
 		var at := outline[4 + i * 2 % 5]
 		draw_line(at, at + Vector2(rough.call(20 + i, 10.0), 8.0 + absf(rough.call(24 + i, 8.0))), rebar, 2.0)
+	draw_set_transform(Vector2.ZERO)
 
 
 ## The crane: a trolley on the sloping rail, two slings, and the load the

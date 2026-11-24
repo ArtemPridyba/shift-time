@@ -22,8 +22,11 @@ extends RefCounted
 ## Data: `collapse` of the level's entry in data/levels.json:
 ## { "quake_seconds": act 1's quake after the room's start,
 ##   "pieces": [{"act": 1 or 3, "second": after the act's quake,
-##       "fall_seconds", "kind": "drop" (falls faster and faster) or "sink"
-##       (slides down at an even speed), "breaks": bool (cracks on landing),
+##       "fall_seconds", "kind": "drop" (falls faster and faster), "sink"
+##       (slides down at an even speed) or "tumble" (a small chunk thrown
+##       sideways: it drifts sideways at an even speed, falls faster and
+##       faster and turns "spin" times on its way down, D149),
+##       "breaks": bool (cracks on landing),
 ##       "crumble_seconds": how long it lies before it crumbles into the
 ##       pit (absent: never)}, ...] — one per piece of the scene, in order;
 ##   "lamps": [{"lamp", "act": 1 or 3, "second" after the act's quake,
@@ -42,13 +45,14 @@ extends RefCounted
 ## Seconds are of the world clock (D96). Lamp fall and shatter seconds:
 ## `kit_objects.quake` in look.json; the shake: `kit_objects.collapse`.
 
-const KINDS: Array[String] = ["drop", "sink"]
+const KINDS: Array[String] = ["drop", "sink", "tumble"]
 ## Share of a sinking piece's way spent speeding up from rest.
 const SINK_EASE := 0.08
 
 var quake_tick := 1
 ## Per piece: {"act", "at" (ticks after the act's quake), "fall" (ticks),
-## "kind", "breaks", "crumble" (ticks lying before it crumbles, 0: never)}.
+## "kind", "breaks", "crumble" (ticks lying before it crumbles, 0: never),
+## "spin" (turns on its way down, only "tumble")}.
 var pieces: Array[Dictionary] = []
 ## Lamps falling on their own: {"lamp", "act", "at", "to_row", "fall", "lit"}.
 var lamps: Array[Dictionary] = []
@@ -96,7 +100,8 @@ static func from_data(data: Variant, ticks_per_second: float, quake: Dictionary,
 		var p: Dictionary = one if one is Dictionary else {}
 		plan.pieces.append({"act": int(p.get("act", 1)), "at": ticks.call(p.get("second", 0.0)),
 			"fall": maxi(ticks.call(p.get("fall_seconds", 1.0)), 1), "kind": str(p.get("kind", "drop")),
-			"breaks": bool(p.get("breaks", false)), "crumble": ticks.call(p.get("crumble_seconds", 0.0))})
+			"breaks": bool(p.get("breaks", false)), "crumble": ticks.call(p.get("crumble_seconds", 0.0)),
+			"spin": float(p.get("spin", 0.0))})
 	plan.lamp_fall_ticks = maxi(ticks.call(quake.get("fall_seconds", 0.8)), 1)
 	for one: Variant in d.get("lamps", []):
 		var l: Dictionary = one if one is Dictionary else {}
@@ -281,6 +286,22 @@ func way(k: int, clock: int, ride: int) -> float:
 	return x * x
 
 
+## How far sideways piece `k` is: 0 … 1 of the way from where it hangs to
+## where it lies (a tumbling chunk drifts at an even speed while it falls
+## faster and faster, so it flies in an arc; the others go straight).
+func side(k: int, clock: int, ride: int) -> float:
+	if str(pieces[k]["kind"]) == "tumble":
+		return drop(k, clock, ride)
+	return way(k, clock, ride)
+
+
+## How far piece `k` has turned, in radians (only a tumbling chunk turns).
+func turn(k: int, clock: int, ride: int) -> float:
+	if str(pieces[k]["kind"]) != "tumble":
+		return 0.0
+	return float(pieces[k]["spin"]) * TAU * drop(k, clock, ride)
+
+
 ## How far piece `k` has crumbled into the pit: 0 whole (or never crumbles)
 ## … 1 its debris gone below; it crumbles `crumble` ticks after it landed and
 ## its debris falls as long as the piece fell.
@@ -411,6 +432,8 @@ static func problems(data: Variant, where: String, lamp_count: int) -> PackedStr
 				errors.append("%s: each of 'collapse.pieces' needs 'second' from 0 and 'fall_seconds' above 0" % where)
 			if not str(p.get("kind", "drop")) in KINDS:
 				errors.append("%s: 'collapse.pieces' kind must be one of %s" % [where, KINDS])
+			if p.has("spin") and not (p.get("spin") is float or p.get("spin") is int):
+				errors.append("%s: 'collapse.pieces' spin must be a number of turns" % where)
 			if p.has("crumble_seconds") and not positive.call(p.get("crumble_seconds")):
 				errors.append("%s: 'collapse.pieces' crumble_seconds must be a number above 0" % where)
 	for one: Variant in d.get("lamps", []):
