@@ -157,7 +157,7 @@ func build(data: Dictionary) -> void:
 		# A part may be drawn larger than on the sheet (the gauntlet reads at 94 px).
 		var size := float(part.get("size", 1.0))
 		joint.scale = Vector2(size, size)
-		var sprite := _picture(dir, String(part.get("texture", "")), _vec(part.get("pivot")), bakes)
+		var sprite := _picture(dir, String(part.get("texture", "")), _vec(part.get("pivot")), bakes, float(part.get("top", 0.0)))
 		sprite.name = "Picture_" + name
 		if bool(part.get("far", false)):
 			sprite.modulate = far_tint
@@ -660,8 +660,7 @@ func _stand_on_treads() -> void:
 	var stepping := _walking and _swing_leg >= 0
 	for i in legs.size():
 		if not stepping:
-			var shin := String(legs[i][1])
-			targets.append(Vector2(_sole_middle(shin).x, _leg_ground(shin, ground)))
+			targets.append(_rest_foot(legs[i], ground, at))
 			weights.append(1.0)
 		elif i == _swing_leg:
 			targets.append(_swing_point(ground, at))
@@ -683,6 +682,37 @@ func _stand_on_treads() -> void:
 		var leg: Array = legs[i]
 		_reach(String(leg[0]), String(leg[1]), targets[i], ground)
 		_lift_clear(String(leg[0]), String(leg[1]), ground, stepping and i == _swing_leg)
+
+
+## Where a boot stands at rest, rig px: whole on one tread. A boot whose
+## middle is near the edge of a tread goes onto the lower of the two treads
+## there when the leg reaches it with the body coming down at most
+## `max_crouch_px`, else onto the higher one; it never straddles the edge.
+func _rest_foot(leg: Array, ground: Callable, at: Vector2) -> Vector2:
+	var shin := String(leg[1])
+	var x := _sole_middle(shin).x
+	var stairs: Dictionary = _data.get("stairs", {})
+	var treads: PackedFloat32Array = _footing.get("treads", PackedFloat32Array())
+	var flight: Vector2 = _footing.get("flight", Vector2(-INF, INF))
+	if treads.size() < 2 or at.x + x < flight.x or at.x + x > flight.y:
+		return Vector2(x, _leg_ground(shin, ground))
+	var half_tread := absf(treads[1] - treads[0]) * 0.5
+	var half := minf(float(stairs.get("sole_half_px", 6.0)), half_tread)
+	var max_reach := float(stairs.get("max_reach", 0.95))
+	var max_down := float(stairs.get("max_crouch_px", 0.0)) / absf(_body.scale.y)
+	var spots: Array[Vector2] = []
+	for middle: float in treads:
+		if absf(at.x + x - middle) <= half_tread + half:
+			var spot_x := clampf(at.x + x, middle - half_tread + half, middle + half_tread - half) - at.x
+			spots.append(Vector2(spot_x, float(ground.call(spot_x))))
+	if spots.is_empty():
+		return Vector2(x, _leg_ground(shin, ground))
+	# The lowest first.
+	spots.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.y > b.y)
+	for spot in spots:
+		if _crouch(leg, spot, max_reach) <= max_down + 0.01:
+			return spot
+	return spots[spots.size() - 1]
 
 
 ## Where the swinging foot is now, rig px: from where it left to where it
@@ -951,12 +981,19 @@ func _to_rig(node: Node2D) -> Transform2D:
 ## game, so it is drawn back at sheet scale and shows 1:1 on screen. Nearest
 ## pixels: at 1:1 linear filtering at a fraction of a pixel blurs the picture
 ## (the showcase's large doll keeps linear).
-func _picture(dir: String, texture: String, pivot: Vector2, bakes: Dictionary) -> Sprite2D:
+## `top`: the rows of the picture above this y (picture px) are not drawn.
+func _picture(dir: String, texture: String, pivot: Vector2, bakes: Dictionary, top := 0.0) -> Sprite2D:
 	var bake := float(bakes.get(texture, 1.0))
 	var sprite := Sprite2D.new()
 	sprite.texture = load("%s/%s.png" % [dir, texture])
 	sprite.centered = false
 	sprite.offset = -pivot * bake
+	if top > 0.0:
+		var size := sprite.texture.get_size()
+		var cut := minf(top * bake, size.y)
+		sprite.region_enabled = true
+		sprite.region_rect = Rect2(0.0, cut, size.x, size.y - cut)
+		sprite.offset.y += cut
 	sprite.scale = Vector2.ONE / bake
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS if _full else CanvasItem.TEXTURE_FILTER_NEAREST
 	return sprite

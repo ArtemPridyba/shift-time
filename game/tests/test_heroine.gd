@@ -163,6 +163,23 @@ func test_air_blends_from_rise_to_fall_by_vertical_speed() -> void:
 	rig.free()
 
 
+## A part with `top` draws its picture only from that row down: the shin
+## above the knee would stick out past the thigh when the knee bends.
+func test_a_part_with_top_draws_its_picture_from_that_row() -> void:
+	var data := HeroineData.load_data()
+	var rig := _rig()
+	for name: String in ["shin_near", "shin_far"]:
+		var part: Dictionary = data["parts"][name]
+		check(part.has("top"), "%s must cut the top of its picture" % name)
+		var sprite := rig.find_child("Picture_" + name, true, false) as Sprite2D
+		check(sprite != null and sprite.region_enabled, "%s must draw only a region of its picture" % name)
+		if sprite == null:
+			continue
+		var bake := sprite.region_rect.position.y / float(part["top"])
+		check(bake > 0.0 and is_equal_approx(sprite.offset.y - sprite.region_rect.position.y, -float(part["pivot"][1]) * bake), "%s: the cut picture must stay where the whole one was" % name)
+	rig.free()
+
+
 func test_in_the_air_the_body_keeps_its_height_and_fits_the_hitbox() -> void:
 	var rig := _rig()
 	var idle := rig.body_rect()
