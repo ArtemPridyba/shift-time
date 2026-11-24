@@ -1,7 +1,9 @@
 extends RefCounted
 ## Tests of level 05 «Crane» (card docs/levels/05.md): a runaway crane strikes
 ## two lamps, slams into its stop, and the collapse (D135) drops the girders as
-## a bridge over the pit and breaks the lamps over it, so the room goes dark. The strikes come from the
+## a bridge over the pit and breaks the lamps over it, so the room goes dark;
+## then the girders slip into the pit (D137), so the bridge lies only for a
+## while. The strikes come from the
 ## load's recorded phase (`CranePlan`): under Shift the load rides back and the
 ## lamps fly up, after Shift is released the same strikes play again. The
 ## solutions in tests/solutions/level_05*.json play the level.
@@ -64,7 +66,8 @@ func test_world_darkness_and_lamp_radius_are_checked() -> void:
 func test_collapse_plan_girders_fall_first_then_lamps_from_the_exit_back() -> void:
 	var plan := CollapsePlan.from_data({"lamps": [2, 3, 4], "to_row": 18, "girder_first_seconds": 0.5,
 		"girder_every_seconds": 0.5, "girder_fall_seconds": 0.5, "lamp_pause_seconds": 1.0,
-		"lamp_every_seconds": 1.0}, 10.0, {"fall_seconds": 0.5, "shatter_seconds": 0.5}, 3)
+		"lamp_every_seconds": 1.0, "slip_pause_seconds": 2.0, "slip_every_seconds": 1.0,
+		"slip_warn_seconds": 0.5, "slip_fall_seconds": 0.5}, 10.0, {"fall_seconds": 0.5, "shatter_seconds": 0.5}, 3)
 	check(plan.girder_start(0) < plan.girder_start(1) and plan.girder_start(1) < plan.girder_start(2),
 		"the girders fall one by one from the stop towards the exit")
 	check(plan.girder_drop(0, -1) == 0.0 and plan.girder_drop(0, plan.girder_start(0)) == 0.0 \
@@ -73,6 +76,14 @@ func test_collapse_plan_girders_fall_first_then_lamps_from_the_exit_back() -> vo
 		"the lamps break from the exit back towards the stop")
 	check(plan.lamp_hit(2) - plan.girders_landed() == plan.lamp_pause, "a pause between the last girder and the first lamp")
 	check(plan.lamp_fall(7, 100).is_empty(), "a lamp the collapse never touches has no fall")
+	check(plan.girder_slip(0) - plan.girders_landed() == plan.slip_pause, "the bridge lies whole for a pause")
+	check(plan.girder_slip(0) < plan.girder_slip(1) and plan.girder_slip(1) < plan.girder_slip(2),
+		"then the girders slip one by one from the stop towards the exit")
+	check(plan.girder_lies(0, plan.girder_slip(0) - 1) and not plan.girder_lies(0, plan.girder_slip(0) + 1),
+		"a girder holds until it slips")
+	check(plan.girder_shudder(1, plan.girder_slip(1) - plan.slip_warn - 1) == 0.0 \
+		and plan.girder_shudder(1, plan.girder_slip(1) - 1) > 0.5, "it shudders just before it slips")
+	check(plan.girder_slide(2, plan.last_tick()) == 1.0, "at the end every girder lies at the bottom of the pit")
 	check(float(plan.lamp_fall(2, -1)["light"]) == 1.0, "before the slam the lamps shine")
 	var down := plan.lamp_fall(2, plan.last_tick())
 	check(float(down["light"]) == 0.0 and float(down["shatter"]) == 1.0, "at the end every lamp lies broken")
@@ -80,7 +91,8 @@ func test_collapse_plan_girders_fall_first_then_lamps_from_the_exit_back() -> vo
 
 func test_collapse_data_is_checked() -> void:
 	var good := {"lamps": [0], "to_row": 18, "girder_first_seconds": 0.3, "girder_every_seconds": 0.4,
-		"girder_fall_seconds": 0.5, "lamp_pause_seconds": 1, "lamp_every_seconds": 1}
+		"girder_fall_seconds": 0.5, "lamp_pause_seconds": 1, "lamp_every_seconds": 1, "slip_pause_seconds": 2,
+		"slip_every_seconds": 1, "slip_warn_seconds": 0.5, "slip_fall_seconds": 0.5}
 	check(CollapsePlan.problems(good, "x", 1).is_empty(), "good collapse data has no problems")
 	var bad_lamp := good.duplicate(true)
 	bad_lamp["lamps"] = [3]
@@ -88,6 +100,9 @@ func test_collapse_data_is_checked() -> void:
 	var bad_number := good.duplicate(true)
 	bad_number["lamp_every_seconds"] = 0
 	check(not CollapsePlan.problems(bad_number, "x", 1).is_empty(), "a zero time is reported")
+	var no_slip := good.duplicate(true)
+	no_slip.erase("slip_every_seconds")
+	check(not CollapsePlan.problems(no_slip, "x", 1).is_empty(), "a missing slip time is reported")
 	var crane := {"load": "l", "hook_lead_px": 0, "falls": [{"lamp": 0, "to_row": 1}], "collapse": bad_lamp}
 	check(not CranePlan.problems(crane, "x", 1).is_empty(), "the crane data check covers its collapse")
 
@@ -104,10 +119,16 @@ func test_level_05_the_crane_slams_and_the_hall_collapses_before_her_eyes() -> v
 		check(light.lights[i].energy > 0.5, "lamp %d still shines when she walks in" % i)
 	var out_at: Array[int] = [-1, -1, -1, -1, -1, -1]
 	var landed_at := -1
+	var slipped_at: Array[int] = [-1, -1, -1, -1]
 	for t in 16 * 60:
 		await _tree.physics_frame
 		if landed_at < 0 and collapse.girder_lies(collapse.girders.size() - 1):
 			landed_at = t
+			for k in collapse.girders.size():
+				check(collapse.girder_lies(k), "the whole bridge lies at once, girder %d" % k)
+		for k in slipped_at.size():
+			if landed_at >= 0 and slipped_at[k] < 0 and not collapse.girder_lies(k):
+				slipped_at[k] = t
 		for i in out_at.size():
 			if out_at[i] < 0 and light.lights[i].energy < 0.01:
 				out_at[i] = t
@@ -117,8 +138,9 @@ func test_level_05_the_crane_slams_and_the_hall_collapses_before_her_eyes() -> v
 	check(landed_at > out_at[1], "the collapse starts after the slam, girders landed at %d" % landed_at)
 	check(out_at[5] > landed_at and out_at[5] < out_at[4] and out_at[4] < out_at[3] and out_at[3] < out_at[2],
 		"then the lamps over the pit go out from the exit back towards the stop, %s" % [out_at])
-	for k in collapse.girders.size():
-		check(collapse.girder_lies(k), "girder %d lies on its stub" % k)
+	check(slipped_at[0] - landed_at >= 3 * 60, "the bridge lies whole at least 3 s, %d ticks" % (slipped_at[0] - landed_at))
+	check(slipped_at[0] < slipped_at[1] and slipped_at[1] < slipped_at[2] and slipped_at[2] < slipped_at[3],
+		"then the girders slip into the pit from the stop towards the exit, %s" % [slipped_at])
 	await _free(room)
 
 
@@ -148,7 +170,8 @@ func test_level_05_shift_brings_everything_back_and_release_plays_it_again() -> 
 	for i in light.lights.size():
 		check(light.lights[i].energy < 0.01, "after release lamp %d breaks again (rule A)" % i)
 	for k in collapse.girders.size():
-		check(collapse.girder_lies(k), "and girder %d lies again" % k)
+		check(not collapse.girder_lies(k) and collapse.girder_rect(k).end.y > collapse.girders[k].end.y,
+			"and girder %d slips into the pit again" % k)
 	await _free(room)
 
 
@@ -158,38 +181,57 @@ func test_level_05_a_girder_holds_her_only_while_it_lies() -> void:
 	await _ticks(2)
 	var shape := collapse.get_child(0).get_child(0) as CollisionShape2D
 	check(shape.disabled, "a hanging girder is not solid")
-	await _ticks(14 * 60)
+	while collapse.since < collapse.plan.girders_landed():
+		await _tree.physics_frame
+	await _ticks(2)
 	check(not shape.disabled, "a girder lying on its stub is solid")
 	check(collapse.girder_rect(0) == collapse.girders[0], "it lies where the level put it")
+	await _ticks(collapse.plan.girder_slip(0) - collapse.since + 2)
+	check(shape.disabled, "a girder slipping off its stub is not solid")
 	await _free(room)
 
 
-func test_level_05_a_short_shift_lights_the_bridge_a_long_one_lifts_it() -> void:
+func test_level_05_a_short_shift_brings_the_bridge_back_a_long_one_lifts_it() -> void:
 	var room := await _load()
 	var collapse := room.get_node("Collapse") as Collapse
 	var light := room.get_node("WorldLight") as WorldLight
 	var player: Player = room.get_node("Player")
-	await _ticks(14 * 60)
-	# She stands safe on ledge B by the stop.
+	await _ticks(16 * 60)
+	# She stands safe on ledge B by the stop; in the present the pit is empty.
 	player.respawn(Vector2(22.5 * CELL, 11.0 * CELL))
 	await _ticks(10)
-	check(light.lights[2].energy < 0.01, "the bridge is dark")
-	Input.action_press("rewind")
-	await _ticks(90)
-	check(light.lights[2].energy > 0.5, "a short Shift brings back the lamp nearest the stop, %.2f" % light.lights[2].energy)
-	for k in collapse.girders.size():
-		check(collapse.girder_lies(k), "while girder %d still lies" % k)
 	var last := collapse.girders.size() - 1
+	for k in collapse.girders.size():
+		check(not collapse.girder_lies(k), "in the present girder %d lies at the bottom of the pit" % k)
+	check(light.lights[2].energy < 0.01, "the pit is dark")
+	Input.action_press("rewind")
+	var whole := false
 	var lifted := false
-	for t in 8 * 60:
+	var lit := false
+	for t in 12 * 60:
 		await _tree.physics_frame
-		if not collapse.girder_lies(last):
+		if not whole and collapse.girder_lies(last) and not _all_lie(collapse):
+			check(not collapse.girder_lies(0), "the girder that slipped last comes back first")
+		if not whole and _all_lie(collapse):
+			whole = true
+		if whole and light.lights[2].energy > 0.5:
+			lit = true
+		if whole and not collapse.girder_lies(last):
 			lifted = true
-			check(collapse.girder_lies(0), "the last girder to fall flies back up first")
+			check(collapse.girder_lies(0), "the last girder to land flies back up first")
 			break
+	check(whole, "a short Shift brings the whole bridge back")
+	check(lit, "and the lamp nearest the stop shines again while the bridge lies")
 	check(lifted, "a long Shift lifts the girders")
 	Input.action_release("rewind")
 	await _free(room)
+
+
+func _all_lie(collapse: Collapse) -> bool:
+	for k in collapse.girders.size():
+		if not collapse.girder_lies(k):
+			return false
+	return true
 
 
 func test_level_05_a_fall_into_the_pit_starts_the_room_again() -> void:

@@ -5,11 +5,14 @@ extends Node2D
 ## girders hanging under the roof beyond the stop fall one by one and land on
 ## the stubs of old supports as a broken bridge over the pit, then the lamps over
 ## the pit break one by one from the exit back towards the stop (`CollapsePlan`).
-## The bridge exists only in the present, and there it is dark.
+## Then the bridge goes (D137): the girders shudder and slip off their stubs
+## into the pit one by one from the stop towards the exit, while the lamps go
+## out ahead. The bridge lies only for a while after the slam: the crane brings
+## her to it just in time, and she runs ahead of the slipping.
 ##
-## A girder is solid only while it lies: falling, or flying back up under
-## Shift, it holds nobody, so a Shift held too long on the bridge drops the
-## heroine into the pit.
+## A girder is solid only while it lies: falling, slipping, or flying back up
+## under Shift, it holds nobody. A short Shift pushes the slipping back; a long
+## one lifts the girders still ahead back to the roof and drops her.
 ##
 ## A recorded object: its state is the ticks since the slam (-1 before it),
 ## held once everything has come down. Under Shift the lamps fly back up first,
@@ -99,15 +102,29 @@ func blocks_player_at(_state: Dictionary, _player_rect: Rect2) -> bool:
 
 ## True while girder `k` lies on its supports and can be stood on.
 func girder_lies(k: int) -> bool:
-	return _plan().girder_drop(k, since) >= 1.0
+	return _plan().girder_lies(k, since)
 
 
-## The rect of girder `k` now, in the room's coordinates.
+## The rect of girder `k` now, in the room's coordinates (before its tilt
+## while it slips, `girder_tilt`).
 func girder_rect(k: int) -> Rect2:
 	var rest := girders[k]
 	var hang := _ceiling_y + ObjectLook.number(_look, "hang_below_ceiling_px", 40.0)
 	var y := lerpf(hang, rest.position.y, _plan().girder_drop(k, since))
-	return Rect2(Vector2(rest.position.x, y), rest.size)
+	var bottom := _plan().to_row * WorldData.CELL - rest.size.y
+	y = lerpf(y, maxf(bottom, rest.position.y), _plan().girder_slide(k, since))
+	var shudder := _plan().girder_shudder(k, since)
+	var x := rest.position.x
+	if shudder > 0.0:
+		x += sin(float(since) * 2.3 + float(k)) * ObjectLook.number(_look, "shudder_px", 3.0) * shudder
+	return Rect2(Vector2(x, y), rest.size)
+
+
+## How far girder `k` has turned while it slips into the pit, in radians:
+## the girders tip one way and the other in turn.
+func girder_tilt(k: int) -> float:
+	var side := 1.0 if k % 2 == 0 else -1.0
+	return side * deg_to_rad(ObjectLook.number(_look, "slip_tilt_degrees", 35.0)) * _plan().girder_slide(k, since)
 
 
 ## The fall of world lamp `lamp` now, for `Crane` and `WorldLight`; {} when
@@ -151,6 +168,7 @@ func _draw() -> void:
 	var rust := ObjectLook.color(_look, "rust", Color("#7a3a22"))
 	var chain := ObjectLook.color(_look, "chain", Color("#3a4048"))
 	var flange := ObjectLook.number(_look, "flange_px", 6.0)
+	var dust := ObjectLook.color(_look, "dust", Color("#8a8278"))
 	for k in girders.size():
 		var r := girder_rect(k)
 		var drop := _plan().girder_drop(k, since)
@@ -158,6 +176,10 @@ func _draw() -> void:
 			var x := r.position.x + r.size.x * side
 			var to := r.position.y if drop <= 0.0 else _ceiling_y + ObjectLook.number(_look, "stub_px", 18.0)
 			draw_line(Vector2(x, _ceiling_y), Vector2(x, to), chain, 2.0, true)
+		_draw_crumbs(k, dust)
+		var centre := r.get_center()
+		draw_set_transform(centre, girder_tilt(k))
+		r.position -= centre
 		draw_rect(r, dark)
 		draw_rect(Rect2(r.position + Vector2(4.0, flange), Vector2(r.size.x - 8.0, r.size.y - 2.0 * flange)), iron)
 		draw_rect(Rect2(r.position, Vector2(r.size.x, flange)), light)
@@ -167,3 +189,24 @@ func _draw() -> void:
 			var at := Vector2(r.position.x + 12.0 + 24.0 * float(i), r.position.y + flange / 2.0)
 			draw_circle(at, 1.6, dark)
 		draw_rect(Rect2(r.position + Vector2(r.size.x * 0.3, flange), Vector2(r.size.x * 0.2, 3.0)), rust)
+		draw_set_transform(Vector2.ZERO)
+
+
+## Concrete crumbs trickling off the stub under girder `k` while it shudders,
+## a burst of them as it slips; drawn from the plan, so they run back under Shift.
+func _draw_crumbs(k: int, dust: Color) -> void:
+	var shudder := _plan().girder_shudder(k, since)
+	var slide := _plan().girder_slide(k, since)
+	if shudder <= 0.0 and (slide <= 0.0 or slide >= 1.0):
+		return
+	var rest := girders[k]
+	var count := int(ObjectLook.number(_look, "crumbs", 6.0))
+	var fall_px := ObjectLook.number(_look, "crumb_fall_px", 90.0)
+	for i in count:
+		var phase := fmod(float(since) / 30.0 + float(i) / float(count), 1.0)
+		var at := Vector2(rest.position.x + rest.size.x * (0.1 + 0.8 * float(i) / float(maxi(count - 1, 1))),
+			rest.end.y + phase * fall_px * (1.0 + slide))
+		var size := 2.0 + 2.0 * slide + float(i % 3)
+		var colour := dust
+		colour.a = (1.0 - phase) * maxf(shudder, 1.0 - slide)
+		draw_rect(Rect2(at, Vector2(size, size)), colour)

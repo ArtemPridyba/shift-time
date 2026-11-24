@@ -5,11 +5,12 @@ extends SceneTree
 ## lit hall; at once a runaway overhead crane rides right, its hook strikes two
 ## lamps, and its load slams into the stop at the end of the rail (D130). The
 ## slam sets off the collapse (D135): girders fall from the roof onto the stubs
-## in the pit beyond as a broken bridge, then the lamps over the pit break, from
-## the exit back towards the stop. Under Shift everything goes back; at the
-## start of history the load hangs by pillar A. She stands on it, lets Shift go,
-## rides to ledge B and crosses the bridge in the dark; a short Shift lights
-## the nearest lamps while the girders still lie, a long one lifts the girders.
+## in the pit beyond as a broken bridge; then (D137) the girders slip into the
+## pit one by one from the stop towards the exit while the lamps over the pit
+## break from the exit back. Under Shift everything goes back; at the start of
+## history the load hangs by pillar A. She stands on it, lets Shift go, rides to
+## ledge B just as the bridge lands and runs across ahead of the slipping; a
+## short Shift pushes the slipping back, a long one lifts the girders ahead.
 ##
 ## Left to right: the start floor (row 12), a pit of two cells, pillar A (two
 ## cells), one cell to the load's start (one cell higher, row 11); the load

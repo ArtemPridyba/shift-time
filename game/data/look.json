@@ -257,14 +257,19 @@
       "stop_px": 18
     },
     "collapse": {
-      "_about": "The collapse of level 05 (D135): girders hang hang_below_ceiling_px under the roof on chains (chain colour), torn stubs stub_px long stay once they fall; an I-beam has flanges flange_px thick and a rust stain. The slam shakes the camera shake_px for shake_seconds.",
+      "_about": "The collapse of level 05 (D135): girders hang hang_below_ceiling_px under the roof on chains (chain colour), torn stubs stub_px long stay once they fall; an I-beam has flanges flange_px thick and a rust stain. The slam shakes the camera shake_px for shake_seconds. Before a girder slips off its stub (D137) it shudders shudder_px and crumbs (count crumbs, dust colour) trickle crumb_fall_px down; slipping, it turns up to slip_tilt_degrees.",
       "hang_below_ceiling_px": 40,
       "stub_px": 18,
       "flange_px": 6,
       "chain": "#3a4048",
       "rust": "#7a3a22",
       "shake_seconds": 1.2,
-      "shake_px": 8
+      "shake_px": 8,
+      "shudder_px": 3,
+      "slip_tilt_degrees": 35,
+      "crumbs": 6,
+      "crumb_fall_px": 90,
+      "dust": "#8a8278"
     }
   },
   "pipe": {
