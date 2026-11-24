@@ -3,16 +3,18 @@ extends Node2D
 ## The collapse of level 05 «Crane» (card docs/levels/05.md, D144), in three
 ## quakes (`CollapsePlan`):
 ## 1. at the start the hall shakes, the hanging platforms fall one by one, each
-##    followed by its lamp; the last one breaks on its stub. Under Shift it
-##    mends and rises first, carrying the heroine up to the crane's ledge.
+##    followed by its lamp; the last one breaks on its stub and soon crumbles
+##    into the pit. Under Shift its debris flies back, it mends and rises
+##    first, carrying the heroine up to the crane's ledge.
 ## 2. her step onto the crane shakes the hall again: the crane breaks loose and
 ##    rides down its sloping rail, and the lamps over it fall as it passes.
 ## 3. at the end of the rail the third quake: the crane sags and falls, the
-##    ceiling comes down in chunks, each with its lamp shining under it, and the
-##    world slows down while she climbs the falling chunks to the exit.
+##    ceiling comes down in chunks, two lamps fall among them still shining, and
+##    the world slows down while she climbs the falling chunks to the exit.
 ##
 ## Every piece and the crane hold the heroine, except a lost one lying at the
-## bottom of the pit. Nothing crushes her: the world waits instead.
+## bottom of the pit and a crumbled one. Nothing crushes her: the world waits
+## instead.
 ##
 ## A recorded object. State: { "clock": ticks since the room began, "ride":
 ## ticks since her step onto the crane, -1 before it }; both stop counting once
@@ -210,15 +212,7 @@ func crane_arrived() -> bool:
 ## The fall of world lamp `lamp` now, for `WorldLight`; {} when nothing here
 ## drops it.
 func lamp_fall(lamp: int) -> Dictionary:
-	var fall := _plan().lamp_fall(lamp, clock, ride)
-	if not fall.has("piece"):
-		return fall
-	# A lamp under a piece goes down with it, as far as the piece goes.
-	var k := int(fall["piece"])
-	var base := _lamp_base[lamp] if lamp < _lamp_base.size() else Vector2.ZERO
-	var down := rests[k].position.y - pieces[k].position.y
-	return {"drop": float(fall["way"]), "light": float(fall["light"]), "shatter": float(fall["shatter"]),
-		"to_row": (base.y + down + 10.0) / WorldData.CELL}
+	return _plan().lamp_fall(lamp, clock, ride)
 
 
 ## A lamp swings while the hall shakes.
@@ -241,7 +235,7 @@ func slowness() -> float:
 
 
 func _holds(k: int, c: int, r: int) -> bool:
-	return not (lost.has(k) and plan.drop(k, c, r) >= 1.0)
+	return not (lost.has(k) and plan.drop(k, c, r) >= 1.0) and plan.crumble(k, c, r) <= 0.0
 
 
 func _rect(k: int, c: int, r: int) -> Rect2:
@@ -311,60 +305,91 @@ func _draw_rail() -> void:
 
 
 ## A hanging platform of act 1: a rusty I-beam on two chains; the one that
-## breaks lies in two halves on its stub.
+## breaks lies in two halves on its stub, then crumbles: its pieces tumble
+## into the pit.
 func _draw_platform(k: int) -> void:
-	var iron := ObjectLook.color(ObjectLook.mech(), "iron", Color("#4c4c53"))
-	var light := ObjectLook.color(ObjectLook.mech(), "iron_light", Color("#6c6c72"))
-	var dark := ObjectLook.color(ObjectLook.mech(), "iron_dark", Color("#2a2a30"))
-	var rust := ObjectLook.color(_look, "rust", Color("#7a3a22"))
 	var chain := ObjectLook.color(_look, "chain", Color("#3a4048"))
-	var flange := ObjectLook.number(_look, "flange_px", 6.0)
 	var r := piece_rect(k)
 	var hangs := piece_hangs(k)
 	for side: float in [0.15, 0.85]:
 		var x := r.position.x + r.size.x * side
 		var to := r.position.y if hangs else _ceiling_y + ObjectLook.number(_look, "stub_px", 18.0)
 		draw_line(Vector2(x, _ceiling_y), Vector2(x, to), chain, 2.0, true)
+	var gone := plan.crumble(k, clock, ride)
+	if gone >= 1.0:
+		return
 	var crack := plan.broken(k, clock, ride)
-	var halves := 2 if crack > 0.0 else 1
-	for h in halves:
-		var w := r.size.x / float(halves)
-		var part := Rect2(r.position + Vector2(w * float(h), 0.0), Vector2(w - (3.0 if halves > 1 else 0.0), r.size.y))
-		# The broken halves sag towards the gap between them.
-		var turn := (0.12 if h == 0 else -0.12) * crack
-		var pivot := Vector2(part.position.x if h == 0 else part.end.x, part.end.y)
+	var parts := 5 if gone > 0.0 else (2 if crack > 0.0 else 1)
+	var w := r.size.x / float(parts)
+	for h in parts:
+		var part := Rect2(r.position + Vector2(w * float(h), 0.0), Vector2(w - (3.0 if parts > 1 else 0.0), r.size.y))
+		var pivot := part.get_center()
+		var turn := 0.0
+		if gone > 0.0:
+			# The pieces tumble down into the pit, each its own way.
+			var spread := float(h) - float(parts - 1) / 2.0
+			pivot += Vector2(spread * 22.0 * gone, (0.8 + 0.12 * float(h % 3)) * gone * gone * 9.0 * WorldData.CELL)
+			turn = spread * 0.9 * gone + 0.4 * gone * float(h % 2)
+		elif parts == 2:
+			# The broken halves sag towards the gap between them.
+			pivot = Vector2(part.position.x if h == 0 else part.end.x, part.end.y)
+			turn = (0.12 if h == 0 else -0.12) * crack
 		draw_set_transform(pivot, turn)
-		var local := Rect2(part.position - pivot, part.size)
-		draw_rect(local, dark)
-		draw_rect(Rect2(local.position + Vector2(4.0, flange), Vector2(local.size.x - 8.0, local.size.y - 2.0 * flange)), iron)
-		draw_rect(Rect2(local.position, Vector2(local.size.x, flange)), light)
-		draw_rect(Rect2(Vector2(local.position.x, local.end.y - flange), Vector2(local.size.x, flange)), dark.lightened(0.1))
-		for i in int(local.size.x / 24.0):
-			draw_circle(Vector2(local.position.x + 12.0 + 24.0 * float(i), local.position.y + flange / 2.0), 1.6, dark)
-		draw_rect(Rect2(local.position + Vector2(local.size.x * 0.3, flange), Vector2(local.size.x * 0.2, 3.0)), rust)
+		_draw_beam(Rect2(part.position - (part.get_center() if gone > 0.0 else pivot), part.size))
 		draw_set_transform(Vector2.ZERO)
 
 
-## A chunk of the ceiling of act 3: a slab of concrete with bent rebar, its
-## lamp under it (drawn by `WorldLight`).
+## A piece of rusty I-beam in `local`: web, a lighter top flange, rivets.
+func _draw_beam(local: Rect2) -> void:
+	var iron := ObjectLook.color(ObjectLook.mech(), "iron", Color("#4c4c53"))
+	var light := ObjectLook.color(ObjectLook.mech(), "iron_light", Color("#6c6c72"))
+	var dark := ObjectLook.color(ObjectLook.mech(), "iron_dark", Color("#2a2a30"))
+	var rust := ObjectLook.color(_look, "rust", Color("#7a3a22"))
+	var flange := ObjectLook.number(_look, "flange_px", 6.0)
+	draw_rect(local, dark)
+	draw_rect(Rect2(local.position + Vector2(4.0, flange), Vector2(maxf(local.size.x - 8.0, 1.0), local.size.y - 2.0 * flange)), iron)
+	draw_rect(Rect2(local.position, Vector2(local.size.x, flange)), light)
+	draw_rect(Rect2(Vector2(local.position.x, local.end.y - flange), Vector2(local.size.x, flange)), dark.lightened(0.1))
+	for i in int(local.size.x / 24.0):
+		draw_circle(Vector2(local.position.x + 12.0 + 24.0 * float(i), local.position.y + flange / 2.0), 1.6, dark)
+	draw_rect(Rect2(local.position + Vector2(local.size.x * 0.3, flange), Vector2(local.size.x * 0.2, 3.0)), rust)
+
+
+## A chunk of the ceiling of act 3: a broken slab of concrete, each its own
+## shape (from its number, so it never changes), with cracks and bent rebar.
+## Its top stays nearly flat where she stands.
 func _draw_chunk(k: int) -> void:
 	var stone := ObjectLook.color(_look, "chunk", Color("#5a554f"))
 	var dark := stone.darkened(0.45)
 	var rebar := ObjectLook.color(_look, "rust", Color("#7a3a22"))
 	var r := piece_rect(k)
-	var top := PackedVector2Array([
-		r.position + Vector2(0.0, 4.0), r.position + Vector2(r.size.x * 0.3, 0.0),
-		r.position + Vector2(r.size.x * 0.75, 2.0), Vector2(r.end.x, r.position.y + 5.0),
-		Vector2(r.end.x - 4.0, r.end.y), Vector2(r.position.x + r.size.x * 0.55, r.end.y + 6.0),
-		Vector2(r.position.x + 6.0, r.end.y + 2.0)])
-	draw_colored_polygon(top, dark)
+	var rough := func(i: int, amount: float) -> float:
+		return sin(float(k * 37 + i * 11) * 12.9898) * amount
+	var w := r.size.x
+	var h := r.size.y
+	var outline := PackedVector2Array([
+		r.position + Vector2(-4.0 + rough.call(0, 4.0), 3.0 + rough.call(1, 3.0)),
+		r.position + Vector2(w * 0.35, rough.call(2, 2.0)),
+		r.position + Vector2(w * 0.7, 1.0 + rough.call(3, 2.0)),
+		r.position + Vector2(w + 5.0 + rough.call(4, 5.0), 4.0 + rough.call(5, 4.0)),
+		r.position + Vector2(w + rough.call(6, 8.0), h * 0.6 + rough.call(7, 6.0)),
+		r.position + Vector2(w * 0.8 + rough.call(8, 6.0), h + 6.0 + rough.call(9, 8.0)),
+		r.position + Vector2(w * 0.45 + rough.call(10, 8.0), h + 14.0 + rough.call(11, 10.0)),
+		r.position + Vector2(w * 0.15 + rough.call(12, 6.0), h + 4.0 + rough.call(13, 8.0)),
+		r.position + Vector2(-6.0 + rough.call(14, 6.0), h * 0.5 + rough.call(15, 6.0))])
+	draw_colored_polygon(outline, dark)
 	var face := PackedVector2Array()
-	for p in top:
-		face.append(p.lerp(r.get_center(), 0.12))
+	for p in outline:
+		face.append(p.lerp(r.get_center(), 0.14))
 	draw_colored_polygon(face, stone)
-	draw_line(r.position + Vector2(4.0, 3.0), Vector2(r.end.x - 4.0, r.position.y + 4.0), stone.lightened(0.25), 3.0)
-	draw_line(Vector2(r.position.x + 8.0, r.end.y), Vector2(r.position.x + 2.0, r.end.y + 10.0), rebar, 2.0)
-	draw_line(Vector2(r.end.x - 10.0, r.end.y - 2.0), Vector2(r.end.x - 2.0, r.end.y + 8.0), rebar, 2.0)
+	draw_line(outline[0] + Vector2(3.0, 0.0), outline[3] + Vector2(-3.0, 0.0), stone.lightened(0.25), 3.0)
+	# Cracks over the face and rebar torn out of the edges.
+	var crack := stone.darkened(0.3)
+	draw_polyline(PackedVector2Array([r.position + Vector2(w * 0.4, 6.0), r.position + Vector2(w * 0.5 + rough.call(16, 6.0), h * 0.5),
+		r.position + Vector2(w * 0.42 + rough.call(17, 8.0), h + 4.0)]), crack, 1.5)
+	for i in 2 + (k % 2):
+		var at := outline[4 + i * 2 % 5]
+		draw_line(at, at + Vector2(rough.call(20 + i, 10.0), 8.0 + absf(rough.call(24 + i, 8.0))), rebar, 2.0)
 
 
 ## The crane: a trolley on the sloping rail, two slings, and the load the

@@ -6,13 +6,14 @@ extends RefCounted
 ##
 ## Act 1, from the room's start (`clock`, ticks since the room began): the
 ## first quake, then the hanging platforms fall one by one, each followed by
-## the lamp beside it; the last platform breaks on its stub.
+## the lamp beside it; the last platform breaks on its stub and soon crumbles
+## into the pit.
 ## Act 2, from the heroine's step onto the crane (`ride`, ticks since that
 ## step, -1 before it): the second quake, the crane breaks loose and rides down
 ## its sloping rail; the lamps over the rail fall as it passes under them.
 ## Act 3, from the crane's arrival at the end of the rail: the third quake, the
-## crane sags and falls, the ceiling comes down in chunks, each with its lamp
-## shining under it, and for a while the world runs slow (variant A: only the
+## crane sags and falls, the ceiling comes down in chunks, lamps fall among
+## them still shining, and for a while the world runs slow (variant A: only the
 ## world, never the heroine). Act 3 is counted on a slowed clock: `slow_ticks`
 ## turns real ticks since the arrival into ticks of the world.
 ##
@@ -20,11 +21,12 @@ extends RefCounted
 ## { "quake_seconds": act 1's quake after the room's start,
 ##   "pieces": [{"act": 1 or 3, "second": after the act's quake,
 ##       "fall_seconds", "kind": "drop" (falls faster and faster) or "sink"
-##       (slides down at an even speed), "breaks": bool, "lamp": the index in
-##       world.lamps of the lamp it carries under it, or -1}, ...] — one per
-##       piece of the scene, in the same order;
-##   "lamps": [{"lamp", "second" after act 1's quake, "to_row"}] lamps that
-##       fall on their own in act 1;
+##       (slides down at an even speed), "breaks": bool (cracks on landing),
+##       "crumble_seconds": how long it lies before it crumbles into the
+##       pit (absent: never)}, ...] — one per piece of the scene, in order;
+##   "lamps": [{"lamp", "act": 1 or 3, "second" after the act's quake,
+##       "to_row", "fall_seconds" (absent: the kit's), "lit": shines on its
+##       way down}] lamps that fall on their own;
 ##   "crane": {"delay_seconds" from the step to setting off, "speed" px per
 ##       world second, "lamps": [lamps over the rail], "lamp_lead_px",
 ##       "lamp_to_row", "sag_seconds", "sag_px", "tilt_degrees",
@@ -41,9 +43,9 @@ const SINK_EASE := 0.08
 
 var quake_tick := 1
 ## Per piece: {"act", "at" (ticks after the act's quake), "fall" (ticks),
-## "kind", "breaks", "lamp"}.
+## "kind", "breaks", "crumble" (ticks lying before it crumbles, 0: never)}.
 var pieces: Array[Dictionary] = []
-## Lamps falling on their own in act 1: {"lamp", "at", "to_row"}.
+## Lamps falling on their own: {"lamp", "act", "at", "to_row", "fall", "lit"}.
 var lamps: Array[Dictionary] = []
 var ride_delay := 1
 ## Pixels per tick the crane rides; ticks it takes (set by `aim`).
@@ -82,11 +84,13 @@ static func from_data(data: Variant, ticks_per_second: float, quake: Dictionary,
 		var p: Dictionary = one if one is Dictionary else {}
 		plan.pieces.append({"act": int(p.get("act", 1)), "at": ticks.call(p.get("second", 0.0)),
 			"fall": maxi(ticks.call(p.get("fall_seconds", 1.0)), 1), "kind": str(p.get("kind", "drop")),
-			"breaks": bool(p.get("breaks", false)), "lamp": int(p.get("lamp", -1))})
+			"breaks": bool(p.get("breaks", false)), "crumble": ticks.call(p.get("crumble_seconds", 0.0))})
+	plan.lamp_fall_ticks = maxi(ticks.call(quake.get("fall_seconds", 0.8)), 1)
 	for one: Variant in d.get("lamps", []):
 		var l: Dictionary = one if one is Dictionary else {}
-		plan.lamps.append({"lamp": int(l.get("lamp", 0)), "at": ticks.call(l.get("second", 0.0)),
-			"to_row": float(l.get("to_row", 20.0))})
+		var fall: int = plan.lamp_fall_ticks if not l.has("fall_seconds") else maxi(ticks.call(l["fall_seconds"]), 1)
+		plan.lamps.append({"lamp": int(l.get("lamp", 0)), "act": int(l.get("act", 1)), "at": ticks.call(l.get("second", 0.0)),
+			"to_row": float(l.get("to_row", 20.0)), "fall": fall, "lit": bool(l.get("lit", false))})
 	var crane: Dictionary = d.get("crane", {}) if d.get("crane", {}) is Dictionary else {}
 	plan.ride_delay = ticks.call(crane.get("delay_seconds", 1.0))
 	plan.ride_step = maxf(float(crane.get("speed", 100.0)), 1.0) / ticks_per_second
@@ -104,15 +108,16 @@ static func from_data(data: Variant, ticks_per_second: float, quake: Dictionary,
 	plan.slow_ease = maxi(ticks.call(slow.get("ease_seconds", 0.5)), 1)
 	plan.slow_hold = ticks.call(slow.get("hold_seconds", 0.0))
 	plan.tempo = clampf(float(slow.get("tempo", 1.0)), 0.01, 1.0)
-	plan.lamp_fall_ticks = maxi(ticks.call(quake.get("fall_seconds", 0.8)), 1)
 	plan.shatter_ticks = maxi(ticks.call(quake.get("shatter_seconds", 0.6)), 1)
 	plan.shake_ticks = maxi(ticks.call(look.get("shake_seconds", 1.2)), 1)
 	plan.clock_end = plan.quake_tick + plan.shake_ticks
 	for p in plan.pieces:
 		if int(p["act"]) == 1:
-			plan.clock_end = maxi(plan.clock_end, plan.quake_tick + int(p["at"]) + int(p["fall"]) + plan.shatter_ticks)
+			var crumble := int(p["crumble"]) + int(p["fall"]) if int(p["crumble"]) > 0 else 0
+			plan.clock_end = maxi(plan.clock_end, plan.quake_tick + int(p["at"]) + int(p["fall"]) + crumble + plan.shatter_ticks)
 	for l in plan.lamps:
-		plan.clock_end = maxi(plan.clock_end, plan.quake_tick + int(l["at"]) + plan.lamp_fall_ticks + plan.shatter_ticks)
+		if int(l["act"]) == 1:
+			plan.clock_end = maxi(plan.clock_end, plan.quake_tick + int(l["at"]) + int(l["fall"]) + plan.shatter_ticks)
 	return plan
 
 
@@ -134,6 +139,9 @@ func aim(start_x: float, travel: Vector2, lamp_x: Array) -> void:
 	for p in pieces:
 		if int(p["act"]) == 3:
 			last = maxi(last, int(p["at"]) + int(p["fall"]) + shatter_ticks)
+	for l in lamps:
+		if int(l["act"]) == 3:
+			last = maxi(last, int(l["at"]) + int(l["fall"]) + shatter_ticks)
 	var real := 0
 	while slow_ticks(float(real)) < float(last) and real < 100000:
 		real += 1
@@ -227,6 +235,17 @@ func way(k: int, clock: int, ride: int) -> float:
 	return x * x
 
 
+## How far piece `k` has crumbled into the pit: 0 whole (or never crumbles)
+## … 1 its debris gone below; it crumbles `crumble` ticks after it landed and
+## its debris falls as long as the piece fell.
+func crumble(k: int, clock: int, ride: int) -> float:
+	var wait := int(pieces[k]["crumble"])
+	if wait <= 0:
+		return 0.0
+	var s := since(k, clock, ride) - float(int(pieces[k]["fall"]) + wait)
+	return clampf(s / float(pieces[k]["fall"]), 0.0, 1.0)
+
+
 ## How broken piece `k` is: 0 whole … 1 broken on its stub (only `breaks`).
 func broken(k: int, clock: int, ride: int) -> float:
 	if not bool(pieces[k]["breaks"]):
@@ -263,17 +282,15 @@ func crane_down(ride: int) -> bool:
 func lamp_fall(lamp: int, clock: int, ride: int) -> Dictionary:
 	for l in lamps:
 		if int(l["lamp"]) == lamp:
-			return _fall(clock - quake_tick - int(l["at"]), float(l["to_row"]))
+			var s := float(clock - quake_tick - int(l["at"]))
+			if int(l["act"]) == 3:
+				var t := act3(ride)
+				s = -1.0 if t < 0.0 else t - float(l["at"])
+			return _fall(s, float(l["to_row"]), int(l["fall"]), bool(l["lit"]))
 	var i := crane_lamps.find(lamp)
 	if i >= 0:
 		var hit := crane_hits[i] if i < crane_hits.size() else -1
-		return _fall(-1 if hit < 0 or ride < hit else ride - hit, lamp_to_row)
-	for k in pieces.size():
-		if int(pieces[k]["lamp"]) == lamp:
-			var x := drop(k, clock, ride)
-			var lying := since(k, clock, ride) - float(pieces[k]["fall"])
-			var shatter := clampf(lying / float(shatter_ticks), 0.0, 1.0) if x >= 1.0 else 0.0
-			return {"piece": k, "way": way(k, clock, ride), "light": 0.0 if x >= 1.0 else 1.0, "shatter": shatter}
+		return _fall(-1.0 if hit < 0 or ride < hit else float(ride - hit), lamp_to_row, lamp_fall_ticks, false)
 	return {}
 
 
@@ -302,12 +319,15 @@ func _shake(since_quake_tick: int) -> float:
 	return (1.0 - x) * (1.0 - x)
 
 
-func _fall(since_tick: int, to_row: float) -> Dictionary:
-	if since_tick < 0:
+## A lamp `since_tick` ticks after it broke loose, falling `fall` ticks onto
+## `to_row`; a `lit` one shines all the way down, the others die out on the way.
+func _fall(since_tick: float, to_row: float, fall: int, lit: bool) -> Dictionary:
+	if since_tick < 0.0:
 		return {"drop": 0.0, "light": 1.0, "shatter": 0.0, "to_row": to_row}
-	var x := clampf(float(since_tick) / float(lamp_fall_ticks), 0.0, 1.0)
-	var shatter := clampf(float(since_tick - lamp_fall_ticks) / float(shatter_ticks), 0.0, 1.0)
-	return {"drop": x * x, "light": 1.0 - x, "shatter": shatter, "to_row": to_row}
+	var x := clampf(since_tick / float(fall), 0.0, 1.0)
+	var shatter := clampf((since_tick - float(fall)) / float(shatter_ticks), 0.0, 1.0)
+	var light := (0.0 if x >= 1.0 else 1.0) if lit else 1.0 - x
+	return {"drop": x * x, "light": light, "shatter": shatter, "to_row": to_row}
 
 
 ## 0 … 1 with a gentle start over the first `ease` of the way, even after it.
@@ -345,12 +365,14 @@ static func problems(data: Variant, where: String, lamp_count: int) -> PackedStr
 				errors.append("%s: each of 'collapse.pieces' needs 'second' from 0 and 'fall_seconds' above 0" % where)
 			if not str(p.get("kind", "drop")) in KINDS:
 				errors.append("%s: 'collapse.pieces' kind must be one of %s" % [where, KINDS])
-			if not lamp_ok.call(p.get("lamp", -1)):
-				errors.append("%s: 'collapse.pieces' lamp must be in world.lamps (0..%d) or -1" % [where, lamp_count - 1])
+			if p.has("crumble_seconds") and not positive.call(p.get("crumble_seconds")):
+				errors.append("%s: 'collapse.pieces' crumble_seconds must be a number above 0" % where)
 	for one: Variant in d.get("lamps", []):
 		var l: Dictionary = one if one is Dictionary else {}
 		if not lamp_ok.call(l.get("lamp")) or int(l.get("lamp", -1)) < 0 or not not_negative.call(l.get("second")) or not positive.call(l.get("to_row")):
 			errors.append("%s: each of 'collapse.lamps' needs a 'lamp' of world.lamps, 'second' and 'to_row'" % where)
+		if not int(l.get("act", 1)) in [1, 3] or (l.has("fall_seconds") and not positive.call(l.get("fall_seconds"))):
+			errors.append("%s: 'collapse.lamps' act must be 1 or 3 and fall_seconds above 0" % where)
 	var crane: Variant = d.get("crane")
 	if not crane is Dictionary:
 		errors.append("%s: 'collapse.crane' must be an object" % where)

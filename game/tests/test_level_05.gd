@@ -1,10 +1,11 @@
 extends RefCounted
 ## Tests of level 05 «Crane» (card docs/levels/05.md, D144): the collapse in
 ## three quakes (`CollapsePlan`, `Collapse`). Act 1: the platforms fall one by
-## one, each followed by its lamp, the third breaks; under Shift it lifts her to
-## the crane. Act 2: her step onto the crane sets it riding down its rail.
-## Act 3: the ceiling comes down in chunks while the world runs slow; she
-## climbs them to the exit. The solutions in tests/solutions/level_05*.json
+## one, each followed by its lamp, the third breaks and crumbles into the pit;
+## under Shift it comes back and lifts her to the crane. Act 2: her step onto
+## the crane sets it riding down its rail. Act 3: the ceiling comes down in
+## chunks, two lamps among them, while the world runs slow; she climbs them to
+## the exit. The solutions in tests/solutions/level_05*.json
 ## play the level.
 
 const LEVEL_PATH := "res://levels/level_05.tscn"
@@ -44,16 +45,22 @@ func test_collapse_plan_act_1_falls_one_by_one_each_platform_then_its_lamp() -> 
 		check(plan.drop(k, start + int(p["fall"]), -1) == 1.0, "platform %d lies after its fall" % k)
 	for k in range(1, starts.size()):
 		check(starts[k] > starts[k - 1], "platform %d falls after platform %d" % [k, k - 1])
-	check(plan.lamps.size() == starts.size(), "each platform has its lamp")
-	for k in mini(plan.lamps.size(), starts.size()):
-		var lamp := plan.quake_tick + int(plan.lamps[k]["at"])
+	var act_1 := plan.lamps.filter(func(l: Dictionary) -> bool: return int(l["act"]) == 1)
+	check(act_1.size() == starts.size(), "each platform has its lamp")
+	for k in mini(act_1.size(), starts.size()):
+		var lamp := plan.quake_tick + int(act_1[k]["at"])
 		check(lamp > starts[k], "lamp %d falls after its platform" % k)
 		check(k + 1 >= starts.size() or lamp < starts[k + 1], "lamp %d falls before the next platform" % k)
-		var dark := plan.lamp_fall(int(plan.lamps[k]["lamp"]), plan.clock_end, -1)
+		var dark := plan.lamp_fall(int(act_1[k]["lamp"]), plan.clock_end, -1)
 		check(float(dark["light"]) == 0.0 and float(dark["shatter"]) == 1.0, "lamp %d lies dark and broken" % k)
 	check(plan.broken(BROKEN, plan.clock_end, -1) == 1.0, "the third platform breaks on its stub")
 	check(plan.broken(0, plan.clock_end, -1) == 0.0 and plan.broken(1, plan.clock_end, -1) == 0.0,
 		"the first two land whole")
+	var landed := starts[BROKEN] + int(plan.pieces[BROKEN]["fall"])
+	check(plan.crumble(BROKEN, landed + 1, -1) == 0.0, "the third lies a moment on its stub")
+	check(plan.crumble(BROKEN, plan.clock_end, -1) == 1.0, "then crumbles into the pit")
+	check(plan.crumble(0, plan.clock_end, -1) == 0.0 and plan.crumble(1, plan.clock_end, -1) == 0.0,
+		"the first two stay on their stubs")
 	check(plan.shake(plan.quake_tick, -1) == 1.0 and plan.shake(plan.quake_tick - 1, -1) == 0.0,
 		"the hall shakes from the first quake on")
 
@@ -127,11 +134,14 @@ func test_level_05_act_1_falls_before_her_eyes() -> void:
 	await _ticks(collapse.plan.clock_end + 4)
 	for k in FIRST_CHUNK:
 		check(collapse.piece_lies(k), "platform %d has fallen onto its stub" % k)
+	check(collapse.piece_holds(0) and collapse.piece_holds(1), "the first two hold her")
+	check(not collapse.piece_holds(BROKEN), "the third has crumbled and holds nobody")
 	for k in range(FIRST_CHUNK, collapse.pieces.size()):
 		check(collapse.piece_hangs(k), "chunk %d still hangs in the ceiling" % k)
 	check(collapse.crane_waits(), "the crane waits for her by the ledge")
 	for one in collapse.plan.lamps:
-		check(float(collapse.lamp_fall(int(one["lamp"]))["light"]) == 0.0, "lamp %d of act 1 is out" % int(one["lamp"]))
+		if int(one["act"]) == 1:
+			check(float(collapse.lamp_fall(int(one["lamp"]))["light"]) == 0.0, "lamp %d of act 1 is out" % int(one["lamp"]))
 	check(collapse.lamp_fall(0).is_empty() and collapse.lamp_fall(4).is_empty(), "the lamps over the start and the ledge stay")
 	check(collapse.clock == collapse.plan.clock_end, "act 1's clock stops once all is down, so the room may stand")
 	await _free(room)
@@ -141,7 +151,11 @@ func test_level_05_under_shift_the_broken_platform_lifts_her_to_the_ledge() -> v
 	var room := await _load()
 	var collapse := room.get_node("Collapse") as Collapse
 	var player: Player = room.get_node("Player")
-	await _ticks(collapse.plan.clock_end + 4)
+	# She is on it while it lies broken, before it crumbles.
+	for i in collapse.plan.clock_end:
+		await _tree.physics_frame
+		if collapse.piece_lies(BROKEN):
+			break
 	var rest := collapse.rests[BROKEN]
 	player.respawn(Vector2(rest.get_center().x, rest.position.y))
 	await _ticks(20)
@@ -208,10 +222,22 @@ func test_level_05_the_chunks_make_a_falling_stair_to_the_exit() -> void:
 	collapse.restore_state({"clock": plan.clock_end, "ride": start})
 	check(collapse.slowness() == 1.0, "the world is at its slowest then")
 	check(collapse.piece_holds(FIRST_CHUNK), "a falling chunk holds her")
-	check(float(collapse.lamp_fall(int(plan.pieces[FIRST_CHUNK]["lamp"]))["light"]) == 1.0, "and its lamp shines under it")
+	var act_3 := plan.lamps.filter(func(l: Dictionary) -> bool: return int(l["act"]) == 3)
+	check(act_3.size() == 2, "two lamps fall among the chunks")
+	var world_lamps: Array = (Content.level_for_scene(LEVEL_PATH)["world"] as Dictionary)["lamps"]
+	for one: Dictionary in act_3:
+		var fall := collapse.lamp_fall(int(one["lamp"]))
+		check(float(fall["light"]) == 1.0 and float(fall["drop"]) > 0.0 and float(fall["drop"]) < 1.0,
+			"lamp %d is on its way down among the chunks, still shining" % int(one["lamp"]))
+		var x := float((world_lamps[int(one["lamp"])] as Dictionary)["x"]) * CELL
+		var between := false
+		for k in range(FIRST_CHUNK, collapse.pieces.size() - 1):
+			between = between or (x > collapse.pieces[k].end.x - 8.0 and x < collapse.pieces[k + 1].position.x + 8.0)
+		check(between, "lamp %d falls between two chunks" % int(one["lamp"]))
 	collapse.restore_state({"clock": plan.clock_end, "ride": plan.ride_end})
 	check(not collapse.piece_holds(FIRST_CHUNK), "at the bottom of the pit a chunk holds nobody")
-	check(float(collapse.lamp_fall(int(plan.pieces[FIRST_CHUNK]["lamp"]))["light"]) == 0.0, "and its lamp is broken")
+	for one: Dictionary in act_3:
+		check(float(collapse.lamp_fall(int(one["lamp"]))["light"]) == 0.0, "lamp %d is broken at the bottom" % int(one["lamp"]))
 	check(collapse.crane_load_rect().position.y > ledge.y + 8.0 * CELL, "the crane has fallen into the pit")
 	await _free(room)
 

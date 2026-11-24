@@ -5,13 +5,14 @@ extends SceneTree
 ##
 ## Act 1: she walks out on the floor at the left. The hall shakes; three
 ## platforms hanging over the pit fall one by one onto their stubs, each
-## followed by its lamp; the third breaks. She crosses the first two, stands on
-## the broken third and holds Shift: it mends and rises to the crane's ledge.
+## followed by its lamp; the third breaks and soon crumbles into the pit. From
+## the second she holds Shift: the third comes back whole on its stub, she
+## jumps onto it, and holding Shift it rises with her to the crane's ledge.
 ## Act 2: on the ledge the crane hangs from a rail sloping down to the right.
 ## Her step onto it shakes the hall again; it breaks loose and rides down the
 ## rail over the pit while the lamps over it fall.
 ## Act 3: at the end of the rail the third quake. The crane sags; the ceiling
-## ahead comes down in chunks, each with its lamp under it, and the world slows
+## ahead comes down in chunks, two lamps fall among them, and the world slows
 ## down: she climbs the falling chunks to the exit ledge high on the right.
 ## Shift lifts a chunk she stands on when she is late.
 ##
@@ -58,17 +59,17 @@ const MAP := [
 const ENTRANCE_CELLS := Rect2i(1, 15, 1, 2)
 ## The falling pieces in the order of `collapse.pieces` (cells: x and row where
 ## it hangs, width, height; x and row where it lies). Act 1: three platforms
-## onto their stubs (the third breaks). Act 3: five chunks of the ceiling, lost
-## to the bottom of the pit.
+## onto their stubs (the third breaks and crumbles). Act 3: five chunks of the
+## ceiling, each its own size, lost to the bottom of the pit.
 const PIECES: Array[Dictionary] = [
 	{"x": 7.0, "row": 12.0, "width": 3.0, "height": 0.5, "rest_row": 16.5},
 	{"x": 10.8, "row": 12.0, "width": 3.0, "height": 0.5, "rest_row": 16.5},
 	{"x": 15.2, "row": 11.0, "width": 3.8, "height": 0.5, "rest_row": 16.5},
-	{"x": 43.9, "row": 4.0, "width": 1.5, "height": 0.7, "rest_row": 23.0, "lost": true},
-	{"x": 46.3, "row": 4.0, "width": 1.5, "height": 0.7, "rest_row": 23.0, "lost": true},
-	{"x": 48.7, "row": 4.0, "width": 1.5, "height": 0.7, "rest_row": 23.0, "lost": true},
-	{"x": 51.1, "row": 4.0, "width": 1.5, "height": 0.7, "rest_row": 23.0, "lost": true},
-	{"x": 53.5, "row": 4.0, "width": 1.5, "height": 0.7, "rest_row": 23.0, "lost": true},
+	{"x": 43.8, "row": 4.2, "width": 1.6, "height": 0.8, "rest_row": 23.0, "lost": true},
+	{"x": 46.1, "row": 4.0, "width": 1.3, "height": 0.7, "rest_row": 23.0, "lost": true},
+	{"x": 48.2, "row": 4.4, "width": 2.0, "height": 1.0, "rest_row": 23.0, "lost": true},
+	{"x": 51.0, "row": 4.1, "width": 1.4, "height": 0.7, "rest_row": 23.0, "lost": true},
+	{"x": 53.3, "row": 4.0, "width": 1.8, "height": 0.9, "rest_row": 23.0, "lost": true},
 ]
 ## The crane's load where it waits by the ledge (cells: x, top row, width,
 ## height), how far it rides down the rail, the rail above its top, and how

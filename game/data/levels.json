@@ -117,28 +117,30 @@
 		"prelude_seconds": 0.5,
 		"intro_seconds": 0.6,
 		"collapse": {
-			"_about": "The collapse of level 05 in three quakes (card docs/levels/05.md, D144; CollapsePlan). Act 1 counts from the room's start: the quake at quake_seconds, then each piece of act 1 falls 'second' after it (the platforms; the third breaks on its stub) and each of 'lamps' falls on its own onto row to_row. Act 2 begins when the heroine steps onto the crane: the second quake; after crane.delay_seconds it rides down its rail at crane.speed px per second and each of crane.lamps falls when it comes within lamp_lead_px of it. Act 3 begins when the crane reaches the end of its rail: the third quake; the crane sags sag_px over sag_seconds (tilting tilt_degrees) and falls at fall_second for fall_seconds; each piece of act 3 (a chunk of the ceiling with its lamp under it) breaks off 'second' after the quake and sinks to the bottom in fall_seconds. The slow part of act 3 (variant A: only the world slows, never the heroine): from_seconds after the quake the world's tempo eases down to 'tempo' over ease_seconds, holds hold_seconds and eases back. Seconds of the world clock (D96).",
-			"quake_seconds": 1.0,
+			"_about": "The collapse of level 05 in three quakes (card docs/levels/05.md, D144; CollapsePlan). Act 1 counts from the room's start: the quake at quake_seconds, then each piece of act 1 falls 'second' after it (the platforms; the third breaks on its stub and crumble_seconds later crumbles into the pit) and each of 'lamps' of act 1 falls on its own onto row to_row. Act 2 begins when the heroine steps onto the crane: the second quake; after crane.delay_seconds it rides down its rail at crane.speed px per second and each of crane.lamps falls when it comes within lamp_lead_px of it. Act 3 begins when the crane reaches the end of its rail: the third quake; the crane sags sag_px over sag_seconds (tilting tilt_degrees) and falls at fall_second for fall_seconds; each piece of act 3 (a chunk of the ceiling) breaks off 'second' after the quake and sinks to the bottom in fall_seconds; the lamps of act 3 fall among them for their own fall_seconds, lit all the way down. The slow part of act 3 (variant A: only the world slows, never the heroine): from_seconds after the quake the world's tempo eases down to 'tempo' over ease_seconds, holds hold_seconds and eases back. Seconds of the world clock (D96).",
+			"quake_seconds": 3.9,
 			"pieces": [
-				{ "act": 1, "second": 0.6, "fall_seconds": 0.9 },
-				{ "act": 1, "second": 2.4, "fall_seconds": 0.9 },
-				{ "act": 1, "second": 4.2, "fall_seconds": 0.9, "breaks": true },
-				{ "act": 3, "second": 1.0, "fall_seconds": 3.2, "kind": "sink", "lamp": 8 },
-				{ "act": 3, "second": 1.167, "fall_seconds": 3.2, "kind": "sink", "lamp": 9 },
-				{ "act": 3, "second": 1.333, "fall_seconds": 3.2, "kind": "sink", "lamp": 10 },
-				{ "act": 3, "second": 1.5, "fall_seconds": 3.2, "kind": "sink", "lamp": 11 },
-				{ "act": 3, "second": 1.667, "fall_seconds": 3.2, "kind": "sink", "lamp": 12 }
+				{ "act": 1, "second": 0.3, "fall_seconds": 0.6 },
+				{ "act": 1, "second": 0.9, "fall_seconds": 0.6 },
+				{ "act": 1, "second": 1.5, "fall_seconds": 0.6, "breaks": true, "crumble_seconds": 2.0 },
+				{ "act": 3, "second": 0.997, "fall_seconds": 3.2, "kind": "sink" },
+				{ "act": 3, "second": 1.174, "fall_seconds": 3.2, "kind": "sink" },
+				{ "act": 3, "second": 1.41, "fall_seconds": 3.2, "kind": "sink" },
+				{ "act": 3, "second": 1.574, "fall_seconds": 3.2, "kind": "sink" },
+				{ "act": 3, "second": 1.773, "fall_seconds": 3.2, "kind": "sink" }
 			],
 			"lamps": [
-				{ "lamp": 1, "second": 1.3, "to_row": 17.0 },
-				{ "lamp": 2, "second": 3.1, "to_row": 17.0 },
-				{ "lamp": 3, "second": 4.9, "to_row": 16.5 }
+				{ "lamp": 1, "act": 1, "second": 0.6, "to_row": 17.0 },
+				{ "lamp": 2, "act": 1, "second": 1.2, "to_row": 17.0 },
+				{ "lamp": 3, "act": 1, "second": 1.8, "to_row": 23.0 },
+				{ "lamp": 8, "act": 3, "second": 0.9, "to_row": 23.0, "fall_seconds": 3.0, "lit": true },
+				{ "lamp": 9, "act": 3, "second": 1.1, "to_row": 23.0, "fall_seconds": 3.0, "lit": true }
 			],
-			"crane": { "delay_seconds": 1.0, "speed": 150, "lamps": [5, 6, 7], "lamp_lead_px": 64, "lamp_to_row": 23.0, "sag_seconds": 3.0, "sag_px": 24, "tilt_degrees": 4, "fall_second": 2.45, "fall_seconds": 1.5 },
-			"slow": { "from_seconds": 2.35, "ease_seconds": 0.4, "tempo": 0.03, "hold_seconds": 10.0 }
+			"crane": { "delay_seconds": 0.5, "speed": 220, "lamps": [5, 6, 7], "lamp_lead_px": 64, "lamp_to_row": 23.0, "sag_seconds": 2.0, "sag_px": 24, "tilt_degrees": 4, "fall_second": 2.5, "fall_seconds": 1.5 },
+			"slow": { "from_seconds": 2.4, "ease_seconds": 0.4, "tempo": 0.06, "hold_seconds": 7.0 }
 		},
 		"world": {
-			"_about": "Level 05 in the Night shop (same kit and scale as level 01, D112), 66 cells wide and 22 high, the roof down to row 4: the start floor at the left on row 17, three stubs in the pit for the platforms of act 1, the crane's ledge on row 11 on its pillar, the pit under the crane's rail open to the bottom (a fall is death), the exit ledge high on the right on row 9. Lamps: 0 over the start, 1-3 beside the platforms (they fall in act 1), 4 over the ledge, 5-7 over the rail (they fall as the crane passes), 8-12 under the chunks of the ceiling (they fall with them), 13 by the exit. darkness: this room is darker than the kit.",
+			"_about": "Level 05 in the Night shop (same kit and scale as level 01, D112), 66 cells wide and 22 high, the roof down to row 4: the start floor at the left on row 17, three stubs in the pit for the platforms of act 1, the crane's ledge on row 11 on its pillar, the pit under the crane's rail open to the bottom (a fall is death), the exit ledge high on the right on row 9. Lamps: 0 over the start, 1-3 beside the platforms (they fall in act 1), 4 over the ledge, 5-7 over the rail (they fall as the crane passes), 8-9 between the chunks of the ceiling (they fall among them, shining), 10 by the exit. darkness: this room is darker than the kit.",
 			"ceiling": 4,
 			"darkness": "#17171e",
 			"back": [
@@ -174,11 +176,8 @@
 				{ "x": 30.0, "drop": 1.0, "radius_px": 300 },
 				{ "x": 34.0, "drop": 1.0, "radius_px": 300 },
 				{ "x": 38.0, "drop": 1.0, "radius_px": 300 },
-				{ "x": 44.65, "drop": 1.2, "radius_px": 260 },
-				{ "x": 47.05, "drop": 1.2, "radius_px": 260 },
-				{ "x": 49.45, "drop": 1.2, "radius_px": 260 },
-				{ "x": 51.85, "drop": 1.2, "radius_px": 260 },
-				{ "x": 54.25, "drop": 1.2, "radius_px": 260 },
+				{ "x": 47.75, "drop": 1.0, "radius_px": 300 },
+				{ "x": 50.6, "drop": 1.0, "radius_px": 300 },
 				{ "x": 60.0, "drop": 1.4, "radius_px": 320 }
 			],
 			"ground": {
