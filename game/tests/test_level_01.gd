@@ -359,6 +359,36 @@ func test_level_01_hero_feet_stand_on_the_treads() -> void:
 	await _free(room)
 
 
+## The chain platform rides over the stairs (Artem 24.11): standing on it she
+## stands on its board, the doll does not walk the treads under it; on the
+## flight itself it does.
+func test_level_01_hero_on_the_platform_over_the_stairs_is_not_on_the_stairs() -> void:
+	var room := await _load()
+	var player: Player = room.get_node("Player")
+	var stairs: Stairs = room.get_node("Stairs")
+	var platform: Node2D = room.get_node("Platform1")
+	var flight := Rect2(stairs.rect_px().position + stairs.global_position, stairs.rect_px().size)
+	await _ticks(int(round(float(Content.level_for_scene(LEVEL_PATH)["intro_seconds"]) * 60.0)) + 5)
+	player.global_position = Vector2(flight.get_center().x, flight.position.y)
+	player.velocity = Vector2.ZERO
+	await _ticks(30)
+	check(not player._footing().is_empty(), "on the flight the doll stands on the treads")
+	# The prelude has carried it past the flight: rewind it back over it.
+	Input.action_press("rewind")
+	var ticks := 0
+	while ticks < 300 and platform.global_position.x > flight.position.x + 120.0:
+		await _ticks(1)
+		ticks += 1
+	Input.action_release("rewind")
+	player.global_position = platform.global_position + Vector2(0.0, -40.0)
+	player.velocity = Vector2.ZERO
+	await _ticks(20)
+	check(platform.global_position.x > flight.position.x and platform.global_position.x < flight.end.x, "the platform is over the flight: %s in %s" % [platform.global_position, flight])
+	check(player.is_on_floor() and player.global_position.y < platform.global_position.y, "she stands on the platform")
+	check(player._footing().is_empty(), "on the platform the doll does not stand on the treads")
+	await _free(room)
+
+
 ## Each boot against the treads under it: gap (its lowest point above the
 ## highest tread under it), sink (its deepest point into a tread), the room x
 ## of its sole from and to.

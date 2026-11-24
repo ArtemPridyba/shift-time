@@ -49,6 +49,18 @@ func surface_y(x: float) -> float:
 	return r.position.y + r.size.y * (k if descends_right else 1.0 - k)
 
 
+## Whether feet at `at` (room px, relative to the node) stand on the flight or
+## on the floor at its ends, and not on something above it, such as a platform
+## riding over the stairs: her box of `half_width` rests on the slope by its
+## uphill corner, so her feet are between the slope under her two sides, give
+## or take half a step.
+func holds_feet(at: Vector2, half_width: float) -> bool:
+	var rise := float(_world.get("stair_rise_px", 20))
+	var a := surface_y(at.x - half_width)
+	var b := surface_y(at.x + half_width)
+	return at.y >= minf(a, b) - rise * 0.5 and at.y <= maxf(a, b) + rise * 0.5
+
+
 ## The top of the tread at room x, where her soles stand (D120): steps of
 ## `tread_px` across, each level with the slope at its middle, as `_draw`
 ## draws them; left and right of the flight, the floor at its ends.
