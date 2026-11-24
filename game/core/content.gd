@@ -702,9 +702,8 @@ const LOOK_KIT_OBJECTS := {
 	"lever": ["base_px", "handle_px", "pivot_from_top", "angle_degrees"],
 	"button": ["base_px", "cap_px", "pressed_px"],
 	"crate": ["size_px"],
-	"crane": ["rail_px", "rail_over_px", "cable_px", "cable_color", "sling_inset_px", "hook_eye_px"],
-	"winch": ["drum_px", "drum_turns", "hatch_px", "hatch_color", "cable_px", "cable_color", "power_color",
-		"torn_gap_px", "torn_end_x", "torn_end_y"],
+	"crane": ["rail_px", "rail_over_px", "cable_px", "cable_color", "sling_inset_px", "hook_eye_px", "stop_px"],
+	"collapse": ["hang_below_ceiling_px", "stub_px", "flange_px", "chain", "rust", "shake_seconds", "shake_px"],
 }
 const LOOK_PIPE_NUMBERS: Array[String] = ["feed_width_px", "main_width_px", "wall_px", "flange_every_px", "flange_px", "dash_length_px", "dash_gap_px", "dash_speed_px"]
 const LOOK_MECH_COLORS: Array[String] = ["iron", "iron_light", "iron_shadow", "iron_dark", "outline", "valve", "valve_light", "rust", "yellow"]

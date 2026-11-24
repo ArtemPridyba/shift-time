@@ -26,19 +26,8 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	var now := _room_time.world_seconds() if _room_time != null else 0.0
-	if now != _seconds or _powered_changed():
+	if now != _seconds:
 		_update(now)
-
-
-var _was_on := true
-
-
-func _powered_changed() -> bool:
-	var door := get_parent().get_node_or_null("ExitDoor") as ExitDoor if get_parent() != null else null
-	var on := door == null or door.has_power()
-	var changed := on != _was_on
-	_was_on = on
-	return changed
 
 
 ## The mirror's angle at world second `seconds`: a turn in `turn_seconds`.
@@ -53,11 +42,7 @@ func facing(seconds: float) -> float:
 
 func _update(seconds: float) -> void:
 	_seconds = seconds
-	# Without power (the exit door's cable torn, D131) the beacon is dark.
-	var door := get_parent().get_node_or_null("ExitDoor") as ExitDoor if get_parent() != null else null
-	var on := door == null or door.has_power()
-	_light.energy = ObjectLook.number(_look, "energy", 0.8) * (0.35 + 0.65 * facing(seconds)) if on else 0.0
-	self_modulate = Color.WHITE if on else Color(0.35, 0.35, 0.38)
+	_light.energy = ObjectLook.number(_look, "energy", 0.8) * (0.35 + 0.65 * facing(seconds))
 	queue_redraw()
 
 

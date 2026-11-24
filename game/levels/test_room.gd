@@ -32,10 +32,15 @@ func _physics_process(_delta: float) -> void:
 		return
 	var fell := _player.global_position.y > _bottom + FALL_MARGIN_CELLS * _blocks.tile_set.tile_size.y
 	if fell:
-		if _spawn != null:
-			_player.respawn(_spawn.global_position)
+		_on_fell()
 	if Input.is_action_just_pressed("reset_level"):
 		restart()
+
+
+## The player fell out of the room: back to the spawn point.
+func _on_fell() -> void:
+	if _spawn != null:
+		_player.respawn(_spawn.global_position)
 
 
 ## The room as it was loaded and the player back at the spawn: the reset key,

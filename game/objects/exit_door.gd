@@ -39,7 +39,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	if elapsed < 0.0:
-		if _player_near() and has_power():
+		if _player_near():
 			elapsed = 0.0
 		return
 	if is_open():
@@ -49,18 +49,6 @@ func _physics_process(delta: float) -> void:
 	queue_redraw()
 	if is_open():
 		opened.emit()
-
-
-## False while something of the room in the group `exit_power` (the lamp
-## winch of level 09, D131) says the door's power cable is torn: the door then
-## stays shut. Without one the door always has power.
-func has_power() -> bool:
-	if not is_inside_tree():
-		return true
-	for node in get_tree().get_nodes_in_group("exit_power"):
-		if node.has_method("feeds_power") and not bool(node.call("feeds_power")):
-			return false
-	return true
 
 
 ## The whole opening takes this long: wheel, then off the wall, then the slide.
