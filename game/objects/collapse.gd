@@ -1,215 +1,281 @@
 class_name Collapse
 extends Node2D
-## The gallery of level 05 «Crane» (card docs/levels/05.md, D139): girders hang
-## from the crane's rail as a walkway, each with its lamp on its chain. The
-## runaway crane's ram knocks each girder off as it reaches it, from the far end
-## of the rail back towards the start; the girder falls and its lamp falls with
-## it (`CollapsePlan`). Some girders land on stubs or on the floor; the lost
-## ones fall to the bottom of the pit and hold nobody.
+## The collapse of level 05 «Crane» (card docs/levels/05.md, D144), in three
+## quakes (`CollapsePlan`):
+## 1. at the start the hall shakes, the hanging platforms fall one by one, each
+##    followed by its lamp; the last one breaks on its stub and soon crumbles
+##    into the pit. Under Shift its debris flies back, it mends and rises
+##    first, carrying the heroine up to the crane's ledge.
+## 2. her step onto the crane shakes the hall again: the crane breaks loose and
+##    rides down its sloping rail, and the lamps over it fall as it passes.
+## 3. at the end of the rail the third quake: the crane sags and falls, the
+##    ceiling comes down in chunks, two lamps fall among them still shining, an
+##    explosion flares up in the background, and the world slows down while she
+##    climbs the falling chunks to the exit. She slows down too, less than the
+##    world (D148): this node sets the engine's time scale, which slows her
+##    moves, her animation and the particles but not the ticks of the world.
 ##
-## A girder holds the heroine while it hangs, while it lies, and while it rises
-## back under Shift, carrying her: a fallen girder is a lift back up (the one
-## knocked last rises first). Coming down in normal time it holds nobody: she
-## falls off it. A girder never crushes her: the world waits instead. The crane's stop lever (`Lever`
-## on the crane's load, `MovingPlatform.brake`) pulled in the past stops the
-## crane in the new history: the girders ahead of it keep hanging.
+## Every piece and the crane hold the heroine, except a lost one lying at the
+## bottom of the pit and a crumbled one. Nothing crushes her: the world waits
+## instead.
 ##
-## A recorded object: its state is the ticks since the ram knocked each girder
-## (-1 while it hangs) and since the crane slammed into its stop. Under Shift
-## the girders rise back and the lamps come back on; after Shift is released the
-## recorded collapse plays again (rule «A»).
-## State: { "since": Array[int], "slam": int }. Numbers: `crane.collapse` of the
-## level's entry in data/levels.json; the look: `kit_objects.collapse` of
-## data/look.json.
+## A recorded object. State: { "clock": ticks since the room began, "ride":
+## ticks since her step onto the crane, -1 before it }; both stop counting once
+## everything of their acts is down, so the room may stand still (D56). The
+## step is the player's action: left of the head it branches the room
+## (`RoomTime.apply_change`), like a time plate's (group `plate`). Only a step
+## in normal time sets the crane going. Under Shift everything goes back up,
+## after Shift is released the recorded collapse plays again (rule «A»).
+## Numbers: `collapse` of the level's entry in data/levels.json; the look:
+## `kit_objects.collapse` and `kit_objects.crane` of data/look.json.
 ##
 ## Temporal object contract: docs/architecture.md, section 4.1.
 
 @export var object_id := "collapse"
-## Where each girder hangs from the rail, in the room's coordinates, from the
-## crane's start towards its stop (the order the ram reaches them is by x).
-@export var girders: Array[Rect2] = []
-## Where each girder lies once fallen.
+## Where each piece hangs, in the room's coordinates, in the order of
+## `collapse.pieces`.
+@export var pieces: Array[Rect2] = []
+## Where each piece lies once fallen.
 @export var rests: Array[Rect2] = []
-## Indices of girders lost to the bottom of the pit: once down, they hold nobody.
+## Pieces lost to the bottom of the pit: once down, they hold nobody.
 @export var lost := PackedInt32Array()
+## The crane's load where it waits by the ledge, and how far it rides.
+@export var crane_rect := Rect2()
+@export var crane_travel := Vector2.ZERO
+## How far it falls into the pit at the end.
+@export var crane_fall_px := 0.0
+## From the load's top up to the trolley on the rail.
+@export var sling_px := 200.0
 
-var since: Array[int] = []
-var slam := -1
+var clock := 0
+var ride := -1
 ## Set by tests or read once from the level entry.
 var plan: CollapsePlan
-## The load phase on which the ram reaches each girder (-1: never).
-var hits: Array[int] = []
-var _crane: Crane
-var _ceiling_y := 384.0
 var _look := {}
+var _crane_look := {}
+var _ceiling_y := 256.0
+var _lamp_base: Array[Vector2] = []
 var _bodies: Array[AnimatableBody2D] = []
-## The direction of world time: girders on their way down hold her only backwards.
-var _direction := 1
-## Pixels of the player's feet inside a girder that are standing, not crushing:
-## the kit's margin plus the most a girder moves in one tick, so a girder
-## rising under her carries her instead of making the world wait.
+var _crane_body: AnimatableBody2D
+## The explosion of act 3: its light on the room and its fireball (unshaded).
+var _blast_light: PointLight2D
+var _blast_glow: Node2D
+## Pixels of the player's feet inside a piece that are standing, not crushing:
+## the kit's margin plus the most a piece moves in one tick.
 var _carry_margin := 8.0
+var _contact_px := 6.0
 
 
 func _ready() -> void:
 	add_to_group("temporal")
+	add_to_group("plate")
 	_look = ObjectLook.of("collapse")
+	_crane_look = ObjectLook.of("crane")
 	_carry_margin = float(Content.objects().get("carry_margin_px", 8))
-	var room := get_parent()
-	if room != null:
-		_crane = room.get_node_or_null("Crane") as Crane
+	_contact_px = float(Content.objects().get("time_plate", {}).get("contact_px", 6))
 	_plan()
-	var fastest := 0.0
-	for k in mini(girders.size(), rests.size()):
-		# It sinks as x² over the last 0.7 of its fall: the speed peaks at the
-		# end, 2 · distance / (0.7 · fall ticks).
-		fastest = maxf(fastest, 2.0 * absf(rests[k].position.y - girders[k].position.y) / (0.7 * float(plan.fall_of(k))))
+	var fastest := plan.ride_step + 2.0 * crane_fall_px / float(plan.crane_fall_ticks)
+	for k in mini(pieces.size(), rests.size()):
+		var way := absf(rests[k].position.y - pieces[k].position.y)
+		var ticks := float(plan.pieces[k]["fall"]) if k < plan.pieces.size() else 1.0
+		fastest = maxf(fastest, 2.0 * way / ticks)
 	_carry_margin += ceilf(fastest)
-	since.clear()
-	for rest in girders:
-		since.append(-1)
-		var body := AnimatableBody2D.new()
-		body.sync_to_physics = true
-		body.collision_layer = 1
-		body.collision_mask = 0
-		var shape := CollisionShape2D.new()
-		var box := RectangleShape2D.new()
-		box.size = rest.size
-		shape.shape = box
-		body.position = rest.get_center()
-		body.add_child(shape)
-		add_child(body)
-		_bodies.append(body)
+	for rest in pieces:
+		_bodies.append(_body(rest.size))
+	_crane_body = _body(crane_rect.size)
+	var disc := KitTextures.soft_disc()
+	_blast_light = PointLight2D.new()
+	_blast_light.name = "BlastLight"
+	_blast_light.texture = disc
+	_blast_light.texture_scale = plan.blast_radius * 2.0 / float(disc.get_width())
+	_blast_light.color = plan.blast_color
+	_blast_light.position = plan.blast_at * WorldData.CELL
+	_blast_light.energy = 0.0
+	add_child(_blast_light)
+	_blast_glow = Node2D.new()
+	_blast_glow.name = "BlastGlow"
+	_blast_glow.show_behind_parent = true
+	var glow := CanvasItemMaterial.new()
+	glow.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+	glow.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_blast_glow.material = glow
+	_blast_glow.draw.connect(_draw_blast)
+	add_child(_blast_glow)
 	_show()
+
+
+func _exit_tree() -> void:
+	Engine.time_scale = 1.0
+
+
+func _body(size: Vector2) -> AnimatableBody2D:
+	var body := AnimatableBody2D.new()
+	body.sync_to_physics = true
+	body.collision_layer = 1
+	body.collision_mask = 0
+	var shape := CollisionShape2D.new()
+	var box := RectangleShape2D.new()
+	box.size = size
+	shape.shape = box
+	body.add_child(shape)
+	add_child(body)
+	return body
 
 
 ## The plan of this level, read once from the entry of the parent's scene.
 func _plan() -> CollapsePlan:
-	if plan != null:
+	if plan != null and not _lamp_base.is_empty():
 		return plan
 	var room := get_parent()
 	var entry := Content.level_for_scene(room.scene_file_path if room != null else "")
-	var crane: Variant = entry.get("crane", {})
-	plan = CollapsePlan.from_data(crane.get("collapse") if crane is Dictionary else null,
-		Content.world_ticks_per_second(Content.time()), ObjectLook.of("quake"), _look)
-	_ceiling_y = WorldData.ceiling(WorldData.layout(entry)) * WorldData.CELL
+	if plan == null:
+		plan = CollapsePlan.from_data(entry.get("collapse"), Content.world_ticks_per_second(Content.time()),
+			ObjectLook.of("quake"), ObjectLook.of("collapse"))
+	var layout := WorldData.layout(entry)
+	var ceiling := WorldData.ceiling(layout)
+	_ceiling_y = ceiling * WorldData.CELL
+	_lamp_base.clear()
+	var lamp_x: Array = []
+	for lamp: Variant in layout.get("lamps", []):
+		var at := WorldData.lamp_at(lamp, ceiling)
+		_lamp_base.append(at)
+		lamp_x.append(at.x)
+	plan.aim(crane_rect.get_center().x, crane_travel, lamp_x)
 	return plan
 
 
-## Where the crane's ram reaches each girder: aimed once from the load's path.
-func _aim() -> void:
-	if hits.size() == girders.size() or _crane == null:
-		return
-	var load_platform := _crane.load_platform()
-	if load_platform == null:
-		return
-	var start := load_platform.position_at(0).x
-	var end := load_platform.position_at(load_platform.once_last_phase()).x
-	var delay := load_platform.once_last_phase() - load_platform.move_ticks()
-	var lead := _crane.plan.hook_lead_px if _crane.plan != null else 0.0
-	hits.clear()
-	for g in girders:
-		hits.append(CollapsePlan.reach_phase(start, end, delay, load_platform.move_ticks(), g.get_center().x, lead))
-
-
 func capture_state() -> Dictionary:
-	return {"since": since.duplicate(), "slam": slam}
+	return {"clock": clock, "ride": ride}
 
 
 func restore_state(state: Dictionary) -> void:
-	var list: Array = state["since"]
-	for k in mini(list.size(), since.size()):
-		since[k] = int(list[k])
-	slam = int(state["slam"])
+	clock = int(state["clock"])
+	ride = int(state["ride"])
 	_show()
 
 
-## Counts from the tick the crane's ram reaches each girder, and from its slam.
 func simulate_tick(_tick: int) -> void:
-	_aim()
-	var load_platform := _crane.load_platform() if _crane != null else null
-	var phase := load_platform.phase if load_platform != null else -1
-	var settled := _plan().settled_tick()
-	for k in since.size():
-		if since[k] >= 0:
-			since[k] = mini(since[k] + 1, settled)
-		elif k < hits.size() and hits[k] >= 0 and phase >= hits[k]:
-			since[k] = 0
-	if slam >= 0:
-		slam = mini(slam + 1, _plan().shake_ticks)
-	elif _crane != null and _crane.has_slammed():
-		slam = 0
+	clock = mini(clock + 1, plan.clock_end)
+	if ride >= 0:
+		ride = mini(ride + 1, plan.ride_end)
 	_show()
 
 
-func on_time_direction_changed(direction: int) -> void:
-	_direction = direction
-	_show()
+func on_time_direction_changed(_direction: int) -> void:
+	pass
 
 
-## True when a girder in `state` would overlap the player's body above the
-## feet: standing on it is riding, anything deeper would crush her.
+## Called by RoomTime after every tick (group `plate`): her feet on the crane
+## in normal time set it going, once.
+func sense(room: Object, direction: int, player_rect: Rect2) -> void:
+	if direction > 0 and ride < 0 and stands_on_crane(player_rect):
+		room.call("apply_change", object_id, {"ride": 0})
+
+
+func forget_step() -> void:
+	pass
+
+
+## True when the player's feet (a rect in the parent's coordinates) stand on
+## the crane's load: their middle over it, so a toe from the ledge does not
+## count.
+func stands_on_crane(player_rect: Rect2) -> bool:
+	if not player_rect.has_area():
+		return false
+	var load_rect := crane_load_rect()
+	var middle := player_rect.get_center().x
+	return absf(player_rect.end.y - load_rect.position.y) <= _contact_px \
+		and middle > load_rect.position.x and middle < load_rect.end.x
+
+
+## True when a piece or the crane in `state` would overlap the player's body
+## above the feet: standing on it is riding, anything deeper would crush her.
 func blocks_player_at(state: Dictionary, player_rect: Rect2) -> bool:
 	if not player_rect.has_area():
 		return false
 	var body := Rect2(player_rect.position, player_rect.size - Vector2(0.0, _carry_margin))
-	var list: Array = state["since"]
-	for k in mini(list.size(), girders.size()):
-		if _solid(k, int(list[k])) and _rect(k, int(list[k])).intersects(body):
+	var c := int(state["clock"])
+	var r := int(state["ride"])
+	for k in pieces.size():
+		if _holds(k, c, r) and _rect(k, c, r).intersects(body):
 			return true
-	return false
+	return not plan.crane_down(r) and _crane_rect_at(r).intersects(body)
 
 
-## True while girder `k` hangs from the rail.
-func girder_hangs(k: int) -> bool:
-	return since[k] < 0
+## True while piece `k` hangs where it was built.
+func piece_hangs(k: int) -> bool:
+	return plan.drop(k, clock, ride) <= 0.0
 
 
-## True while girder `k` lies where it fell.
-func girder_lies(k: int) -> bool:
-	return _plan().drop(k, since[k]) >= 1.0
+## True while piece `k` lies where it fell.
+func piece_lies(k: int) -> bool:
+	return plan.drop(k, clock, ride) >= 1.0
 
 
-## True while girder `k` can be stood on now.
-func girder_holds(k: int) -> bool:
-	if since[k] < 0:
-		return true
-	if girder_lies(k):
-		return not lost.has(k)
-	return _direction < 0
+## True while piece `k` can be stood on.
+func piece_holds(k: int) -> bool:
+	return _holds(k, clock, ride)
 
 
-## The rect of girder `k` now, in the room's coordinates.
-func girder_rect(k: int) -> Rect2:
-	return _rect(k, since[k])
+## The rect of piece `k` now, in the room's coordinates.
+func piece_rect(k: int) -> Rect2:
+	return _rect(k, clock, ride)
 
 
-## The fall of world lamp `lamp` now, for `Crane` and `WorldLight`; {} when no
-## girder carries it.
+## The crane's load now (without its tilt), in the room's coordinates.
+func crane_load_rect() -> Rect2:
+	return _crane_rect_at(ride)
+
+
+## True while the crane waits for her by the ledge.
+func crane_waits() -> bool:
+	return ride < plan.ride_delay
+
+
+## True once the crane has reached the end of its rail (act 3 has begun).
+func crane_arrived() -> bool:
+	return ride >= plan.arrival()
+
+
+## The fall of world lamp `lamp` now, for `WorldLight`; {} when nothing here
+## drops it.
 func lamp_fall(lamp: int) -> Dictionary:
-	var k := _plan().lamps.find(lamp)
-	if k < 0 or k >= girders.size():
-		return {}
-	return _plan().lamp_fall(since[k], rests[k].position.y / WorldData.CELL)
+	return _plan().lamp_fall(lamp, clock, ride)
 
 
-## How hard the hall shakes now: 0 to 1, from the slam dying away.
+## A lamp swings while the hall shakes.
+func swing(lamp: int) -> float:
+	var amount := shake_amount()
+	if amount <= 0.0:
+		return 0.0
+	var t := float(plan.since_quake(clock, ride))
+	return deg_to_rad(ObjectLook.number(ObjectLook.of("quake"), "swing_degrees", 7.0)) * amount * sin(t * 0.17 + float(lamp) * 0.9)
+
+
+## How hard the hall shakes now: 0 to 1.
 func shake_amount() -> float:
-	return _plan().shake(slam)
+	return _plan().shake(clock, ride)
 
 
-## True when girder `k` knocked `ticks` ago is in the way of her body: anything
-## but a lost girder at the bottom of the pit.
-func _solid(k: int, ticks: int) -> bool:
-	return not (lost.has(k) and _plan().drop(k, ticks) >= 1.0)
+## How slow the world runs now (the look of act 3): 0 normal … 1 slowest.
+func slowness() -> float:
+	return _plan().slowness(ride)
 
 
-func _rect(k: int, ticks: int) -> Rect2:
-	var hang := girders[k]
+func _holds(k: int, c: int, r: int) -> bool:
+	return not (lost.has(k) and plan.drop(k, c, r) >= 1.0) and plan.crumble(k, c, r) <= 0.0
+
+
+func _rect(k: int, c: int, r: int) -> Rect2:
+	var hang := pieces[k]
 	var rest := rests[k] if k < rests.size() else hang
-	var way := _plan().path(k, ticks)
-	var at := Vector2(lerpf(hang.position.x, rest.position.x, way.x), lerpf(hang.position.y, rest.position.y, way.y))
-	return Rect2(at, hang.size)
+	var way := plan.way(k, c, r)
+	return Rect2(hang.position.lerp(rest.position, way), hang.size)
+
+
+func _crane_rect_at(r: int) -> Rect2:
+	var pose := plan.crane_pose(r, crane_travel, crane_fall_px)
+	return Rect2(crane_rect.position + (pose["at"] as Vector2), crane_rect.size)
 
 
 func _process(_delta: float) -> void:
@@ -217,40 +283,219 @@ func _process(_delta: float) -> void:
 	if camera == null:
 		return
 	var amount := shake_amount()
-	var t := float(slam) * 0.4
+	var t := float(maxi(plan.since_quake(clock, ride), 0)) * 0.4
 	var px := ObjectLook.number(_look, "shake_px", 8.0) * amount
 	camera.offset = Vector2(sin(t * 3.0) * px, sin(t * 4.1 + 1.1) * px * 0.6)
 
 
 func _show() -> void:
 	for k in _bodies.size():
-		_bodies[k].position = girder_rect(k).get_center()
-		var shape := _bodies[k].get_child(0) as CollisionShape2D
-		shape.set_deferred("disabled", not girder_holds(k))
+		_bodies[k].position = piece_rect(k).get_center()
+		(_bodies[k].get_child(0) as CollisionShape2D).set_deferred("disabled", not piece_holds(k))
+	# The heroine's clock: slower while the world is slow (D148).
+	var heroine := plan.heroine_scale(ride)
+	if Engine.time_scale != heroine:
+		Engine.time_scale = heroine
+	if _blast_light != null:
+		_blast_light.energy = plan.blast_energy * plan.blast_light(ride)
+		_blast_glow.queue_redraw()
+	if _crane_body != null:
+		_crane_body.position = crane_load_rect().get_center()
+		(_crane_body.get_child(0) as CollisionShape2D).set_deferred("disabled", plan.crane_down(ride))
 	queue_redraw()
 
 
-## Rusty I-beams: a web with a lighter top flange and rivets; chains to the
-## rail while they hang, torn stubs once they fall.
 func _draw() -> void:
+	_draw_rail()
+	for k in pieces.size():
+		if k < plan.pieces.size() and int(plan.pieces[k]["act"]) == 3:
+			_draw_chunk(k)
+		else:
+			_draw_platform(k)
+	_draw_crane()
+
+
+## The sloping rail the crane rides down, under the roof.
+func _draw_rail() -> void:
+	var iron := ObjectLook.color(ObjectLook.mech(), "iron_dark", Color("#2a2622"))
+	var light := ObjectLook.color(ObjectLook.mech(), "iron_light", Color("#6c6c72"))
+	var rail_px := ObjectLook.number(_crane_look, "rail_px", 14.0)
+	var over := ObjectLook.number(_crane_look, "rail_over_px", 64.0)
+	var top := crane_rect.get_center() - Vector2(0.0, crane_rect.size.y / 2.0 + sling_px)
+	var dir := crane_travel.normalized() if crane_travel != Vector2.ZERO else Vector2.RIGHT
+	var from := top - dir * over
+	var to := top + crane_travel + dir * over
+	draw_line(from, to, iron, rail_px)
+	draw_line(from - Vector2(0.0, rail_px / 2.0 - 1.0), to - Vector2(0.0, rail_px / 2.0 - 1.0), light, 2.0)
+	# Hangers from the roof hold the rail.
+	var hangers := int(from.distance_to(to) / (4.0 * WorldData.CELL)) + 1
+	for i in hangers + 1:
+		var at := from.lerp(to, float(i) / float(hangers))
+		draw_line(Vector2(at.x, _ceiling_y), at, iron, 4.0)
+	# The stop at the bottom end.
+	var stop_px := ObjectLook.number(_crane_look, "stop_px", 18.0)
+	var stop_at := top + crane_travel + dir * (over * 0.5)
+	draw_rect(Rect2(stop_at - Vector2(stop_px / 2.0, 0.0), Vector2(stop_px, stop_px * 2.0)),
+		ObjectLook.color(ObjectLook.mech(), "yellow", Color("#d4a21e")).darkened(0.35))
+
+
+## The explosion of act 3 behind the falling ceiling: a fireball that swells
+## and dies, and embers flying out of it, all from act 3's recorded clock, so
+## under Shift it shrinks back into the wall.
+func _draw_blast() -> void:
+	var age := plan.blast_age(ride)
+	if age < 0.0:
+		return
+	var light := plan.blast_light(ride)
+	var at := plan.blast_at * WorldData.CELL
+	var r := plan.blast_radius * 0.35 * (0.35 + 0.65 * sqrt(age))
+	# Many thin layers from a dark red rim to a white core: a soft ball, no rings.
+	var rim := Color("#7a1e08")
+	var core := Color("#fff4d6")
+	var layers := 14
+	for i in layers:
+		var x := float(i) / float(layers - 1)
+		var c := rim.lerp(plan.blast_color, minf(x * 2.0, 1.0)).lerp(core, maxf(x * 2.0 - 1.0, 0.0))
+		c.a = light * 0.12 * (0.4 + x)
+		var wobble := Vector2(sin(float(i) * 2.1 + age * 3.0), cos(float(i) * 1.7)) * r * 0.05 * (1.0 - x)
+		_blast_glow.draw_circle(at + wobble, r * (1.0 - 0.85 * x), c)
+	var ember := Color("#ffb54a")
+	ember.a = minf(1.0, light * 1.5)
+	var fly := plan.blast_radius * 0.9 * age
+	for i in 18:
+		var angle := float(i) * TAU / 18.0 + sin(float(i) * 7.3) * 0.25
+		var speed := 0.6 + 0.4 * absf(sin(float(i) * 3.7))
+		var tip := at + Vector2(cos(angle), sin(angle)) * fly * speed + Vector2(0.0, age * age * 120.0)
+		var tail := tip - Vector2(cos(angle), sin(angle)) * (14.0 + 18.0 * light)
+		_blast_glow.draw_line(tail, tip, ember, 2.0, true)
+
+
+## A hanging platform of act 1: a rusty I-beam on two chains; the one that
+## breaks lies in two halves on its stub, then crumbles: its pieces tumble
+## into the pit.
+func _draw_platform(k: int) -> void:
+	var chain := ObjectLook.color(_look, "chain", Color("#3a4048"))
+	var r := piece_rect(k)
+	var hangs := piece_hangs(k)
+	for side: float in [0.15, 0.85]:
+		var x := r.position.x + r.size.x * side
+		var to := r.position.y if hangs else _ceiling_y + ObjectLook.number(_look, "stub_px", 18.0)
+		draw_line(Vector2(x, _ceiling_y), Vector2(x, to), chain, 2.0, true)
+	var gone := plan.crumble(k, clock, ride)
+	if gone >= 1.0:
+		return
+	var crack := plan.broken(k, clock, ride)
+	var parts := 5 if gone > 0.0 else (2 if crack > 0.0 else 1)
+	var w := r.size.x / float(parts)
+	for h in parts:
+		var part := Rect2(r.position + Vector2(w * float(h), 0.0), Vector2(w - (3.0 if parts > 1 else 0.0), r.size.y))
+		var pivot := part.get_center()
+		var turn := 0.0
+		if gone > 0.0:
+			# The pieces tumble down into the pit, each its own way.
+			var spread := float(h) - float(parts - 1) / 2.0
+			pivot += Vector2(spread * 22.0 * gone, (0.8 + 0.12 * float(h % 3)) * gone * gone * 9.0 * WorldData.CELL)
+			turn = spread * 0.9 * gone + 0.4 * gone * float(h % 2)
+		elif parts == 2:
+			# The broken halves sag towards the gap between them.
+			pivot = Vector2(part.position.x if h == 0 else part.end.x, part.end.y)
+			turn = (0.12 if h == 0 else -0.12) * crack
+		draw_set_transform(pivot, turn)
+		_draw_beam(Rect2(part.position - (part.get_center() if gone > 0.0 else pivot), part.size))
+		draw_set_transform(Vector2.ZERO)
+
+
+## A piece of rusty I-beam in `local`: web, a lighter top flange, rivets.
+func _draw_beam(local: Rect2) -> void:
 	var iron := ObjectLook.color(ObjectLook.mech(), "iron", Color("#4c4c53"))
 	var light := ObjectLook.color(ObjectLook.mech(), "iron_light", Color("#6c6c72"))
 	var dark := ObjectLook.color(ObjectLook.mech(), "iron_dark", Color("#2a2a30"))
 	var rust := ObjectLook.color(_look, "rust", Color("#7a3a22"))
-	var chain := ObjectLook.color(_look, "chain", Color("#3a4048"))
 	var flange := ObjectLook.number(_look, "flange_px", 6.0)
-	for k in girders.size():
-		var r := girder_rect(k)
-		for side: float in [0.15, 0.85]:
-			var x := r.position.x + r.size.x * side
-			var to := r.position.y if since[k] < 0 else _ceiling_y + ObjectLook.number(_look, "stub_px", 18.0)
-			draw_line(Vector2(x, _ceiling_y), Vector2(x, to), chain, 2.0, true)
-		draw_rect(r, dark)
-		draw_rect(Rect2(r.position + Vector2(4.0, flange), Vector2(r.size.x - 8.0, r.size.y - 2.0 * flange)), iron)
-		draw_rect(Rect2(r.position, Vector2(r.size.x, flange)), light)
-		draw_rect(Rect2(Vector2(r.position.x, r.end.y - flange), Vector2(r.size.x, flange)), dark.lightened(0.1))
-		var rivets := int(r.size.x / 24.0)
-		for i in rivets:
-			var at := Vector2(r.position.x + 12.0 + 24.0 * float(i), r.position.y + flange / 2.0)
-			draw_circle(at, 1.6, dark)
-		draw_rect(Rect2(r.position + Vector2(r.size.x * 0.3, flange), Vector2(r.size.x * 0.2, 3.0)), rust)
+	draw_rect(local, dark)
+	draw_rect(Rect2(local.position + Vector2(4.0, flange), Vector2(maxf(local.size.x - 8.0, 1.0), local.size.y - 2.0 * flange)), iron)
+	draw_rect(Rect2(local.position, Vector2(local.size.x, flange)), light)
+	draw_rect(Rect2(Vector2(local.position.x, local.end.y - flange), Vector2(local.size.x, flange)), dark.lightened(0.1))
+	for i in int(local.size.x / 24.0):
+		draw_circle(Vector2(local.position.x + 12.0 + 24.0 * float(i), local.position.y + flange / 2.0), 1.6, dark)
+	draw_rect(Rect2(local.position + Vector2(local.size.x * 0.3, flange), Vector2(local.size.x * 0.2, 3.0)), rust)
+
+
+## A chunk of the ceiling of act 3: a broken slab of concrete, each its own
+## shape (from its number, so it never changes), with cracks and bent rebar.
+## Its top stays nearly flat where she stands.
+func _draw_chunk(k: int) -> void:
+	var stone := ObjectLook.color(_look, "chunk", Color("#5a554f"))
+	var dark := stone.darkened(0.45)
+	var rebar := ObjectLook.color(_look, "rust", Color("#7a3a22"))
+	var r := piece_rect(k)
+	var rough := func(i: int, amount: float) -> float:
+		return sin(float(k * 37 + i * 11) * 12.9898) * amount
+	var w := r.size.x
+	var h := r.size.y
+	var outline := PackedVector2Array([
+		r.position + Vector2(-4.0 + rough.call(0, 4.0), 3.0 + rough.call(1, 3.0)),
+		r.position + Vector2(w * 0.35, rough.call(2, 2.0)),
+		r.position + Vector2(w * 0.7, 1.0 + rough.call(3, 2.0)),
+		r.position + Vector2(w + 5.0 + rough.call(4, 5.0), 4.0 + rough.call(5, 4.0)),
+		r.position + Vector2(w + rough.call(6, 8.0), h * 0.6 + rough.call(7, 6.0)),
+		r.position + Vector2(w * 0.8 + rough.call(8, 6.0), h + 6.0 + rough.call(9, 8.0)),
+		r.position + Vector2(w * 0.45 + rough.call(10, 8.0), h + 14.0 + rough.call(11, 10.0)),
+		r.position + Vector2(w * 0.15 + rough.call(12, 6.0), h + 4.0 + rough.call(13, 8.0)),
+		r.position + Vector2(-6.0 + rough.call(14, 6.0), h * 0.5 + rough.call(15, 6.0))])
+	draw_colored_polygon(outline, dark)
+	var face := PackedVector2Array()
+	for p in outline:
+		face.append(p.lerp(r.get_center(), 0.14))
+	draw_colored_polygon(face, stone)
+	draw_line(outline[0] + Vector2(3.0, 0.0), outline[3] + Vector2(-3.0, 0.0), stone.lightened(0.25), 3.0)
+	# Cracks over the face and rebar torn out of the edges.
+	var crack := stone.darkened(0.3)
+	draw_polyline(PackedVector2Array([r.position + Vector2(w * 0.4, 6.0), r.position + Vector2(w * 0.5 + rough.call(16, 6.0), h * 0.5),
+		r.position + Vector2(w * 0.42 + rough.call(17, 8.0), h + 4.0)]), crack, 1.5)
+	for i in 2 + (k % 2):
+		var at := outline[4 + i * 2 % 5]
+		draw_line(at, at + Vector2(rough.call(20 + i, 10.0), 8.0 + absf(rough.call(24 + i, 8.0))), rebar, 2.0)
+
+
+## The crane: a trolley on the sloping rail, two slings, and the load the
+## heroine rides, signal yellow (D65); it sags and tilts at the end.
+func _draw_crane() -> void:
+	var pose := plan.crane_pose(ride, crane_travel, crane_fall_px)
+	var at := pose["at"] as Vector2
+	var tilt := float(pose["tilt"])
+	var load_rect := Rect2(crane_rect.position + at, crane_rect.size)
+	var iron := ObjectLook.color(ObjectLook.mech(), "iron_dark", Color("#2a2622"))
+	var yellow := ObjectLook.color(ObjectLook.mech(), "yellow", Color("#d4a21e"))
+	var cable := ObjectLook.color(_crane_look, "cable_color", iron)
+	var width := ObjectLook.number(_crane_look, "cable_px", 2.0)
+	var inset := ObjectLook.number(_crane_look, "sling_inset_px", 10.0)
+	var rail_at := crane_rect.get_center() - Vector2(0.0, crane_rect.size.y / 2.0 + sling_px) \
+		+ crane_travel * plan.crane_way(ride)
+	var falling := bool(pose["falling"])
+	var trolley := Rect2(rail_at - Vector2(26.0, 6.0), Vector2(52.0, 24.0))
+	draw_rect(trolley, iron)
+	draw_circle(rail_at + Vector2(-14.0, -6.0), 7.0, iron.lightened(0.15))
+	draw_circle(rail_at + Vector2(14.0, -6.0), 7.0, iron.lightened(0.15))
+	var hook := rail_at + Vector2(0.0, 26.0)
+	draw_line(rail_at + Vector2(0.0, 18.0), hook, cable, width + 1.0)
+	var centre := load_rect.get_center()
+	var ends: Array[Vector2] = []
+	for side: float in [-1.0, 1.0]:
+		ends.append(centre + Vector2(side * (load_rect.size.x / 2.0 - inset), -load_rect.size.y / 2.0).rotated(tilt))
+	if not falling:
+		for foot in ends:
+			draw_line(hook, foot, cable, width, true)
+	else:
+		# Torn slings: one hangs from the hook, one trails from the load.
+		draw_line(hook, hook + Vector2(6.0, 40.0), cable, width, true)
+		draw_line(ends[1], ends[1] + Vector2(-8.0, -36.0), cable, width, true)
+	draw_set_transform(centre, tilt)
+	var local := Rect2(-load_rect.size / 2.0, load_rect.size)
+	draw_rect(local, iron)
+	draw_rect(Rect2(local.position, Vector2(local.size.x, 6.0)), yellow)
+	var stripes := int(local.size.x / 24.0)
+	for i in stripes:
+		var x := local.position.x + 6.0 + 24.0 * float(i)
+		draw_line(Vector2(x, local.position.y + 8.0), Vector2(x + 10.0, local.end.y - 2.0), yellow.darkened(0.3), 4.0)
+	draw_set_transform(Vector2.ZERO)

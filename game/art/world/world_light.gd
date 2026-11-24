@@ -27,7 +27,7 @@ var _world: Dictionary
 var _glow: Node2D
 var _shine: Array[float] = []
 var _seconds_per_frame := 1.0 / 60.0
-## Where falls of lamps come from: `Quakes` (level 01) or `Crane` (level 05),
+## Where falls of lamps come from: `Quakes` (level 01) or `Collapse` (level 05),
 ## a sibling with `lamp_fall(i)` and `swing(i)`.
 var _quakes: Node
 ## Per lamp: {"drop", "light", "shatter", "to_row"} while one falls (Quakes.lamp_fall).
@@ -93,7 +93,7 @@ func _ready() -> void:
 	_stairs = get_node_or_null("../Stairs") as Stairs
 	_quakes = get_node_or_null("../Quakes")
 	if _quakes == null:
-		_quakes = get_node_or_null("../Crane")
+		_quakes = get_node_or_null("../Collapse")
 	show_at(0.0)
 	_light_heroine.call_deferred()
 
