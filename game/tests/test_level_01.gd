@@ -5,6 +5,9 @@ extends RefCounted
 const DOOR_PATH := "res://objects/door.tscn"
 const PLATFORM_PATH := "res://objects/platform.tscn"
 const LEVEL_PATH := "res://levels/level_01.tscn"
+## How far right of the top of the flight the stair tests start: clear of the
+## shutter beside it (half her 44 px hitbox and a little).
+const STAIRS_TOP_FROM_EDGE := 28.0
 const ONCE := {"cycle": "once", "hold_open_seconds": 1, "close_seconds": 5}
 
 var failures: Array[String] = []
@@ -245,10 +248,13 @@ func test_level_01_stairs_are_walked_down_and_up_without_a_jump() -> void:
 	var flight := stairs.rect_px()
 	check(rad_to_deg(atan(flight.size.y / flight.size.x)) <= 40.0, "the stairs are no steeper than 40 degrees")
 	await _ticks(int(round(float(Content.level_for_scene(LEVEL_PATH)["intro_seconds"]) * 60.0)) + 5)
-	player.global_position = Vector2(flight.position.x - 64.0, flight.position.y)
+	# The shutter stands right at the top of the flight (D138): she starts on
+	# the top tread beside it and climbs back up to it.
+	var top_x := flight.position.x + STAIRS_TOP_FROM_EDGE
+	player.global_position = Vector2(top_x, stairs.surface_y(top_x))
 	player.velocity = Vector2.ZERO
 	await _ticks(5)
-	var trips := [["move_right", flight.end.x + 48.0], ["move_left", flight.position.x - 48.0]]
+	var trips := [["move_right", flight.end.x + 48.0], ["move_left", top_x + 8.0]]
 	for trip: Array in trips:
 		var action: String = trip[0]
 		var goal: float = trip[1]
@@ -268,7 +274,7 @@ func test_level_01_stairs_are_walked_down_and_up_without_a_jump() -> void:
 		check(ticks < 4 * 60, "%s: she gets across the stairs in time, at x %.0f" % [action, player.global_position.x])
 		check(off_floor <= 2, "%s: she keeps to the stairs, %d ticks off the floor" % [action, off_floor])
 		check(worst < 16.0, "%s: her feet stay on the slope, %.1f px at most" % [action, worst])
-	check(absf(player.global_position.y - flight.position.y) < 2.0, "back up, she stands on the upper floor, y %.1f" % player.global_position.y)
+	check(player.is_on_floor() and absf(player.global_position.y - stairs.surface_y(player.global_position.x)) < 16.0, "back up, she stands on the top of the flight, at %s, the slope at %.1f" % [player.global_position, stairs.surface_y(player.global_position.x)])
 	await _free(room)
 
 
@@ -313,11 +319,14 @@ func test_level_01_hero_feet_stand_on_the_treads() -> void:
 	var tread := stairs.tread_px()
 	var legs: Array = HeroineData.load_data()["stairs"]["legs"]
 	await _ticks(int(round(float(Content.level_for_scene(LEVEL_PATH)["intro_seconds"]) * 60.0)) + 5)
-	player.global_position = Vector2(flight.position.x - 64.0, flight.position.y)
+	# The shutter stands right at the top of the flight (D138): she starts on
+	# the top tread beside it and climbs back up to it.
+	var top_x := flight.position.x + STAIRS_TOP_FROM_EDGE
+	player.global_position = Vector2(top_x, stairs.surface_y(top_x))
 	player.velocity = Vector2.ZERO
 	await _ticks(5)
 	for action: String in ["move_right", "move_left"]:
-		var goal := flight.end.x + 48.0 if action == "move_right" else flight.position.x - 48.0
+		var goal := flight.end.x + 48.0 if action == "move_right" else top_x + 8.0
 		var deepest := 0.0
 		var hanging := 0.0
 		var landings := 0
