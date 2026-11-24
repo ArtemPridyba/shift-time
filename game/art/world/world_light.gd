@@ -19,6 +19,8 @@ const HEROINE_MASK := 2
 @export var player_path := NodePath("../Player")
 
 var lights: Array[PointLight2D] = []
+## The dust in each lamp's light; hidden while its lamp is dark.
+var _dust: Array[TimeParticles] = []
 var _lamps: Array = []
 ## The row the lamp cables hang from (`ceiling` of the layout).
 var _ceiling := 1.0
@@ -36,6 +38,8 @@ var _swings: Array[float] = []
 var _bases: Array[Vector2] = []
 ## The flight a falling lamp's shards may land on (a sibling `Stairs`), or null.
 var _stairs: Stairs
+## The stepped flights of the shards of fallen lamps, by lamp, shard and origin.
+var _shard_paths := {}
 
 
 func _ready() -> void:
@@ -81,6 +85,7 @@ func _ready() -> void:
 		dust.noise_seed = 17 + i * 5
 		dust.position = at + Vector2(0, 12)
 		add_child(dust)
+		_dust.append(dust)
 	# The bulbs and their halo glow by themselves: the dark does not dim them.
 	_glow = Node2D.new()
 	_glow.name = "Glow"
@@ -123,6 +128,10 @@ func show_at(seconds: float) -> void:
 			e *= maxf(float(fall["light"]), flash)
 			lights[i].position = _bases[i] + Vector2(0, _drop_px(i))
 		lights[i].energy = e
+		# A dark lamp costs nothing to draw: its light and its dust are off
+		# (level 05 under Shift lights up eleven lamps, 24.11).
+		lights[i].enabled = e > 0.001
+		_dust[i].visible = e > 0.001
 		_shine[i] = e / energy
 	if _glow != null:
 		_glow.queue_redraw()
@@ -227,6 +236,8 @@ func _draw_fallen(i: int, at: Vector2, picture: Texture2D, chain: Texture2D) -> 
 
 ## The glass of fallen lamp `i` on `item`: drawn lit with the room, and once
 ## more faintly in the glow (`glint` 0..1) so it catches the eye in the dark.
+## All shards of the lamp go in one triangle array: one draw call, not one per
+## shard (the FPS of level 05 under Shift, 24.11).
 func _draw_shards(item: CanvasItem, i: int, at: Vector2, glass: Color, glint: float) -> void:
 	var fall := _falls[i]
 	var shatter := float(fall["shatter"])
@@ -234,50 +245,102 @@ func _draw_shards(item: CanvasItem, i: int, at: Vector2, glass: Color, glint: fl
 		return
 	var look := ObjectLook.of("quake")
 	var origin := Vector2(at.x, float(fall["to_row"]) * WorldData.CELL - 8.0)
+	var points := PackedVector2Array()
+	var colors := PackedColorArray()
+	var indices := PackedInt32Array()
 	for k in int(ObjectLook.number(look, "lamp_shards", 14.0)):
 		var shard := _shard(i, k, origin, shatter, look)
 		var s := float(shard["size"])
 		var turned := Transform2D(float(shard["angle"]), shard["at"] as Vector2)
-		var points := PackedVector2Array([Vector2(-s, -s * 0.35), Vector2(s * 0.8, -s * 0.5), Vector2(s * 0.4, s * 0.45)])
 		var color := glass.darkened(0.25 * float(shard["shade"]))
 		if glint > 0.0:
 			color.a = glint * (0.5 + 0.5 * float(shard["shade"]))
-		item.draw_colored_polygon(turned * points, color)
+		var first := points.size()
+		points.append_array(turned * PackedVector2Array([Vector2(-s, -s * 0.35), Vector2(s * 0.8, -s * 0.5), Vector2(s * 0.4, s * 0.45)]))
+		colors.append_array([color, color, color])
+		indices.append_array([first, first + 1, first + 2])
+	if not points.is_empty():
+		RenderingServer.canvas_item_add_triangle_array(item.get_canvas_item(), indices, points, colors)
 
 
 ## Shard `k` of lamp `i` at `shatter` (0..1 of the breaking): it flies from
 ## `origin` with its own speed under gravity and stops where it meets the
-## ground. {"at": Vector2, "angle", "size", "shade"}.
+## ground. {"at": Vector2, "angle", "size", "shade"}. The arc is stepped once
+## per shard and kept (`_shard_paths`); a frame only looks it up.
 func _shard(i: int, k: int, origin: Vector2, shatter: float, look: Dictionary) -> Dictionary:
 	var r1 := _noise(i, k, 1.0)
 	var r2 := _noise(i, k, 2.0)
 	var r3 := _noise(i, k, 3.0)
+	var spin := (r2 - 0.5) * 24.0
+	var seconds := shatter * ObjectLook.number(look, "shatter_seconds", 0.6)
+	var path := _shard_path(i, k, origin, look)
+	var steps := path["at"] as PackedVector2Array
+	var speeds := path["speed"] as PackedVector2Array
+	var step := 1.0 / 60.0
+	# The last whole step before `seconds`, then the rest of the way from it.
+	var n := mini(int(floorf(seconds / step + 0.0001)), steps.size() - 1)
+	var at := steps[n]
+	var t := float(n) * step
+	if n == steps.size() - 1 and bool(path["landed"]):
+		return {"at": at, "angle": spin * float(path["land_t"]), "size": 3.0 + 5.0 * r3, "shade": r1}
+	var speed := speeds[n]
+	var gravity := ObjectLook.number(look, "gravity_px", 1500.0)
+	while t < seconds - 0.000001:
+		var dt := minf(step, seconds - t)
+		var next := _arc_step(at, speed, dt, origin, gravity)
+		at = next[0]
+		speed = next[1]
+		t += dt
+		if next[2]:
+			break
+	return {"at": at, "angle": spin * t, "size": 3.0 + 5.0 * r3, "shade": r1}
+
+
+## The flight of shard `k` of lamp `i` from `origin`, one entry per whole step
+## of 1/60 s: {"at", "speed": PackedVector2Array, "landed": bool, "land_t"}.
+func _shard_path(i: int, k: int, origin: Vector2, look: Dictionary) -> Dictionary:
+	var key := "%d:%d:%s" % [i, k, origin]
+	if _shard_paths.has(key):
+		return _shard_paths[key]
+	var r1 := _noise(i, k, 1.0)
+	var r2 := _noise(i, k, 2.0)
 	var speed := Vector2((r1 * 2.0 - 1.0) * ObjectLook.number(look, "shard_speed_px", 170.0),
 			-(0.35 + 0.65 * r2) * ObjectLook.number(look, "shard_hop_px", 260.0))
 	var gravity := ObjectLook.number(look, "gravity_px", 1500.0)
-	var seconds := shatter * ObjectLook.number(look, "shatter_seconds", 0.6)
-	var spin := (r2 - 0.5) * 24.0
+	var longest := ObjectLook.number(look, "shatter_seconds", 0.6)
 	var step := 1.0 / 60.0
-	var t := 0.0
 	var at := origin
+	var steps := PackedVector2Array([at])
+	var speeds := PackedVector2Array([speed])
+	var landed := false
+	var t := 0.0
 	# Step the arc until the shard meets the ground, then it lies there.
-	while t < seconds:
-		var dt := minf(step, seconds - t)
-		var next := at + speed * dt + Vector2(0.0, gravity * dt * dt * 0.5)
-		speed.y += gravity * dt
-		var ground := _ground_y(next.x, origin.y + 8.0) - 1.5
-		if next.y > ground and ground < at.y - 0.5:
-			# It meets the riser of a higher tread: it bounces back off it.
-			speed.x = -speed.x * 0.3
-			next.x = at.x
-			ground = _ground_y(next.x, origin.y + 8.0) - 1.5
-		if speed.y > 0.0 and next.y >= ground:
-			at = Vector2(next.x, ground)
-			t += dt
-			break
-		at = next
-		t += dt
-	return {"at": at, "angle": spin * t, "size": 3.0 + 5.0 * r3, "shade": r1}
+	while t < longest and not landed:
+		var next := _arc_step(at, speed, step, origin, gravity)
+		at = next[0]
+		speed = next[1]
+		landed = next[2]
+		t += step
+		steps.append(at)
+		speeds.append(speed)
+	var path := {"at": steps, "speed": speeds, "landed": landed, "land_t": t}
+	_shard_paths[key] = path
+	return path
+
+
+## One step `dt` of a shard's arc: [at, speed, landed]. It bounces back off
+## the riser of a higher tread and lies where it meets the ground.
+func _arc_step(at: Vector2, speed: Vector2, dt: float, origin: Vector2, gravity: float) -> Array:
+	var next := at + speed * dt + Vector2(0.0, gravity * dt * dt * 0.5)
+	speed.y += gravity * dt
+	var ground := _ground_y(next.x, origin.y + 8.0) - 1.5
+	if next.y > ground and ground < at.y - 0.5:
+		speed.x = -speed.x * 0.3
+		next.x = at.x
+		ground = _ground_y(next.x, origin.y + 8.0) - 1.5
+	if speed.y > 0.0 and next.y >= ground:
+		return [Vector2(next.x, ground), speed, true]
+	return [next, speed, false]
 
 
 ## The ground under room x where a fall lies: a tread of the stairs, or the floor.
