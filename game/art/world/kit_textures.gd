@@ -109,14 +109,19 @@ static func top_strip_px(world: Dictionary) -> int:
 	return int(world.get("top_face_px", 16)) + int(world.get("edge_px", 6)) + 4
 
 
+## The Gemini picture of `name`, or null; the answer is kept, so drawing every
+## frame does not ask the file system again.
 static func _file(name: String) -> Texture2D:
+	var key := "file:" + name
+	if _cache.has(key):
+		return _cache[key]
+	var picture: Texture2D = null
 	var textures: Variant = WorldData.look().get("textures")
-	if not textures is Dictionary:
-		return null
-	var path := str((textures as Dictionary).get(name, ""))
-	if path.is_empty() or not ResourceLoader.exists(path):
-		return null
-	return kept(path)
+	var path := str((textures as Dictionary).get(name, "")) if textures is Dictionary else ""
+	if not path.is_empty() and ResourceLoader.exists(path):
+		picture = kept(path)
+	_cache[key] = picture
+	return picture
 
 
 ## The picture at `path`, loaded once and kept. A draw call holds only the

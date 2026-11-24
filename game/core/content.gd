@@ -134,9 +134,18 @@ static func art() -> Dictionary:
 
 
 ## The look of the Night Hall (task Д2): particle presets and mechanism colours.
+## look.json, read once: the lamps, the crane and the world ask it while they
+## draw, every frame while something falls, and parsing it each time made the
+## game stutter (24.11.2026). Nobody changes it while the game runs; treat the
+## Dictionary as read-only.
+static var _look: Variant = null
+
+
 static func look() -> Dictionary:
-	var data: Variant = load_json(LOOK_PATH)
-	return data if data is Dictionary else {}
+	if _look == null:
+		var data: Variant = load_json(LOOK_PATH)
+		_look = data if data is Dictionary else {}
+	return _look
 
 
 static func look_particles() -> Dictionary:
