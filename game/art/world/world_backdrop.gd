@@ -8,11 +8,16 @@ extends Node2D
 ## under every lamp, as bright as `WorldLight` says the lamp is now — it
 ## flickers, dies when the lamp falls and comes back under Shift. Nodes of the
 ## level whose still parts the picture already has (`painted` of
-## `world.backdrop`) are told to draw only what moves (`use_backdrop`).
+## `world.backdrop`) are told to draw only what moves (`use_backdrop`); those
+## drawn by code get the picture's light too (`use_picture_light`, the shader
+## `object_light.gdshader`, numbers `kit_objects.picture_light` of look.json):
+## dim like the wall behind them in the dark, warm under a lamp's cone, a
+## little soft like the picture (24.11, level 01 notes).
 ## Decoration only: nothing is recorded, nothing collides.
 
 const MAX_LAMPS := 8
 const SHADER := preload("res://art/world/backdrop.gdshader")
+const OBJECT_SHADER := preload("res://art/world/object_light.gdshader")
 
 ## The level's id in levels.json.
 @export var level_id := ""
@@ -26,6 +31,8 @@ var _lit: Texture2D
 var _rect := Rect2()
 var _material: ShaderMaterial
 var _bulbs := PackedVector2Array()
+## The light of the picture for the objects drawn over it (`use_picture_light`).
+var object_material: ShaderMaterial
 
 
 func _ready() -> void:
@@ -49,6 +56,17 @@ func _ready() -> void:
 			_bulbs.append(WorldData.lamp_at(lamp, ceiling))
 	_material.set_shader_parameter("lamp_count", _bulbs.size())
 	_material.set_shader_parameter("lamp_at", _padded(_bulbs, Vector2.ZERO))
+	object_material = ShaderMaterial.new()
+	object_material.shader = OBJECT_SHADER
+	for key: String in ["top_px", "spread", "length_px", "soft", "above_px", "lamp_count", "lamp_at"]:
+		object_material.set_shader_parameter(key, _material.get_shader_parameter(key))
+	var look := ObjectLook.of("picture_light")
+	object_material.set_shader_parameter("dark", ObjectLook.number(look, "dark", 0.35))
+	object_material.set_shader_parameter("lit_color", ObjectLook.color(look, "lit_color", Color.WHITE))
+	object_material.set_shader_parameter("soft_px", ObjectLook.number(look, "soft_px", 0.0))
+	object_material.set_shader_parameter("lit_gain", ObjectLook.number(look, "lit_gain", 1.0))
+	object_material.set_shader_parameter("haze_color", ObjectLook.color(look, "haze_color", Color.BLACK))
+	object_material.set_shader_parameter("haze", ObjectLook.number(look, "haze", 0.0))
 	# Behind the level, moving with its camera, out of reach of its darkness.
 	layer = CanvasLayer.new()
 	layer.name = "BackdropLayer"
@@ -87,6 +105,7 @@ func _shine() -> void:
 	for i in weights.size():
 		padded[i] = weights[i]
 	_material.set_shader_parameter("lamp_shine", padded)
+	object_material.set_shader_parameter("lamp_shine", padded)
 
 
 func _draw_picture() -> void:
@@ -99,6 +118,7 @@ func _follow_level() -> void:
 	var level := get_parent() as Node2D
 	if level != null and picture != null:
 		picture.transform = level.global_transform
+		object_material.set_shader_parameter("level_origin", level.global_position)
 
 
 func _paint_nodes() -> void:
@@ -110,6 +130,8 @@ func _paint_nodes() -> void:
 		var node := level.get_node_or_null(NodePath(str(path)))
 		if node != null and node.has_method("use_backdrop"):
 			node.call("use_backdrop", nodes[path] as Dictionary)
+			if node is CanvasItem and node.has_method("use_picture_light"):
+				node.call("use_picture_light", object_material)
 		else:
 			push_error("world.backdrop.painted: %s is not a node of the level with use_backdrop" % path)
 

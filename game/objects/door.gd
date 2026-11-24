@@ -48,6 +48,8 @@ const GAUGE_BACK_COLOR := Color("#23272d")
 ## The height of the door in pixels; 0 keeps the 192 of door.tscn. Doors are
 ## about 120 px next to the 94 px heroine (D82, 20.11.2026).
 @export var height := 0.0
+## The width of the door in pixels; 0 keeps the 32 of door.tscn.
+@export var width := 0.0
 ## When set, this door is driven by a button or lever with this object_id.
 ## The cycle runs for looks (open/close speed) but hold times are ignored.
 @export var linked_id := ""
@@ -83,7 +85,8 @@ var _hold_closed_ticks := 1
 ## Ticks an `opens_once` door waits closed before it opens.
 var _delay_ticks := 0
 ## The level's picture has the housing (`world.backdrop`, D131): {"clip_y",
-## "wheel": [x, y, size]} in room pixels; empty when the kit draws it.
+## "wheel": [x, y, size], "gear": [x, y, size]} in room pixels; empty when the
+## kit draws it.
 var _painted := {}
 
 
@@ -125,9 +128,12 @@ func apply_settings(settings: Dictionary) -> void:
 
 func _ready() -> void:
 	var shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
-	if height > 0.0 and shape != null and shape.shape is RectangleShape2D:
+	if (height > 0.0 or width > 0.0) and shape != null and shape.shape is RectangleShape2D:
 		var own := (shape.shape as RectangleShape2D).duplicate() as RectangleShape2D
-		own.size.y = height
+		if height > 0.0:
+			own.size.y = height
+		if width > 0.0:
+			own.size.x = width
 		shape.shape = own
 	if housing_height > 0.0:
 		z_index = 1
@@ -298,30 +304,55 @@ func _draw_below(slab: Texture2D, r: Rect2, region: Rect2, cut: float) -> void:
 			Rect2(region.position + Vector2(0.0, from), Vector2(region.size.x, h)))
 
 
-func _draw_painted(slab: Texture2D, blade: Rect2, blade_region: Rect2, stripe_rect: Rect2, stripes: Rect2) -> void:
+## Under the painted gearbox (24.11, level 01 notes): the blade is the long
+## strip of the shutter (`painted_blade_region`) hanging up to the gearbox at
+## every travel, so no gap opens between a closed blade and the housing. With
+## a painted `gear` its rack meshes with that gear: the gear turns by the
+## blade's travel (rolling without slip) and the wheel with it.
+func _draw_painted(slab: Texture2D, blade: Rect2, _blade_region: Rect2, stripe_rect: Rect2, stripes: Rect2) -> void:
+	var look := ObjectLook.of("shutter")
 	var cut := _room_point(Vector2(0.0, float(_painted.get("clip_y", -100000.0)))).y
-	_draw_below(slab, blade, blade_region, cut)
+	var long_region := ObjectLook.rect(look, "painted_blade_region", Rect2(0, 0, 64, 512))
+	var long_h := blade.size.x * long_region.size.y / maxf(long_region.size.x, 0.001)
+	var hanging := Rect2(blade.position.x, blade.end.y - long_h, blade.size.x, long_h)
+	_draw_below(slab, hanging, long_region, cut)
 	_draw_below(slab, stripe_rect, stripes, cut)
 	var wheel_data: Variant = _painted.get("wheel")
 	if not wheel_data is Array or (wheel_data as Array).size() != 3:
 		return
-	var look := ObjectLook.of("shutter")
 	var wheel := ObjectLook.picture("shutter_wheel")
 	var gear := ObjectLook.picture("shutter_gear_small")
 	var wheel_px := float(wheel_data[2])
-	var gear_px := wheel_px * ObjectLook.number(look, "gear_px", 22.0) / maxf(ObjectLook.number(look, "wheel_px", 40.0), 1.0)
 	var hub := _room_point(Vector2(float(wheel_data[0]), float(wheel_data[1])))
 	var angle := wheel_angle()
-	if gear != null:
+	var gear_data: Variant = _painted.get("gear")
+	if _meshes_painted_gear():
+		var gear_size := float(gear_data[2])
+		if gear != null:
+			var gear_at := _room_point(Vector2(float(gear_data[0]), float(gear_data[1])))
+			ObjectLook.draw_turned(self, gear, gear_at, Vector2(gear_size, gear_size), -mech_travel() / maxf(gear_size / 2.0, 1.0))
+	elif gear != null:
+		var gear_px := wheel_px * ObjectLook.number(look, "gear_px", 22.0) / maxf(ObjectLook.number(look, "wheel_px", 40.0), 1.0)
 		var at := hub + Vector2(wheel_px / 2.0 - 2.0, wheel_px / 2.0 - gear_px / 2.0 + 2.0)
 		ObjectLook.draw_turned(self, gear, at, Vector2(gear_px, gear_px), -angle * wheel_px / gear_px)
 	if wheel != null:
 		ObjectLook.draw_turned(self, wheel, hub, Vector2(wheel_px, wheel_px), angle)
 
 
-## The wheel's angle on the housing: `wheel_turns` turns from closed to open.
+## The wheel's angle on the housing: `wheel_turns` turns from closed to open;
+## over a painted gear it rolls with the gear that drives the rack, so it turns
+## by the blade's travel over its own radius.
 func wheel_angle() -> float:
+	if _meshes_painted_gear():
+		return mech_travel() / maxf(float((_painted["wheel"] as Array)[2]) / 2.0, 1.0)
 	return mech_fraction() * ObjectLook.number(ObjectLook.of("shutter"), "wheel_turns", 1.5) * TAU
+
+
+## True when the level's picture has the gear whose teeth drive the rack.
+func _meshes_painted_gear() -> bool:
+	var wheel: Variant = _painted.get("wheel")
+	var gear: Variant = _painted.get("gear")
+	return wheel is Array and (wheel as Array).size() == 3 and gear is Array and (gear as Array).size() == 3
 
 
 ## The level's picture has the housing (D131): the blade hides above
@@ -367,3 +398,9 @@ func _draw_kit(slab: Texture2D, size: Vector2) -> void:
 		ObjectLook.draw_turned(self, gear, at, Vector2(gear_px, gear_px), -angle * wheel_px / gear_px)
 	if wheel != null:
 		ObjectLook.draw_turned(self, wheel, hub, Vector2(wheel_px, wheel_px), angle)
+
+
+## The picture's light instead of the room's darkness (`WorldBackdrop`,
+## 24.11 level 01 notes).
+func use_picture_light(light: ShaderMaterial) -> void:
+	material = light

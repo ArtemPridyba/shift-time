@@ -24,6 +24,10 @@ extends AnimatableBody2D
 ## with it, so under Shift they go back exactly. Numbers:
 ## `kit_objects.platform` of `data/look.json`.
 ##
+## In a painted room (`world.backdrop`, D131) the picture has the track (the
+## rail column, the chain beam): only the plank and its gear are drawn, with
+## the picture's light (`use_picture_light`, 24.11 level 01 notes).
+##
 ## Temporal object contract: docs/architecture.md, section 4.1.
 
 const BODY_COLOR := Color("#6b717a")
@@ -42,6 +46,9 @@ const CYCLE_ONCE := "once"
 @export var width := 0.0
 ## The fixed way the platform rides, drawn behind it: "", "rack" or "chain".
 @export var track := ""
+
+## True when the level's picture has the track (D131).
+var _painted := false
 
 ## Tick on the path: there, pause, back, pause. In `once` mode: wait, ride, stay.
 var phase := 0
@@ -224,6 +231,17 @@ func gear_angle() -> float:
 	return mech_travel() / maxf(r, 1.0)
 
 
+## The level's picture has the track the platform rides.
+func use_backdrop(_config: Dictionary) -> void:
+	_painted = true
+	queue_redraw()
+
+
+## The picture's light instead of the room's darkness (`WorldBackdrop`).
+func use_picture_light(light: ShaderMaterial) -> void:
+	material = light
+
+
 func _draw_kit(plank: Texture2D, size: Vector2) -> void:
 	var look := ObjectLook.of("platform")
 	var top := -size.y / 2.0
@@ -231,7 +249,7 @@ func _draw_kit(plank: Texture2D, size: Vector2) -> void:
 	var gear := ObjectLook.picture("shutter_gear_small")
 	var gear_px := ObjectLook.number(look, "gear_px", 22.0)
 	var tint := ObjectLook.color(look, "track_tint", Color.WHITE)
-	if track == "rack":
+	if track == "rack" and not _painted:
 		var rack := ObjectLook.picture("platform_rack")
 		var w := ObjectLook.number(look, "rack_px", 18.0)
 		var y0 := shift.y + minf(0.0, travel.y) - ObjectLook.number(look, "track_above_px", 64.0)
@@ -239,7 +257,7 @@ func _draw_kit(plank: Texture2D, size: Vector2) -> void:
 		if rack != null:
 			ObjectLook.draw_region_down(self, rack, Rect2(Vector2.ZERO, rack.get_size()),
 					Rect2(shift.x - w / 2.0, y0, w, y1 - y0), tint)
-	elif track == "chain":
+	elif track == "chain" and not _painted:
 		var chain := ObjectLook.picture("platform_chain")
 		var h := ObjectLook.number(look, "chain_px", 10.0)
 		var x0 := shift.x + minf(0.0, travel.x)
@@ -253,7 +271,7 @@ func _draw_kit(plank: Texture2D, size: Vector2) -> void:
 				ObjectLook.draw_turned(self, gear, Vector2(x, y), Vector2(gear_px, gear_px), gear_angle() * signf(travel.x), tint)
 	var plank_h := float(plank.get_height()) / ObjectLook.texel("platform")
 	_draw_plank(plank, Rect2(-size.x / 2.0, top, size.x, plank_h), ObjectLook.number(look, "cap_px", 24.0))
-	if track == "rack" and gear != null:
+	if (track == "rack" or _painted) and gear != null:
 		ObjectLook.draw_turned(self, gear, Vector2(0.0, top + plank_h), Vector2(gear_px, gear_px), gear_angle())
 
 
