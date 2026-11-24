@@ -98,6 +98,10 @@ func _footing() -> Dictionary:
 				or at.y < flight.position.y - _size.y or at.y > flight.end.y + _size.y:
 			continue
 		var origin := stairs.global_position
+		# A platform riding over the flight is not the stairs: on it her
+		# feet stay on its board, not on the treads below.
+		if not stairs.holds_feet(at - origin, _size.x * 0.5):
+			continue
 		return {
 			"ground": func(x: float) -> float: return origin.y + stairs.tread_y(at.x + x - origin.x) - at.y,
 			"tread_px": stairs.tread_px(),
