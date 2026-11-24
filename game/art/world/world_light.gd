@@ -27,7 +27,9 @@ var _world: Dictionary
 var _glow: Node2D
 var _shine: Array[float] = []
 var _seconds_per_frame := 1.0 / 60.0
-var _quakes: Quakes
+## Where falls of lamps come from: `Quakes` (level 01) or `Crane` (level 09),
+## a sibling with `lamp_fall(i)` and `swing(i)`.
+var _quakes: Node
 ## Per lamp: {"drop", "light", "shatter", "to_row"} while one falls (Quakes.lamp_fall).
 var _falls: Array[Dictionary] = []
 var _swings: Array[float] = []
@@ -49,6 +51,9 @@ func _ready() -> void:
 	var dark := CanvasModulate.new()
 	dark.name = "Darkness"
 	dark.color = WorldData.color(_world, "darkness")
+	# A level may be darker than the kit (level 09: the dark is the difficulty).
+	if layout.get("darkness") is String:
+		dark.color = Color.from_string(str(layout["darkness"]), dark.color)
 	add_child(dark)
 	var disc := KitTextures.soft_disc()
 	var radius := float(_lamp.get("radius_px", 300))
@@ -57,7 +62,9 @@ func _ready() -> void:
 		var light := PointLight2D.new()
 		light.name = "Light%d" % (i + 1)
 		light.texture = disc
-		light.texture_scale = radius * 2.0 / float(disc.get_width())
+		# A lamp may light a wider island than the kit's (level 09: the pillar by the crane).
+		var own_radius := float(_lamps[i].get("radius_px", radius)) if _lamps[i] is Dictionary else radius
+		light.texture_scale = own_radius * 2.0 / float(disc.get_width())
 		light.color = Color.from_string(str(_lamp.get("color", "#ffb066")), Color.ORANGE)
 		light.position = at + Vector2(0, float(_lamp.get("below_px", 150)))
 		add_child(light)
@@ -81,7 +88,9 @@ func _ready() -> void:
 	_glow.material = glow_material
 	_glow.draw.connect(_draw_glow)
 	add_child(_glow)
-	_quakes = get_node_or_null("../Quakes") as Quakes
+	_quakes = get_node_or_null("../Quakes")
+	if _quakes == null:
+		_quakes = get_node_or_null("../Crane")
 	show_at(0.0)
 	_light_heroine.call_deferred()
 
@@ -116,8 +125,8 @@ func _read_quakes() -> void:
 		return
 	var changed := false
 	for i in _lamps.size():
-		var fall := _quakes.lamp_fall(i)
-		var swing := _quakes.swing(i)
+		var fall: Dictionary = _quakes.call("lamp_fall", i)
+		var swing := float(_quakes.call("swing", i))
 		if fall != _falls[i] or swing != _swings[i]:
 			changed = true
 		_falls[i] = fall
