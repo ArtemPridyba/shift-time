@@ -247,7 +247,7 @@
       "size_px": 64
     },
     "crane": {
-      "_about": "The runaway crane of level 09: the crane_beam picture as its rail, rail_px high under the ceiling and rail_over_px longer than the load's way at each end; the crane picture is the trolley with the hook; two slings cable_px wide in cable_color run from the hook's eye (hook_eye_px above its lower end) to the load, sling_inset_px in from its ends.",
+      "_about": "The runaway crane of level 05: the crane_beam picture as its rail, rail_px high under the ceiling and rail_over_px longer than the load's way at each end; the crane picture is the trolley with the hook; two slings cable_px wide in cable_color run from the hook's eye (hook_eye_px above its lower end) to the load, sling_inset_px in from its ends.",
       "rail_px": 14,
       "rail_over_px": 64,
       "cable_px": 2,
@@ -257,7 +257,7 @@
       "stop_px": 18
     },
     "collapse": {
-      "_about": "The collapse of level 09 (D135): girders hang hang_below_ceiling_px under the roof on chains (chain colour), torn stubs stub_px long stay once they fall; an I-beam has flanges flange_px thick and a rust stain. The slam shakes the camera shake_px for shake_seconds.",
+      "_about": "The collapse of level 05 (D135): girders hang hang_below_ceiling_px under the roof on chains (chain colour), torn stubs stub_px long stay once they fall; an I-beam has flanges flange_px thick and a rust stain. The slam shakes the camera shake_px for shake_seconds.",
       "hang_below_ceiling_px": 40,
       "stub_px": 18,
       "flange_px": 6,

@@ -1,6 +1,6 @@
 class_name Crane
 extends Node2D
-## The runaway overhead crane of level 09 (card docs/levels/09.md): a trolley
+## The runaway overhead crane of level 05 (card docs/levels/05.md): a trolley
 ## on a rail under the roof, its hook over the middle of the load, two slings
 ## from the hook down to the load. The load is a `once` platform of the room
 ## (`crane.load` of the level's entry in data/levels.json) that carries the

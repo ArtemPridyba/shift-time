@@ -1,6 +1,6 @@
 class_name TimePlate
 extends Node2D
-## A pressure plate that takes the direction of time (level 08, D118). The
+## A pressure plate that takes the direction of time (level 04, D118). The
 ## player presses it by stepping onto it, never with a key. Stepped on in
 ## normal time, it closes its shutters; stepped on with Shift held, it sends
 ## the closing into the past: once time runs forward, they open.

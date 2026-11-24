@@ -1,5 +1,5 @@
 extends SceneTree
-## Builds level 09 `levels/level_09.tscn` «Crane» (card docs/levels/09.md): a
+## Builds level 05 `levels/level_05.tscn` «Crane» (card docs/levels/05.md): a
 ## room of 48x17 cells in the Night shop, sized to the heroine like level 01
 ## (D112): the hall is 6 cells high under the dark roof. She walks out into a
 ## lit hall; at once a runaway overhead crane rides right, its hook strikes two
@@ -19,15 +19,15 @@ extends SceneTree
 ## in data/levels.json.
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
-##   godot --headless --path game --script $PWD/tools/build_level_09.gd
+##   godot --headless --path game --script $PWD/tools/build_level_05.gd
 ##
 ## Map legend: '#' block, '.' empty, 'S' spawn point (inside the entrance),
 ## 'E' the exit zone (centred on its cells).
 
 const CELL := 64
 const TILESET_RES := "res://levels/blockout/blockout_tileset.tres"
-const SCENE_PATH := "res://levels/level_09.tscn"
-const LEVEL_ID := "level_09"
+const SCENE_PATH := "res://levels/level_05.tscn"
+const LEVEL_ID := "level_05"
 
 const MAP := [
 	"################################################",
@@ -71,7 +71,7 @@ const BEACON_FROM_DOOR := Vector2(-66.0, -118.0)
 
 func _initialize() -> void:
 	var root := Node2D.new()
-	root.name = "Level09"
+	root.name = "Level05"
 	root.set_script(load("res://levels/level_room.gd"))
 
 	var blocks := TileMapLayer.new()

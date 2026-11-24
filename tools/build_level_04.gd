@@ -1,85 +1,64 @@
 extends SceneTree
-## Builds level 04 «Interference» `levels/level_04.tscn` (task 3.3, card
-## docs/levels/04.md, D104, D105): a room of 44x17 cells. The hero walks out
-## of a doorway into a hall; ahead a wooden bridge burns over a bottomless pit
-## and falls apart; at its far end a wooden barricade burns in the exit
-## corridor, and the hall's fire system rains on it and puts it out, so it
-## stays whole and shut.
-##
-## Part one: a lever high on the left wall (three ledges up) opens a sprinkler
-## over the bridge. Thrown now it rains into the empty pit; thrown under Shift
-## while the bridge burns it puts the bridge out in a new branch.
-## Part two: a valve on the middle ledge shuts the fire system over the
-## barricade. It is open from the start and the system starts on its own a
-## moment into the history (`start_seconds`); shut under Shift before then, the
-## barricade burns through in the new branch. Both are needed, so the recorded
-## history never has a whole bridge and an open way. Numbers in levels.json.
+## Builds level 04 `levels/level_04.tscn` (task 3.8, D118; card
+## docs/levels/04.md): time plates. A room of 38x17 cells in two tiers sized to
+## the heroine (D112). Upper tier: a low corridor (two cells high, no jumping
+## over a plate) with plate A and its open shutter A, then plate B and its
+## shutter B, closed from the start. A shaft drops to the lower tier: plate C,
+## a pit of four cells under hatch C, then wall C and the exit. Plate C drives
+## both the hatch and the wall. Which shutter starts open is data:
+## `objects` of the level's entry in data/levels.json.
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
 ##   godot --headless --path game --script $PWD/tools/build_level_04.gd
 ##
 ## Map legend: '#' block, '.' empty, 'S' spawn point (inside the entrance),
-## 'E' the exit zone (centred on its cells). The bridge, the barricade, the
-## levers and the pipes are placed by the constants below. The pit columns are
-## open to the bottom, so a fall brings the hero back to the spawn point.
+## 'E' the exit zone (centred on its cells).
 
 const CELL := 64
 const TILESET_RES := "res://levels/blockout/blockout_tileset.tres"
 const SCENE_PATH := "res://levels/level_04.tscn"
 
 const MAP := [
-	"############################################",
-	"#...........................################",
-	"#...........................################",
-	"#...........................################",
-	"#...........................################",
-	"#...........................################",
-	"#...........................################",
-	"#..........................................#",
-	"####....................................EE.#",
-	"#.....##................................EE.#",
-	"#.........####...............###############",
-	"#........#####...............###############",
-	"#.......######...............###############",
-	"#.S....#######...............###############",
-	"##############...............###############",
-	"##############...............###############",
-	"##############...............###############",
+	"######################################",
+	"######################################",
+	"######################################",
+	"######################################",
+	"######################################",
+	"#......................###############",
+	"#S.....................###############",
+	"#####################..###############",
+	"#####################..###############",
+	"#####################..###############",
+	"#####################..###############",
+	"#####################..............EE#",
+	"#####################..............EE#",
+	"############################....######",
+	"#############################...######",
+	"######################################",
+	"######################################",
 ]
 
 ## The doorway the hero walks out of (decoration only), in cells.
-const ENTRANCE_CELLS := Rect2i(1, 12, 1, 2)
+const ENTRANCE_CELLS := Rect2i(1, 5, 1, 2)
 
-## The bridge spans the pit (columns 14-28) with its top on the landing's
-## level, row 10, and runs under the barricade to the corridor floor: there is
-## no floor before the barricade, so nobody waits there for it to burn through.
-const BRIDGE_HEIGHT := 32.0
-const BRIDGE_CELLS := Rect2i(14, 10, 15, 1)
-## The barricade closes the corridor (rows 7-9) in column 28.
-const BARRICADE_CELLS := Rect2i(28, 7, 1, 3)
-## The lever stands on the lower ledge, a cell above the landing and two cells
-## from it, one jump: cell (6, 8). The valve of the fire system stands on the
-## upper ledge by the left wall, a cell higher again and two cells further,
-## two jumps from the landing: cell (2, 7) (D108: swapped, so the two water
-## lines never cross; D112: the ledges moved for the jump of one heroine
-## height, which carries about 2.3 cells, no longer 3). The ledges hang over the hall floor, high
-## enough to walk under them from the entrance.
-const LEVER_CELL := Vector2i(6, 8)
-const VALVE_CELL := Vector2i(2, 7)
-## The sprinkler pipe hangs under the ceiling over the pit only, its rain falls
-## to the bridge; it stops short of the barricade.
-const PIPE_Y := 192.0
-const PIPE_LEFT := 14 * 64
-const PIPE_RIGHT := 27 * 64 + 16
-## The cistern the pipe draws from (decoration), in cells, over the lever.
-const CISTERN_CELLS := Rect2i(5, 2, 3, 1)
-## The fire system: its main rises from the valve by the left wall, runs along
-## the ceiling over the cistern to the corridor and down its wall; its nozzle
-## hangs over the barricade only. The feed pipe runs under the main, so the
-## two lines never cross (D108).
-const MAIN_Y := 80.0
-const MAIN_X := 27 * 64 + 44
-const SYSTEM_Y := 7 * 64 + 12
+## Plates: the first cell and the width in cells, on the floor row whose top
+## they lie on. Three cells: wider than a jump under the low ceiling.
+const PLATE_CELLS := 3
+const PLATES := [
+	{"id": "plate_a", "label": "A", "cell": Vector2i(5, 7), "targets": ["shutter_a"]},
+	{"id": "plate_b", "label": "B", "cell": Vector2i(13, 7), "targets": ["shutter_b"]},
+	{"id": "plate_c", "label": "C", "cell": Vector2i(24, 13), "targets": ["hatch_c", "wall_c"]},
+]
+
+## Shutters: the cells they close and where they go to open, in cells. Walls
+## rise into the ceiling; the hatch slides right into the floor and a half
+## cell down, so the heroine standing there never touches it.
+const SHUTTERS := [
+	{"id": "shutter_a", "label": "A", "cells": Rect2(11, 5, 0.5, 2), "travel": Vector2(0, -2)},
+	{"id": "shutter_b", "label": "B", "cells": Rect2(18, 5, 0.5, 2), "travel": Vector2(0, -2)},
+	{"id": "hatch_c", "label": "C", "cells": Rect2(28, 13, 4, 0.5), "travel": Vector2(4, 0.5)},
+	{"id": "wall_c", "label": "C", "cells": Rect2(34, 11, 0.5, 2), "travel": Vector2(0, -2)},
+]
 
 
 func _initialize() -> void:
@@ -98,7 +77,6 @@ func _initialize() -> void:
 	var exit_cells := Rect2i()
 	for y in MAP.size():
 		var row: String = MAP[y]
-		assert(row.length() == 44, "row %d is %d cells" % [y, row.length()])
 		for x in row.length():
 			var cell := Vector2i(x, y)
 			match row[x]:
@@ -116,70 +94,27 @@ func _initialize() -> void:
 	entrance.position = Vector2(ENTRANCE_CELLS.position * CELL)
 	_own(root, entrance)
 
-	# Decoration: the cistern under the ceiling and the rod down to the lever.
-	# Nothing here is recorded.
-	_pipe(root, "Cistern", Rect2(Vector2(CISTERN_CELLS.position * CELL), Vector2(CISTERN_CELLS.size * CELL)), Color("#4a5058"))
-	var lever_x := (LEVER_CELL.x + 0.5) * CELL
-	_pipe(root, "LeverRod", Rect2(lever_x - 3.0, CISTERN_CELLS.end.y * CELL, 6.0, (LEVER_CELL.y + 1) * CELL - 64.0 - CISTERN_CELLS.end.y * CELL))
+	for one: Dictionary in SHUTTERS:
+		var shutter := Shutter.new()
+		shutter.object_id = one["id"]
+		shutter.name = str(one["id"]).to_pascal_case()
+		shutter.label = one["label"]
+		var cells: Rect2 = one["cells"]
+		shutter.size = cells.size * CELL
+		shutter.travel = (one["travel"] as Vector2) * CELL
+		shutter.position = (cells.position + cells.size / 2.0) * CELL
+		_own(root, shutter)
 
-	# Both wood zones are burning when the room starts: the fire was lit before
-	# the hero came. Their burn times are per level (data/levels.json).
-	var bridge := _wood("bridge", Rect2(Vector2(BRIDGE_CELLS.position * CELL), Vector2(BRIDGE_CELLS.size.x * CELL, BRIDGE_HEIGHT)))
-	bridge.name = "Bridge"
-	_own(root, bridge)
-	var barricade := _wood("barricade", Rect2(Vector2(BARRICADE_CELLS.position * CELL), Vector2(BARRICADE_CELLS.size * CELL)))
-	barricade.name = "Barricade"
-	_own(root, barricade)
-
-	# The two water lines (D108): pipes that show the water running in them.
-	# The feed pipe runs from the cistern along the sprinkler's nozzles; the
-	# main rises from the valve to the ceiling, over the cistern, down the
-	# corridor wall and along the fire system's nozzle.
-	var feed_y := PIPE_Y - 4.0
-	_water_pipe(root, "FeedPipe", WaterPipe.Kind.FEED, "../Sprinkler", PackedVector2Array([
-		Vector2(CISTERN_CELLS.end.x * CELL, feed_y), Vector2(PIPE_RIGHT, feed_y)]))
-	var valve_x := (VALVE_CELL.x + 0.5) * CELL
-	var system_y := SYSTEM_Y - 4.0
-	_water_pipe(root, "FireMain", WaterPipe.Kind.MAIN, "../FireSystem", PackedVector2Array([
-		Vector2(valve_x, (VALVE_CELL.y + 1) * CELL - 32.0), Vector2(valve_x, MAIN_Y),
-		Vector2(MAIN_X, MAIN_Y), Vector2(MAIN_X, system_y),
-		Vector2(BARRICADE_CELLS.end.x * CELL, system_y)]))
-
-	var sprinkler := Sprinkler.new()
-	sprinkler.name = "Sprinkler"
-	sprinkler.object_id = "sprinkler"
-	sprinkler.draw_pipe = false
-	var bridge_top := float(BRIDGE_CELLS.position.y * CELL)
-	sprinkler.size = Vector2(PIPE_RIGHT - PIPE_LEFT, bridge_top + BRIDGE_HEIGHT / 2.0 - PIPE_Y)
-	sprinkler.position = Vector2((PIPE_LEFT + PIPE_RIGHT) / 2.0, PIPE_Y)
-	_own(root, sprinkler)
-
-	var lever: Lever = (load("res://objects/lever.tscn") as PackedScene).instantiate()
-	lever.object_id = "lever"
-	lever.name = "Lever"
-	lever.target_id = "sprinkler"
-	lever.position = Vector2((LEVER_CELL.x + 0.5) * CELL, (LEVER_CELL.y + 1) * CELL)
-	_own(root, lever)
-
-	# The hall's fire system over the barricade: open from the start, it rains
-	# on its own after `start_seconds` (levels.json) unless the valve is shut.
-	var system := Sprinkler.new()
-	system.name = "FireSystem"
-	system.object_id = "fire_system"
-	system.powered = true
-	system.draw_pipe = false
-	system.size = Vector2(BARRICADE_CELLS.size.x * CELL, BARRICADE_CELLS.size.y * CELL - 16.0 - (SYSTEM_Y - BARRICADE_CELLS.position.y * CELL))
-	system.position = Vector2((BARRICADE_CELLS.position.x + BARRICADE_CELLS.size.x / 2.0) * CELL, SYSTEM_Y)
-	_own(root, system)
-
-	var valve: Lever = (load("res://objects/lever.tscn") as PackedScene).instantiate()
-	valve.object_id = "valve"
-	valve.name = "Valve"
-	valve.target_id = "fire_system"
-	valve.look = 1
-	valve.on = true
-	valve.position = Vector2((VALVE_CELL.x + 0.5) * CELL, (VALVE_CELL.y + 1) * CELL)
-	_own(root, valve)
+	for one: Dictionary in PLATES:
+		var plate := TimePlate.new()
+		plate.object_id = one["id"]
+		plate.name = str(one["id"]).to_pascal_case()
+		plate.label = one["label"]
+		plate.target_ids = PackedStringArray(one["targets"])
+		plate.width = float(PLATE_CELLS * CELL)
+		var cell: Vector2i = one["cell"]
+		plate.position = Vector2((cell.x + PLATE_CELLS / 2.0) * CELL, cell.y * CELL)
+		_own(root, plate)
 
 	var exit: ExitZone = (load("res://objects/exit_zone.tscn") as PackedScene).instantiate()
 	exit.size = Vector2(exit_cells.size * CELL)
@@ -199,37 +134,6 @@ func _initialize() -> void:
 	root.free()
 	print("wrote ", SCENE_PATH)
 	quit()
-
-
-## A wood zone over `rect` (pixels), burning from the start.
-func _wood(id: String, rect: Rect2) -> WoodZone:
-	var zone: WoodZone = (load("res://objects/wood_zone.tscn") as PackedScene).instantiate()
-	zone.object_id = id
-	zone.size = rect.size
-	zone.position = rect.get_center()
-	zone.start_phase = WoodBurn.Phase.BURNING
-	return zone
-
-
-## A water pipe along `path` (pixels) that shows the water of `source`.
-func _water_pipe(root: Node, node_name: String, kind: WaterPipe.Kind, source: String, path: PackedVector2Array) -> void:
-	var pipe := WaterPipe.new()
-	pipe.name = node_name
-	pipe.kind = kind
-	pipe.source_path = NodePath(source)
-	pipe.points = path
-	_own(root, pipe)
-
-
-## A decorative pipe or tank: a plain rectangle, never recorded.
-func _pipe(root: Node, node_name: String, rect: Rect2, color: Color = Sprinkler.PIPE_COLOR) -> void:
-	var pipe := ColorRect.new()
-	pipe.name = node_name
-	pipe.color = color
-	pipe.position = rect.position
-	pipe.size = rect.size
-	pipe.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_own(root, pipe)
 
 
 func _own(root: Node, child: Node) -> void:

@@ -1,5 +1,5 @@
 {
-	"level": "level_08",
+	"level": "level_04",
 	"expect": "no_exit",
 	"segments": [
 		{ "actions": [], "ticks": 40 },

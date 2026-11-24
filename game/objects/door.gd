@@ -17,7 +17,7 @@ extends AnimatableBody2D
 ## `"cycle": "once"` for a door that starts open, waits `hold_open_seconds`,
 ## closes in `close_seconds` and then stays closed (level 01), and
 ## `"cycle": "opens_once"` for a door that starts closed, waits `delay_seconds`,
-## opens in `open_seconds` and then stays open (the gate of level 04). Both run
+## opens in `open_seconds` and then stays open (the gate of level 03). Both run
 ## by the door's own phase, so a new branch of history plays them again.
 ##
 ## Dressed from the Night shop kit (task Д4): the blade is a strip of the

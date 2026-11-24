@@ -1,6 +1,6 @@
 {
-	"level": "level_09",
-	"expect": "exit",
+	"level": "level_05",
+	"expect": "no_exit",
 	"segments": [
 		{ "actions": [], "ticks": 40 },
 		{ "actions": ["rewind"], "ticks": 250 },
@@ -16,6 +16,7 @@
 		{ "actions": ["move_right"], "ticks": 65 },
 		{ "actions": ["move_right", "jump"], "ticks": 20 },
 		{ "actions": ["move_right"], "ticks": 35 },
+		{ "actions": ["rewind"], "ticks": 360 },
 		{ "actions": ["move_right", "jump"], "ticks": 20 },
 		{ "actions": ["move_right"], "ticks": 20 },
 		{ "actions": ["move_right"], "ticks": 13 },
