@@ -60,19 +60,27 @@ func test_world_darkness_and_lamp_radius_are_checked() -> void:
 		"a lamp radius of 0 is reported")
 
 
-func test_level_09_starts_dark_with_every_lamp_on_the_floor() -> void:
+func test_level_09_lamps_fall_in_front_of_her_at_the_start() -> void:
 	var room := await _load()
 	var crane := room.get_node("Crane") as Crane
 	var load_platform := crane.load_platform()
-	check(load_platform != null, "the crane finds its load")
-	check(load_platform.phase == load_platform.once_last_phase(), "the load has stopped when she walks in")
-	for i in 3:
-		var fall := crane.lamp_fall(i)
-		check(not fall.is_empty() and float(fall["shatter"]) == 1.0, "lamp %d lies shattered at the start" % i)
 	var light := room.get_node("WorldLight") as WorldLight
+	check(load_platform != null, "the crane finds its load")
+	check(load_platform.phase < load_platform.once_last_phase(), "the crane is still on its way when she walks in")
 	await _ticks(2)
-	for i in light.lights.size():
-		check(light.lights[i].energy < 0.01, "lamp %d gives no light at the start, %.2f" % [i, light.lights[i].energy])
+	check(light.lights[2].energy > 0.5, "the last lamp still shines when she walks in, %.2f" % light.lights[2].energy)
+	# The lamps go out one by one: never two of them in the same moment.
+	var out_at: Array[int] = [-1, -1, -1]
+	for t in 12 * 60:
+		await _tree.physics_frame
+		for i in 3:
+			if out_at[i] < 0 and light.lights[i].energy < 0.01:
+				out_at[i] = t
+	for i in 3:
+		check(out_at[i] >= 0, "lamp %d goes out while she watches" % i)
+	check(out_at[0] < out_at[1] and out_at[1] < out_at[2], "the lamps go out one by one, ticks %s" % [out_at])
+	check(out_at[2] < 10 * 60, "the room is dark within 10 s, at tick %d" % out_at[2])
+	check(load_platform.phase == load_platform.once_last_phase(), "then the crane stands at the exit ledge")
 	await _free(room)
 
 

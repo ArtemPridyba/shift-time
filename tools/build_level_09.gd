@@ -1,9 +1,9 @@
 extends SceneTree
 ## Builds level 09 `levels/level_09.tscn` «Crane» (card docs/levels/09.md): a
 ## room of 32x17 cells in the Night shop, sized to the heroine like level 01
-## (D112): the hall is 6 cells high under the dark roof. A runaway overhead
-## crane rode right in the prelude and its hook struck the three lamps one by
-## one, so she walks out into the dark. Under Shift the crane rides back and
+## (D112): the hall is 6 cells high under the dark roof. She walks out into a
+## lit hall; at once a runaway overhead crane rides right and its hook strikes
+## the three lamps one by one before her eyes, so the hall goes dark (D130). Under Shift the crane rides back and
 ## the light returns; at the start of history its load hangs by the pillar
 ## over the lower hall. She stands on it, lets Shift go, and the crane carries
 ## her across the hall to the exit ledge, striking the lamps on the way.

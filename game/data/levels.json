@@ -110,10 +110,10 @@
 	{
 		"id": "level_09",
 		"scene": "res://levels/level_09.tscn",
-		"prelude_seconds": 9.5,
+		"prelude_seconds": 0.5,
 		"intro_seconds": 0.6,
 		"objects": {
-			"crane_load": { "cycle": "once", "speed": 120, "delay_seconds": 1.0 }
+			"crane_load": { "cycle": "once", "speed": 120, "delay_seconds": 0.8 }
 		},
 		"crane": {
 			"_about": "The runaway crane of level 09 (card docs/levels/09.md): the load is the platform crane_load; its hook strikes a lamp of world.lamps when it comes within hook_lead_px of it, and the lamp falls to the floor row to_row. Fall and shatter seconds: kit_objects.quake in look.json. A test checks that the last lamp has shattered before the load stops.",
