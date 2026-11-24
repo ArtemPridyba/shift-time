@@ -72,6 +72,25 @@ static func soft_disc() -> Texture2D:
 
 ## Texture pixels per room pixel of picture `name`: `kit_texel` for a Gemini
 ## file (tools/cut_kit.py cuts them so), 1 for a code placeholder.
+## A small round dot with a soft rim, white, for motes drawn as rects: rects
+## of one texture batch into one draw call, circles are a call each.
+static func dot() -> Texture2D:
+	if _cache.has("_dot"):
+		return _cache["_dot"]
+	var gradient := Gradient.new()
+	gradient.offsets = PackedFloat32Array([0.0, 0.7, 1.0])
+	gradient.colors = PackedColorArray([Color.WHITE, Color.WHITE, Color(1, 1, 1, 0)])
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.5, 0.5)
+	texture.fill_to = Vector2(0.5, 0.0)
+	texture.width = 16
+	texture.height = 16
+	_cache["_dot"] = texture
+	return texture
+
+
 static func texel(name: String) -> float:
 	if _file(name) != null:
 		return float(WorldData.look().get("kit_texel", 2))
