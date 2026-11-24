@@ -54,6 +54,16 @@
 			],
 			"ground": { "concrete": [[24, 9, 8, 8]], "roof": [[0, 0, 32, 6]] }
 		},
+		"quakes": {
+			"_about": "Quakes of world time (Д4, D127): a weak one at 6 s, a strong one at 14 s that drops the third lamp and a lump of plaster beside it onto the upper floor (row 12), then weak ones every 13 s. Seconds are those of the WORLD timer. The look: kit_objects.quake in look.json.",
+			"list": [{ "second": 6, "strength": 0.35 }, { "second": 14, "strength": 1.0 }],
+			"repeat_every_seconds": 13,
+			"repeat_strength": 0.3,
+			"falls": [
+				{ "kind": "lamp", "lamp": 3, "quake": 2, "delay_seconds": 0.15, "to_row": 12 },
+				{ "kind": "lump", "at": [12.55, 7.45], "quake": 2, "delay_seconds": 0.45, "to_row": 12 }
+			]
+		},
 		"title": "01 Effect"
 	},
 	{

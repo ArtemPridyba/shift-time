@@ -661,3 +661,79 @@ func test_kit_objects_data_is_checked() -> void:
 	broken["beacon"]["color"] = "red-ish"
 	broken["exit_door"].erase("wheel_turns")
 	check(Content.validate_kit_objects(broken).size() == 4, "a broken region, a zero, a bad colour and a missing key are caught: %s" % [Content.validate_kit_objects(broken)])
+
+
+func test_quake_plan_finds_quakes_and_repeats() -> void:
+	var plan := QuakePlan.from_data({"list": [{"second": 6, "strength": 0.4}, {"second": 14, "strength": 1}],
+		"repeat_every_seconds": 13, "repeat_strength": 0.3,
+		"falls": [{"kind": "lamp", "lamp": 3, "quake": 2, "delay_seconds": 0.5, "to_row": 12}]}, 10.0)
+	check(plan.index_at(59) == -1 and plan.index_at(60) == 0 and plan.index_at(139) == 0, "the first quake starts on its tick")
+	check(plan.index_at(140) == 1 and plan.index_at(269) == 1 and plan.index_at(270) == 2, "after the last one listed they repeat")
+	check(plan.start_tick(3) == 400 and is_equal_approx(plan.strength(3), 0.3), "a repeat starts 13 s after the one before, as weak as repeat_strength")
+	var fall: Dictionary = plan.falls[0]
+	check(int(fall["lamp"]) == 2 and int(fall["quake"]) == 1 and int(fall["delay"]) == 5, "falls count from 0, delays in ticks")
+	check(plan.fall_elapsed(fall, 0, 30, 99) == -1 and plan.fall_elapsed(fall, 1, 3, 99) == -1, "nothing falls before its quake and its delay")
+	check(plan.fall_elapsed(fall, 1, 12, 99) == 7 and plan.fall_elapsed(fall, 2, 0, 99) == 99, "it falls after the delay and lies after a later quake")
+
+
+func test_quake_data_is_checked() -> void:
+	check(Content.validate().is_empty(), "levels.json with quakes passes the check: %s" % [Content.validate()])
+	var broken := {"list": [{"second": 14, "strength": 1}, {"second": 6, "strength": 2}], "repeat_every_seconds": -1,
+		"falls": [{"kind": "lamp", "lamp": 9, "quake": 1, "to_row": 12}, {"kind": "rock", "quake": 3}]}
+	var problems := QuakePlan.problems(broken, "level_x", 6)
+	# Late second, strength 2, negative repeat, lamp 9, kind rock, quake 3, no to_row.
+	check(problems.size() == 7, "seven problems are caught: %s" % [problems])
+
+
+func test_level_01_quake_drops_the_lamp_and_shift_lifts_it_back_without_a_jump() -> void:
+	var room := await _load()
+	var time: RoomTime = room.get_node("RoomTime")
+	var quakes: Quakes = room.get_node("Quakes")
+	var light: WorldLight = room.get_node("WorldLight")
+	var lamp := 2
+	check(quakes.lamp_fall(lamp).get("drop") == 0.0, "at the start the third lamp hangs")
+	var shook := false
+	while time.world_seconds() < 6.4:
+		await _ticks(1)
+		shook = shook or quakes.shake_amount() > 0.0
+	check(shook and quakes.lamp_fall(lamp)["drop"] == 0.0, "the weak quake at 6 s shakes the room but drops nothing")
+	var lit := light.lights[lamp].energy
+	var drops: Array[float] = []
+	while time.world_seconds() < 16.5:
+		await _ticks(1)
+		drops.append(float(quakes.lamp_fall(lamp)["drop"]))
+	check(quakes.lamp_fall(lamp)["drop"] == 1.0 and quakes.lamp_fall(lamp)["shatter"] == 1.0, "after 14 s the lamp lies broken on the floor")
+	check(light.lights[lamp].energy < 0.001 and lit > 0.0, "and its island of light is gone")
+	check(_largest_step(drops) < 0.2, "it falls without a jump, largest step %.2f" % _largest_step(drops))
+	Input.action_press("rewind")
+	var back: Array[float] = []
+	while time.world_seconds() > 12.0:
+		await _ticks(1)
+		back.append(float(quakes.lamp_fall(lamp)["drop"]))
+	check(back.size() > 20 and _largest_step(back) < 0.2, "under Shift it flies back up without a jump, largest step %.2f" % _largest_step(back))
+	check(quakes.lamp_fall(lamp)["drop"] == 0.0 and light.lights[lamp].energy > 0.0, "before 14 s it hangs and shines again")
+	Input.action_release("rewind")
+	while time.world_seconds() < 16.5:
+		await _ticks(1)
+	check(quakes.lamp_fall(lamp)["drop"] == 1.0, "released, the recorded quake drops it again (rule A)")
+	await _free(room)
+
+
+func _largest_step(values: Array[float]) -> float:
+	var largest := 0.0
+	for i in range(1, values.size()):
+		largest = maxf(largest, absf(values[i] - values[i - 1]))
+	return largest
+
+
+func test_level_01_world_timer_and_sparking_wire() -> void:
+	check(WorldTimer.text_of(14.23) == "WORLD 00:14.2" and WorldTimer.text_of(75.0) == "WORLD 01:15.0", "the timer reads WORLD mm:ss.t")
+	check(WorldTimer.text_of(-1.0) == "WORLD 00:00.0", "it never shows less than zero")
+	var room := await _load()
+	var time: RoomTime = room.get_node("RoomTime")
+	var timer: WorldTimer = room.get_node("WorldTimer")
+	await _ticks(90)
+	check(timer.label.text == WorldTimer.text_of(time.world_seconds()), "the timer shows the room's world time: %s" % timer.label.text)
+	var wire: SparkingWire = room.get_node("SparkingWire")
+	check(wire.sparks != null and wire.sparks.preset == "sparks", "the torn wire sparks with the sparks preset")
+	await _free(room)

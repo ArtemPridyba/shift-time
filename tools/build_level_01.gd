@@ -59,6 +59,11 @@ const ENTRANCE_CELLS := Rect2i(1, 10, 1, 2)
 ## test). Centres, in cells. Both are two cells wide (D112).
 ## The factory clock hangs on the column after the shutter, over her head.
 const CLOCK_CELL := Vector2(13.55, 9.5)
+## The torn cable that sparks (Д4): hangs from the truss here, its end this far
+## below, the sparks die on the upper floor.
+const WIRE_CELL := Vector2(8.6, 6.6)
+const WIRE_END := Vector2(14.0, 84.0)
+const FLOOR_ROW := 12
 ## The beacon sits on the wall by the exit door's upper left corner, from the
 ## door's foot: over the door there is no room under the truss.
 const BEACON_FROM_DOOR := Vector2(-66.0, -118.0)
@@ -169,6 +174,16 @@ func _initialize() -> void:
 	clock.name = "Clock"
 	clock.position = CLOCK_CELL * CELL
 	_own(root, clock)
+	# Quakes of world time (D127): they shake the room and drop a lamp and plaster.
+	var quakes := Quakes.new()
+	quakes.name = "Quakes"
+	_own(root, quakes)
+	var wire := SparkingWire.new()
+	wire.name = "SparkingWire"
+	wire.position = WIRE_CELL * CELL
+	wire.end = WIRE_END
+	wire.floor_y = FLOOR_ROW * CELL - wire.position.y
+	_own(root, wire)
 
 	var player: Node2D = (load("res://objects/player.tscn") as PackedScene).instantiate()
 	_own(root, player)

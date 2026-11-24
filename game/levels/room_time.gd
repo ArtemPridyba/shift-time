@@ -53,13 +53,14 @@ func _ready() -> void:
 	world.run_prelude(objects, _prelude_ticks, _prelude_events)
 
 
-## The world time the room shows, in world seconds (D96): the tick of the
-## frame at the cursor. It runs back under Shift and stands at frame 0; the
-## clock and the beacon of a level read it (task Д4). 0 before the first tick.
+## The world time the room shows, in world seconds (D96): the world tick
+## (`world_tick`, the still ticks at the head included, D56), so it runs on
+## while the room stands. It runs back under Shift and stands at frame 0; the
+## clock, the beacon and the WORLD timer read it (task Д4). 0 before the first tick.
 func world_seconds() -> float:
 	if world == null or world.timeline.cursor() < 0:
 		return 0.0
-	var tick := world.timeline.tick_of(world.timeline.cursor())
+	var tick := world.timeline.world_tick()
 	if _world_ticks_per_second <= 0.0:
 		_world_ticks_per_second = Content.world_ticks_per_second(Content.time())
 	return maxf(float(tick), 0.0) / _world_ticks_per_second

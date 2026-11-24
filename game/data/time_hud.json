@@ -40,5 +40,16 @@
 	"audio": {
 		"forward": "",
 		"rewind": ""
+	},
+	"world_timer": {
+		"_about": "The world-time timer at the top left of every level (Д4): WORLD 00:14.2, world seconds of the room (D96), counting back under Shift. Not the time colour: that belongs to the heroine (D60).",
+		"show": true,
+		"x_px": 22,
+		"y_px": 16,
+		"font_px": 20,
+		"outline_px": 4,
+		"color": "#d8d0c0",
+		"outline": "#0b0a09",
+		"alpha": 0.85
 	}
 }

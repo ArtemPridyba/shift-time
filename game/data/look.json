@@ -208,6 +208,43 @@
       "turn_seconds": 1.6,
       "energy": 0.8,
       "radius_px": 150
+    },
+    "quake": {
+      "_about": "A quake of world time (Д4): the camera shakes shake_px at strength 1 for shake_seconds at shake_hz, the hanging lamps swing swing_degrees, dust_count specks fall from the ceiling for dust_seconds; what falls (quakes.falls of a level) takes fall_seconds to land, a lamp then shatters for shatter_seconds into lamp_shards pieces; a lump of plaster is lump_px wide. Seconds are world seconds.",
+      "shake_px": 7,
+      "shake_seconds": 1.4,
+      "shake_hz": 9,
+      "swing_degrees": 7,
+      "fall_seconds": 0.8,
+      "shatter_seconds": 0.6,
+      "dust_count": 36,
+      "dust_seconds": 2.2,
+      "lump_px": 30,
+      "lamp_shards": 7,
+      "dust_color": "#b9ad98"
+    },
+    "wire": {
+      "_about": "A torn cable that sparks (Д4): its sparks are the particle preset sparks.",
+      "width_px": 3,
+      "color": "#1d1a18",
+      "end_color": "#b8733c"
+    },
+    "lever": {
+      "_about": "Signal-yellow lever from the kit (D65): the base picture base_px high on the floor, the handle handle_px long turning angle_degrees either way on a pivot pivot_from_top of the base below its top.",
+      "base_px": 52,
+      "handle_px": 46,
+      "pivot_from_top": 6,
+      "angle_degrees": 32
+    },
+    "button": {
+      "_about": "Signal-yellow floor button from the kit: base base_px wide, cap cap_px wide on top, pressed it sinks pressed_px.",
+      "base_px": 52,
+      "cap_px": 36,
+      "pressed_px": 9
+    },
+    "crate": {
+      "_about": "Signal-yellow crate from the kit, size_px a side; for the crate object of a later level.",
+      "size_px": 64
     }
   },
   "pipe": {
@@ -292,6 +329,11 @@
       "clock": "res://assets/art/kit/clock.png",
       "clock_hand_hour": "res://assets/art/kit/clock_hand_hour.png",
       "clock_hand_minute": "res://assets/art/kit/clock_hand_minute.png",
+      "lever_base": "res://assets/art/kit/lever_base.png",
+      "lever_handle": "res://assets/art/kit/lever_handle.png",
+      "button_base": "res://assets/art/kit/button_base.png",
+      "button_cap": "res://assets/art/kit/button_cap.png",
+      "crate": "res://assets/art/kit/crate.png",
       "stairs": ""
     },
     "brick_px": [28, 10],
