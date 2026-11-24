@@ -74,7 +74,7 @@ const PLATFORM_WIDTH_CELLS := 2
 const PLATFORM_1_CENTRE := Vector2(15.0, 12.0)
 const PLATFORM_1_TRAVEL := Vector2(6.0, 0.0)
 const PLATFORM_2_CENTRE := Vector2(23.0, 9.0)
-const PLATFORM_2_TRAVEL := Vector2(0.0, 5.0)
+const PLATFORM_2_TRAVEL := Vector2(0.0, 3.0)
 
 
 func _initialize() -> void:

@@ -69,7 +69,7 @@ position = Vector2(1472, 592)
 collision_mask = 0
 script = ExtResource("9_685d6")
 object_id = "platform_2"
-travel = Vector2(0, 320)
+travel = Vector2(0, 192)
 width = 128.0
 track = "rack"
 
