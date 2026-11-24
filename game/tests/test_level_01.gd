@@ -160,9 +160,10 @@ func test_level_01_platform_1_has_left_and_platform_2_has_started_to_sink() -> v
 	await _free(room)
 
 
-## Platform 2 passes the level of platform 1's end at the very tick platform 1
-## arrives there, right beside it, and sinks on past it: the player has nothing
-## to wait for and sees the way up leave (task 3.2, 16.11.2026).
+## Platform 2 comes down to the level of platform 1's end at the very tick
+## platform 1 arrives there, right beside it, and stops there (Artem's design,
+## 24.11.2026): the only way onto it is from platform 1; from the floor of the
+## pit it hangs too high to jump onto.
 func test_level_01_platform_2_is_level_with_platform_1_when_it_arrives() -> void:
 	var room := await _load()
 	var first: MovingPlatform = room.get_node("Platform1")
@@ -175,7 +176,13 @@ func test_level_01_platform_2_is_level_with_platform_1_when_it_arrives() -> void
 	var between := (second_then.x - width / 2.0) - (first_end.x + width / 2.0)
 	check(absf(between) < 1.0, "platform 2 stands %.1f px from the end of platform 1, it must be beside it" % between)
 	var bottom := second.position_at(second.once_last_phase())
-	check(bottom.y >= first_end.y + 2.0 * 64.0, "platform 2 sinks at least two cells below platform 1's level, ends at y %.0f" % bottom.y)
+	check(absf(bottom.y - first_end.y) < 1.0, "platform 2 stops at platform 1's level, ends at y %.0f" % bottom.y)
+	var params := Content.player()
+	var jump_height := pow(float(params["jump_velocity"]), 2.0) / (2.0 * float(params["gravity"]))
+	var pit_floor := 15.0 * 64.0
+	var board := float(((second.get_node("CollisionShape2D") as CollisionShape2D).shape as RectangleShape2D).size.y)
+	var reach := pit_floor - (bottom.y - board / 2.0)
+	check(reach > jump_height + 32.0, "from the pit floor platform 2 is out of reach: its top is %.0f px up, a jump %.0f px" % [reach, jump_height])
 	check(second.position_at(arrival - 120).y < first_end.y - 64.0, "platform 2 is clearly above platform 1's level two seconds before")
 	check(second.once and first.once, "both platforms of level 01 ride once")
 	await _free(room)
