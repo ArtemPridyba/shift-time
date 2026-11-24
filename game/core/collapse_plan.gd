@@ -13,9 +13,11 @@ extends RefCounted
 ## its sloping rail; the lamps over the rail fall as it passes under them.
 ## Act 3, from the crane's arrival at the end of the rail: the third quake, the
 ## crane sags and falls, the ceiling comes down in chunks, lamps fall among
-## them still shining, and for a while the world runs slow (variant A: only the
-## world, never the heroine). Act 3 is counted on a slowed clock: `slow_ticks`
-## turns real ticks since the arrival into ticks of the world.
+## them still shining, an explosion flares up in the background (`blast`), and
+## for a while the world runs slow. Act 3 is counted on a slowed clock:
+## `slow_ticks` turns real ticks since the arrival into ticks of the world. The
+## heroine slows down too, less than the world (`heroine_tempo`, D148): her
+## clock is the engine's time scale, which `Collapse` sets from `slowness`.
 ##
 ## Data: `collapse` of the level's entry in data/levels.json:
 ## { "quake_seconds": act 1's quake after the room's start,
@@ -33,7 +35,10 @@ extends RefCounted
 ##       "fall_second" after act 3's quake, "fall_seconds"};
 ##   "slow": {"from_seconds" after act 3's quake, "ease_seconds", "tempo",
 ##       "hold_seconds"}: the world's tempo eases down to `tempo`, holds, eases
-##       back (`slow_ticks`); these seconds run on the heroine's clock }.
+##       back (`slow_ticks`); these seconds count ticks, not the heroine's
+##       slowed clock; "heroine_tempo": how fast she moves at the slowest};
+##   "blast": {"at": [x, row] in cells, "seconds" it burns on act 3's clock,
+##       "radius_px", "energy", "color"} — the explosion of act 3, look only }.
 ## Seconds are of the world clock (D96). Lamp fall and shatter seconds:
 ## `kit_objects.quake` in look.json; the shake: `kit_objects.collapse`.
 
@@ -66,6 +71,13 @@ var slow_from := 0
 var slow_ease := 1
 var slow_hold := 0
 var tempo := 1.0
+var heroine_tempo := 1.0
+## The explosion of act 3 (look only): where, how long, how big and bright.
+var blast_at := Vector2.ZERO
+var blast_ticks := 1
+var blast_radius := 400.0
+var blast_energy := 2.0
+var blast_color := Color("#ff8a3a")
 var lamp_fall_ticks := 1
 var shatter_ticks := 1
 var shake_ticks := 1
@@ -108,6 +120,15 @@ static func from_data(data: Variant, ticks_per_second: float, quake: Dictionary,
 	plan.slow_ease = maxi(ticks.call(slow.get("ease_seconds", 0.5)), 1)
 	plan.slow_hold = ticks.call(slow.get("hold_seconds", 0.0))
 	plan.tempo = clampf(float(slow.get("tempo", 1.0)), 0.01, 1.0)
+	plan.heroine_tempo = clampf(float(slow.get("heroine_tempo", 1.0)), 0.05, 1.0)
+	var blast: Dictionary = d.get("blast", {}) if d.get("blast", {}) is Dictionary else {}
+	var at: Variant = blast.get("at", [0, 0])
+	if at is Array and (at as Array).size() == 2:
+		plan.blast_at = Vector2(float(at[0]), float(at[1]))
+	plan.blast_ticks = maxi(ticks.call(blast.get("seconds", 1.0)), 1)
+	plan.blast_radius = float(blast.get("radius_px", 400.0))
+	plan.blast_energy = float(blast.get("energy", 2.0))
+	plan.blast_color = Color.from_string(str(blast.get("color", "#ff8a3a")), Color("#ff8a3a"))
 	plan.shatter_ticks = maxi(ticks.call(quake.get("shatter_seconds", 0.6)), 1)
 	plan.shake_ticks = maxi(ticks.call(look.get("shake_seconds", 1.2)), 1)
 	plan.clock_end = plan.quake_tick + plan.shake_ticks
@@ -207,6 +228,31 @@ func slowness(ride: int) -> float:
 	if r < a + e + h:
 		return 1.0
 	return 1.0 - (r - a - e - h) / e
+
+
+## How fast the heroine moves now, for the engine's time scale: 1 normal …
+## `heroine_tempo` at the slowest.
+func heroine_scale(ride: int) -> float:
+	return lerpf(1.0, heroine_tempo, slowness(ride))
+
+
+## How far the explosion of act 3 has burnt: -1 before the third quake (and
+## after it has died out), else 0 … 1 on act 3's (slowed) clock.
+func blast_age(ride: int) -> float:
+	var t := act3(ride)
+	if t < 0.0 or t >= float(blast_ticks):
+		return -1.0
+	return t / float(blast_ticks)
+
+
+## How bright the explosion is now: a flash in the first tenth, then it dies.
+func blast_light(ride: int) -> float:
+	var age := blast_age(ride)
+	if age < 0.0:
+		return 0.0
+	if age < 0.1:
+		return age / 0.1
+	return 1.0 - (age - 0.1) / 0.9
 
 
 ## Ticks since piece `k` broke off, on its act's clock; < 0 while it hangs.
@@ -400,4 +446,18 @@ static func problems(data: Variant, where: String, lamp_count: int) -> PackedStr
 				errors.append("%s: 'collapse.slow.%s' must be a number from 0" % [where, key])
 		if not positive.call(s.get("ease_seconds")):
 			errors.append("%s: 'collapse.slow.ease_seconds' must be a number above 0" % where)
+		var h: Variant = s.get("heroine_tempo", 1.0)
+		if not (h is float or h is int) or float(h) < 0.05 or float(h) > 1.0:
+			errors.append("%s: 'collapse.slow.heroine_tempo' must be from 0.05 to 1" % where)
+	var blast: Variant = d.get("blast")
+	if blast != null:
+		var b: Dictionary = blast if blast is Dictionary else {}
+		var at: Variant = b.get("at")
+		if not at is Array or (at as Array).size() != 2:
+			errors.append("%s: 'collapse.blast.at' must be [x, row]" % where)
+		for key: String in ["seconds", "radius_px", "energy"]:
+			if not positive.call(b.get(key)):
+				errors.append("%s: 'collapse.blast.%s' must be a number above 0" % [where, key])
+		if not b.get("color") is String or not Color.html_is_valid(str(b.get("color"))):
+			errors.append("%s: 'collapse.blast.color' must be a colour" % where)
 	return errors

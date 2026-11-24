@@ -221,6 +221,8 @@ func test_level_05_the_chunks_make_a_falling_stair_to_the_exit() -> void:
 	check(onto_ledge >= 3 * TICKS_PER_SECOND, "and from the last chunk onto the exit ledge for 3 s at least, %d ticks" % onto_ledge)
 	collapse.restore_state({"clock": plan.clock_end, "ride": start})
 	check(collapse.slowness() == 1.0, "the world is at its slowest then")
+	check(plan.heroine_tempo < 1.0 and plan.heroine_tempo > plan.tempo, "she slows down too, less than the world")
+	check(is_equal_approx(Engine.time_scale, plan.heroine_tempo), "her clock runs at her slow tempo, %.2f" % Engine.time_scale)
 	check(collapse.piece_holds(FIRST_CHUNK), "a falling chunk holds her")
 	var act_3 := plan.lamps.filter(func(l: Dictionary) -> bool: return int(l["act"]) == 3)
 	check(act_3.size() == 2, "two lamps fall among the chunks")
@@ -239,7 +241,27 @@ func test_level_05_the_chunks_make_a_falling_stair_to_the_exit() -> void:
 	for one: Dictionary in act_3:
 		check(float(collapse.lamp_fall(int(one["lamp"]))["light"]) == 0.0, "lamp %d is broken at the bottom" % int(one["lamp"]))
 	check(collapse.crane_load_rect().position.y > ledge.y + 8.0 * CELL, "the crane has fallen into the pit")
+	check(Engine.time_scale == 1.0, "after the slow part her clock is back to normal")
+	collapse.restore_state({"clock": plan.clock_end, "ride": start})
 	await _free(room)
+	check(Engine.time_scale == 1.0, "leaving the level puts her clock back to normal")
+
+
+func test_collapse_plan_blast_flares_up_at_the_third_quake_and_dies() -> void:
+	var plan := _level_plan()
+	plan.aim(0.0, Vector2(100.0, 0.0), [])
+	var a := plan.arrival()
+	check(plan.blast_light(a - 1) == 0.0 and plan.blast_age(a - 1) < 0.0, "no explosion before the third quake")
+	var peak := 0.0
+	var last := 0
+	for r in range(a, plan.ride_end):
+		peak = maxf(peak, plan.blast_light(r))
+		if plan.blast_age(r) >= 0.0:
+			last = r
+	check(peak > 0.95, "it flashes at full light, %.2f" % peak)
+	check(plan.blast_light(plan.ride_end) == 0.0, "and dies out")
+	check(plan.act3(last) > plan.act3(a + plan.slow_from), "it is still burning when the world slows down")
+	check(plan.heroine_scale(a - 1) == 1.0 and plan.heroine_scale(plan.ride_end) == 1.0, "she moves at her own pace before and after")
 
 
 func test_level_05_a_fall_into_the_pit_starts_the_room_again() -> void:

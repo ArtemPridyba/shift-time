@@ -9,8 +9,11 @@ extends Node2D
 ## 2. her step onto the crane shakes the hall again: the crane breaks loose and
 ##    rides down its sloping rail, and the lamps over it fall as it passes.
 ## 3. at the end of the rail the third quake: the crane sags and falls, the
-##    ceiling comes down in chunks, two lamps fall among them still shining, and
-##    the world slows down while she climbs the falling chunks to the exit.
+##    ceiling comes down in chunks, two lamps fall among them still shining, an
+##    explosion flares up in the background, and the world slows down while she
+##    climbs the falling chunks to the exit. She slows down too, less than the
+##    world (D148): this node sets the engine's time scale, which slows her
+##    moves, her animation and the particles but not the ticks of the world.
 ##
 ## Every piece and the crane hold the heroine, except a lost one lying at the
 ## bottom of the pit and a crumbled one. Nothing crushes her: the world waits
@@ -54,6 +57,9 @@ var _ceiling_y := 256.0
 var _lamp_base: Array[Vector2] = []
 var _bodies: Array[AnimatableBody2D] = []
 var _crane_body: AnimatableBody2D
+## The explosion of act 3: its light on the room and its fireball (unshaded).
+var _blast_light: PointLight2D
+var _blast_glow: Node2D
 ## Pixels of the player's feet inside a piece that are standing, not crushing:
 ## the kit's margin plus the most a piece moves in one tick.
 var _carry_margin := 8.0
@@ -77,7 +83,29 @@ func _ready() -> void:
 	for rest in pieces:
 		_bodies.append(_body(rest.size))
 	_crane_body = _body(crane_rect.size)
+	var disc := KitTextures.soft_disc()
+	_blast_light = PointLight2D.new()
+	_blast_light.name = "BlastLight"
+	_blast_light.texture = disc
+	_blast_light.texture_scale = plan.blast_radius * 2.0 / float(disc.get_width())
+	_blast_light.color = plan.blast_color
+	_blast_light.position = plan.blast_at * WorldData.CELL
+	_blast_light.energy = 0.0
+	add_child(_blast_light)
+	_blast_glow = Node2D.new()
+	_blast_glow.name = "BlastGlow"
+	_blast_glow.show_behind_parent = true
+	var glow := CanvasItemMaterial.new()
+	glow.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+	glow.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_blast_glow.material = glow
+	_blast_glow.draw.connect(_draw_blast)
+	add_child(_blast_glow)
 	_show()
+
+
+func _exit_tree() -> void:
+	Engine.time_scale = 1.0
 
 
 func _body(size: Vector2) -> AnimatableBody2D:
@@ -264,6 +292,13 @@ func _show() -> void:
 	for k in _bodies.size():
 		_bodies[k].position = piece_rect(k).get_center()
 		(_bodies[k].get_child(0) as CollisionShape2D).set_deferred("disabled", not piece_holds(k))
+	# The heroine's clock: slower while the world is slow (D148).
+	var heroine := plan.heroine_scale(ride)
+	if Engine.time_scale != heroine:
+		Engine.time_scale = heroine
+	if _blast_light != null:
+		_blast_light.energy = plan.blast_energy * plan.blast_light(ride)
+		_blast_glow.queue_redraw()
 	if _crane_body != null:
 		_crane_body.position = crane_load_rect().get_center()
 		(_crane_body.get_child(0) as CollisionShape2D).set_deferred("disabled", plan.crane_down(ride))
@@ -302,6 +337,37 @@ func _draw_rail() -> void:
 	var stop_at := top + crane_travel + dir * (over * 0.5)
 	draw_rect(Rect2(stop_at - Vector2(stop_px / 2.0, 0.0), Vector2(stop_px, stop_px * 2.0)),
 		ObjectLook.color(ObjectLook.mech(), "yellow", Color("#d4a21e")).darkened(0.35))
+
+
+## The explosion of act 3 behind the falling ceiling: a fireball that swells
+## and dies, and embers flying out of it, all from act 3's recorded clock, so
+## under Shift it shrinks back into the wall.
+func _draw_blast() -> void:
+	var age := plan.blast_age(ride)
+	if age < 0.0:
+		return
+	var light := plan.blast_light(ride)
+	var at := plan.blast_at * WorldData.CELL
+	var r := plan.blast_radius * 0.35 * (0.35 + 0.65 * sqrt(age))
+	# Many thin layers from a dark red rim to a white core: a soft ball, no rings.
+	var rim := Color("#7a1e08")
+	var core := Color("#fff4d6")
+	var layers := 14
+	for i in layers:
+		var x := float(i) / float(layers - 1)
+		var c := rim.lerp(plan.blast_color, minf(x * 2.0, 1.0)).lerp(core, maxf(x * 2.0 - 1.0, 0.0))
+		c.a = light * 0.12 * (0.4 + x)
+		var wobble := Vector2(sin(float(i) * 2.1 + age * 3.0), cos(float(i) * 1.7)) * r * 0.05 * (1.0 - x)
+		_blast_glow.draw_circle(at + wobble, r * (1.0 - 0.85 * x), c)
+	var ember := Color("#ffb54a")
+	ember.a = minf(1.0, light * 1.5)
+	var fly := plan.blast_radius * 0.9 * age
+	for i in 18:
+		var angle := float(i) * TAU / 18.0 + sin(float(i) * 7.3) * 0.25
+		var speed := 0.6 + 0.4 * absf(sin(float(i) * 3.7))
+		var tip := at + Vector2(cos(angle), sin(angle)) * fly * speed + Vector2(0.0, age * age * 120.0)
+		var tail := tip - Vector2(cos(angle), sin(angle)) * (14.0 + 18.0 * light)
+		_blast_glow.draw_line(tail, tip, ember, 2.0, true)
 
 
 ## A hanging platform of act 1: a rusty I-beam on two chains; the one that
