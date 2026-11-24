@@ -57,6 +57,12 @@ func _add_world_timer() -> void:
 	add_child(timer)
 
 
+## In a level a fall into a pit open to the bottom is death (level 09, D135):
+## the room starts again, as after drowning or burning.
+func _on_fell() -> void:
+	restart()
+
+
 ## The reset key, drowning and burning bring the hero in again.
 func restart() -> void:
 	super.restart()

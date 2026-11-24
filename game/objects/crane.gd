@@ -16,6 +16,8 @@ extends Node2D
 ## Set by tests or read once from the level entry.
 var plan: CranePlan
 var _load: MovingPlatform
+## The collapse the slam into the stop sets off (`Collapse`), when the level has one.
+var _collapse: Collapse
 var _look := {}
 var _ceiling_y := 384.0
 var _rail := Rect2()
@@ -40,12 +42,24 @@ func lamp_fall(lamp: int) -> Dictionary:
 	_aim()
 	if plan == null or _load == null:
 		return {}
-	return plan.lamp_fall(lamp, _load.phase)
+	var fall := plan.lamp_fall(lamp, _load.phase)
+	if fall.is_empty() and _collapse != null:
+		return _collapse.lamp_fall(lamp)
+	return fall
 
 
-## The crane never swings a lamp; only `Quakes` do.
-func swing(_lamp: int) -> float:
-	return 0.0
+## True once the load has reached the stop at the end of the rail.
+func has_slammed() -> bool:
+	_aim()
+	return _load != null and _load.phase >= _load.once_last_phase()
+
+
+## A lamp swings while the hall shakes after the slam (`Collapse`).
+func swing(lamp: int) -> float:
+	if _collapse == null:
+		return 0.0
+	var amount := _collapse.shake_amount()
+	return deg_to_rad(ObjectLook.number(ObjectLook.of("quake"), "swing_degrees", 7.0)) * amount * sin(float(_collapse.since) * 0.17 + float(lamp) * 0.9)
 
 
 func _aim() -> void:
@@ -61,6 +75,8 @@ func _aim() -> void:
 	for child in room.get_children():
 		if child is MovingPlatform and (child as MovingPlatform).object_id == plan.load_id:
 			_load = child
+		if child is Collapse:
+			_collapse = child
 	if _load == null:
 		return
 	var layout := WorldData.layout(entry)
@@ -88,6 +104,10 @@ func _draw() -> void:
 		KitTextures.draw_across(self, beam, _rail)
 	else:
 		draw_rect(_rail, iron)
+	# The stop at the end of the rail the load slams into.
+	var stop := Rect2(Vector2(maxf(_rail.end.x - ObjectLook.number(_look, "rail_over_px", 64.0) + 12.0, _rail.position.x), _rail.end.y),
+		Vector2(ObjectLook.number(_look, "stop_px", 18.0), ObjectLook.number(_look, "stop_px", 18.0) * 2.0))
+	draw_rect(stop, ObjectLook.color(ObjectLook.mech(), "yellow", Color("#d4a21e")).darkened(0.35))
 	var x := _load.position.x
 	var hook := ObjectLook.picture("crane")
 	var size := Vector2(hook.get_size()) / ObjectLook.texel("crane") if hook != null else Vector2(20, 45)

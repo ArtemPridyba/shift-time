@@ -106,4 +106,6 @@ static func problems(data: Variant, where: String, lamp_count: int) -> PackedStr
 			continue
 		if int(one["lamp"]) < 0 or int(one["lamp"]) >= lamp_count:
 			errors.append("%s: 'lamp' must be a lamp of world.lamps (0..%d)" % [at, lamp_count - 1])
+	if data.has("collapse"):
+		errors.append_array(CollapsePlan.problems(data["collapse"], where, lamp_count))
 	return errors

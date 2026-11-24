@@ -116,17 +116,25 @@
 			"crane_load": { "cycle": "once", "speed": 120, "delay_seconds": 0.8 }
 		},
 		"crane": {
-			"_about": "The runaway crane of level 09 (card docs/levels/09.md): the load is the platform crane_load; its hook strikes a lamp of world.lamps when it comes within hook_lead_px of it, and the lamp falls to the floor row to_row. Fall and shatter seconds: kit_objects.quake in look.json. A test checks that the last lamp has shattered before the load stops.",
+			"_about": "The runaway crane of level 09 (card docs/levels/09.md): the load is the platform crane_load; its hook strikes a lamp of world.lamps when it comes within hook_lead_px of it, and the lamp falls to the row to_row (17: the bottom edge of the room, the floor of the pit; never below it, or the overview shows lamps falling out of the level). When the load slams into the stop at the end of the rail, the collapse (D135) begins: girders fall one by one from the stop towards the exit and land on stubs as a broken bridge, then after lamp_pause_seconds the lamps of collapse.lamps break one by one from the exit back towards the stop. Seconds of the world clock; fall and shatter seconds: kit_objects.quake in look.json.",
 			"load": "crane_load",
 			"hook_lead_px": 16,
 			"falls": [
-				{ "lamp": 0, "to_row": 14 },
-				{ "lamp": 1, "to_row": 14 },
-				{ "lamp": 2, "to_row": 14 }
-			]
+				{ "lamp": 0, "to_row": 17 },
+				{ "lamp": 1, "to_row": 17 }
+			],
+			"collapse": {
+				"lamps": [2, 3, 4, 5],
+				"to_row": 17,
+				"girder_first_seconds": 0.3,
+				"girder_every_seconds": 0.45,
+				"girder_fall_seconds": 0.5,
+				"lamp_pause_seconds": 1.5,
+				"lamp_every_seconds": 1.0
+			}
 		},
 		"world": {
-			"_about": "Level 09 in the Night shop (same kit and scale as level 01, D112): the hall is 6 cells high under the dark roof; the lower hall floor is row 14. darkness: this room is darker than the kit, the dark is the difficulty. The three lamps hang on the crane's way (radius_px: a wider island than the kit's, so lamp 1 lights pillar A) and fall when its hook strikes them (crane above).",
+			"_about": "Level 09 in the Night shop (same kit and scale as level 01, D112), 48 cells wide: the hall is 6 cells high under the dark roof; the pits are open to the bottom (a fall is death, D135). darkness: this room is darker than the kit, the dark is the difficulty. Lamps 1 and 2 hang over the crane's way and fall when its hook strikes them; lamps 3 to 6 hang over the pit between the girders and break in the collapse (crane above).",
 			"ceiling": 6,
 			"darkness": "#17171e",
 			"back": [
@@ -138,25 +146,38 @@
 				{ "kind": "column", "rect": [6.0, 6, 0.3, 8] },
 				{ "kind": "column", "rect": [13.0, 6, 0.3, 8] },
 				{ "kind": "column", "rect": [19.2, 6, 0.3, 8] },
-				{ "kind": "column", "rect": [25.4, 6, 0.3, 5] },
 				{ "kind": "rust", "rect": [16.0, 11.2, 1.3, 0.8] },
 				{ "kind": "cracks", "rect": [4.0, 8.6, 1.1, 0.8] },
 				{ "kind": "cracks", "rect": [23.0, 12.4, 1.1, 0.75] },
 				{ "kind": "plaster", "rect": [11.0, 12.2, 1.0, 1.0] },
 				{ "kind": "stain", "rect": [17.6, 12.6, 1.3, 0.9] },
-				{ "kind": "pipe", "rect": [27.4, 6, 0.18, 5] },
-				{ "kind": "pipe", "rect": [3.4, 6, 0.18, 4] }
+				{ "kind": "pipe", "rect": [3.4, 6, 0.18, 4] },
+				{ "kind": "window", "rect": [27.6, 7.3, 1.15, 3] },
+				{ "kind": "window", "rect": [35.3, 7.3, 1.15, 3] },
+				{ "kind": "window", "rect": [44.2, 7.3, 1.15, 2.2] },
+				{ "kind": "column", "rect": [25.0, 6, 0.3, 5] },
+				{ "kind": "column", "rect": [32.6, 6, 0.3, 8] },
+				{ "kind": "column", "rect": [39.2, 6, 0.3, 8] },
+				{ "kind": "column", "rect": [45.8, 6, 0.3, 5] },
+				{ "kind": "pipe", "rect": [42.6, 6, 0.18, 5] },
+				{ "kind": "soot", "rect": [36.8, 6.5, 1.8, 0.9] },
+				{ "kind": "cracks", "rect": [29.0, 8.4, 1.1, 0.8] }
 			],
 			"front": [
-				{ "kind": "bricks", "rect": [14.2, 13.78, 1.2, 0.22] },
-				{ "kind": "beam", "rect": [20.5, 13.84, 1.5, 0.16] }
+				{ "kind": "bricks", "rect": [14.2, 13.78, 1.2, 0.22] }
 			],
 			"lamps": [
-				{ "x": 11.5, "drop": 1.1, "radius_px": 420 },
-				{ "x": 17.0, "drop": 1.0 },
-				{ "x": 22.4, "drop": 1.1 }
+				{ "x": 13.5, "drop": 1.1, "radius_px": 360 },
+				{ "x": 17.6, "drop": 1.0 },
+				{ "x": 25.3, "drop": 1.1, "radius_px": 300 },
+				{ "x": 30.0, "drop": 1.0, "radius_px": 300 },
+				{ "x": 34.0, "drop": 1.1, "radius_px": 300 },
+				{ "x": 41.3, "drop": 1.0, "radius_px": 300 }
 			],
-			"ground": { "concrete": [[26, 11, 6, 6]], "roof": [[0, 0, 32, 6]] }
+			"ground": {
+				"concrete": [[21, 11, 4, 6], [27, 12, 1, 5], [31, 11, 1, 6], [35, 13, 1, 4], [38, 12, 1, 5], [42, 11, 6, 6]],
+				"roof": [[0, 0, 48, 6]]
+			}
 		},
 		"title": "09 Crane"
 	}

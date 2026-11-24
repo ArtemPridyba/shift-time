@@ -152,3 +152,10 @@ func test_slab_keeps_its_collision_and_draws_its_kind() -> void:
 			check(Vector2i(slab.front.texture.get_size()) == Vector2i(slab.front_rect().size.round()), "the %s front must fill the front face" % kind)
 		check(slab.size == Vector2(192, 48), "a slab must not change its collision rectangle")
 		slab.free()
+
+
+func test_look_data_is_read_once() -> void:
+	# The lamps ask look.json every frame while they fall; parsing it each
+	# time made the game stutter (24.11.2026).
+	check(is_same(Content.look(), Content.look()), "look.json is parsed once and kept")
+	check(KitTextures.piece("lamp") == KitTextures.piece("lamp"), "a kit picture is looked up once and kept")

@@ -1,20 +1,22 @@
 extends SceneTree
 ## Builds level 09 `levels/level_09.tscn` «Crane» (card docs/levels/09.md): a
-## room of 32x17 cells in the Night shop, sized to the heroine like level 01
+## room of 48x17 cells in the Night shop, sized to the heroine like level 01
 ## (D112): the hall is 6 cells high under the dark roof. She walks out into a
-## lit hall; at once a runaway overhead crane rides right and its hook strikes
-## the three lamps one by one before her eyes, so the hall goes dark (D130). Under Shift the crane rides back and
-## the light returns; at the start of history its load hangs by the pillar
-## over the lower hall. She stands on it, lets Shift go, and the crane carries
-## her across the hall to the exit ledge, striking the lamps on the way.
+## lit hall; at once a runaway overhead crane rides right, its hook strikes two
+## lamps, and its load slams into the stop at the end of the rail (D130). The
+## slam sets off the collapse (D135): girders fall from the roof onto the stubs
+## in the pit beyond as a broken bridge, then the lamps over the pit break, from
+## the exit back towards the stop. Under Shift everything goes back; at the
+## start of history the load hangs by pillar A. She stands on it, lets Shift go,
+## rides to ledge B and crosses the bridge in the dark; a short Shift lights
+## the nearest lamps while the girders still lie, a long one lifts the girders.
 ##
-## Left to right: the start floor (row 12), a gap of two cells, pillar A (two
-## cells), one cell to the load's start (one cell higher, row 11); under them
-## the lower hall (row 14), three cells down, with a step block back up to the
-## start. The load rides 14 cells right and stops flush with the exit ledge
-## (row 11), three cells above the lower hall floor: out of reach without the
-## crane. Timing and the strikes: `crane` and `objects` of the level's entry in
-## data/levels.json.
+## Left to right: the start floor (row 12), a pit of two cells, pillar A (two
+## cells), one cell to the load's start (one cell higher, row 11); the load
+## rides 9 cells over the pit and stops flush with ledge B (row 11). Beyond B
+## the pit with four stubs and the exit ledge (row 11). The pits are open to the
+## bottom: a fall is death. Timing: `crane` and `objects` of the level's entry
+## in data/levels.json.
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
 ##   godot --headless --path game --script $PWD/tools/build_level_09.gd
@@ -28,23 +30,23 @@ const SCENE_PATH := "res://levels/level_09.tscn"
 const LEVEL_ID := "level_09"
 
 const MAP := [
-	"################################",
-	"################################",
-	"################################",
-	"################################",
-	"################################",
-	"################################",
-	"#..............................#",
-	"#..............................#",
-	"#..............................#",
-	"#...........................EE.#",
-	"#...........................EE.#",
-	"#S........................######",
-	"#####..##.................######",
-	"######.##.................######",
-	"################################",
-	"################################",
-	"################################",
+	"################################################",
+	"################################################",
+	"################################################",
+	"################################################",
+	"################################################",
+	"################################################",
+	"#..............................................#",
+	"#..............................................#",
+	"#..............................................#",
+	"#...........................................EE.#",
+	"#...........................................EE.#",
+	"#S...................####......#..........######",
+	"#####..##............####..#...#......#...######",
+	"#####..##............####..#...#...#..#...######",
+	"#####..##............####..#...#...#..#...######",
+	"#####..##............####..#...#...#..#...######",
+	"#####..##............####..#...#...#..#...######",
 ]
 
 ## The doorway the hero walks out of (decoration only), in cells.
@@ -52,9 +54,17 @@ const ENTRANCE_CELLS := Rect2i(1, 10, 1, 2)
 ## The crane's load: where its top edge meets the grid at the start of history
 ## (the middle in x, the top surface at the row), how far it rides, in cells.
 const LOAD_CENTRE := Vector2(11.0, 11.0)
-const LOAD_TRAVEL := Vector2(14.0, 0.0)
+const LOAD_TRAVEL := Vector2(9.0, 0.0)
 const LOAD_WIDTH_CELLS := 2
 const LOAD_HEIGHT := 32.0
+## Where the girders of the collapse lie once fallen (cells: x, top row, width),
+## from the stop towards the exit; each rests on a stub of an old support (D135).
+const GIRDERS: Array[Rect2] = [
+	Rect2(25.75, 11.5, 3.5, 0.5),
+	Rect2(30.5, 10.5, 2.5, 0.5),
+	Rect2(34.75, 12.5, 2.0, 0.5),
+	Rect2(37.9, 11.5, 2.7, 0.5),
+]
 ## The beacon sits on the wall by the exit door's upper left corner (as in 01).
 const BEACON_FROM_DOOR := Vector2(-66.0, -118.0)
 
@@ -111,6 +121,15 @@ func _initialize() -> void:
 	load_platform.width = float(LOAD_WIDTH_CELLS * CELL)
 	load_platform.position = Vector2(LOAD_CENTRE.x * CELL, LOAD_CENTRE.y * CELL + LOAD_HEIGHT / 2.0)
 	_own(root, load_platform)
+
+	# The collapse the load's slam into the stop sets off (D135).
+	var collapse := Collapse.new()
+	collapse.name = "Collapse"
+	var rests: Array[Rect2] = []
+	for g in GIRDERS:
+		rests.append(Rect2(g.position * CELL, g.size * CELL))
+	collapse.girders = rests
+	_own(root, collapse)
 
 	var ground := WorldGround.new()
 	ground.name = "WorldGround"

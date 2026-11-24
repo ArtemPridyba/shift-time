@@ -253,7 +253,18 @@
       "cable_px": 2,
       "cable_color": "#2a2622",
       "sling_inset_px": 10,
-      "hook_eye_px": 6
+      "hook_eye_px": 6,
+      "stop_px": 18
+    },
+    "collapse": {
+      "_about": "The collapse of level 09 (D135): girders hang hang_below_ceiling_px under the roof on chains (chain colour), torn stubs stub_px long stay once they fall; an I-beam has flanges flange_px thick and a rust stain. The slam shakes the camera shake_px for shake_seconds.",
+      "hang_below_ceiling_px": 40,
+      "stub_px": 18,
+      "flange_px": 6,
+      "chain": "#3a4048",
+      "rust": "#7a3a22",
+      "shake_seconds": 1.2,
+      "shake_px": 8
     }
   },
   "pipe": {

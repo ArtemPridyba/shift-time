@@ -134,9 +134,18 @@ static func art() -> Dictionary:
 
 
 ## The look of the Night Hall (task Д2): particle presets and mechanism colours.
+## look.json, read once: the lamps, the crane and the world ask it while they
+## draw, every frame while something falls, and parsing it each time made the
+## game stutter (24.11.2026). Nobody changes it while the game runs; treat the
+## Dictionary as read-only.
+static var _look: Variant = null
+
+
 static func look() -> Dictionary:
-	var data: Variant = load_json(LOOK_PATH)
-	return data if data is Dictionary else {}
+	if _look == null:
+		var data: Variant = load_json(LOOK_PATH)
+		_look = data if data is Dictionary else {}
+	return _look
 
 
 static func look_particles() -> Dictionary:
@@ -702,7 +711,8 @@ const LOOK_KIT_OBJECTS := {
 	"lever": ["base_px", "handle_px", "pivot_from_top", "angle_degrees"],
 	"button": ["base_px", "cap_px", "pressed_px"],
 	"crate": ["size_px"],
-	"crane": ["rail_px", "rail_over_px", "cable_px", "cable_color", "sling_inset_px", "hook_eye_px"],
+	"crane": ["rail_px", "rail_over_px", "cable_px", "cable_color", "sling_inset_px", "hook_eye_px", "stop_px"],
+	"collapse": ["hang_below_ceiling_px", "stub_px", "flange_px", "chain", "rust", "shake_seconds", "shake_px"],
 }
 const LOOK_PIPE_NUMBERS: Array[String] = ["feed_width_px", "main_width_px", "wall_px", "flange_every_px", "flange_px", "dash_length_px", "dash_gap_px", "dash_speed_px"]
 const LOOK_MECH_COLORS: Array[String] = ["iron", "iron_light", "iron_shadow", "iron_dark", "outline", "valve", "valve_light", "rust", "yellow"]

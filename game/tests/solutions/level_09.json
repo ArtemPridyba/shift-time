@@ -11,6 +11,18 @@
 		{ "actions": ["rewind", "move_right"], "ticks": 20 },
 		{ "actions": ["rewind"], "ticks": 30 },
 		{ "actions": [], "ticks": 420 },
-		{ "actions": ["move_right"], "ticks": 200 }
+		{ "actions": ["move_right"], "ticks": 53 },
+		{ "actions": ["move_right", "jump"], "ticks": 20 },
+		{ "actions": ["move_right"], "ticks": 65 },
+		{ "actions": ["move_right", "jump"], "ticks": 20 },
+		{ "actions": ["move_right"], "ticks": 35 },
+		{ "actions": ["move_right", "jump"], "ticks": 20 },
+		{ "actions": ["move_right"], "ticks": 20 },
+		{ "actions": ["move_right"], "ticks": 13 },
+		{ "actions": ["move_right", "jump"], "ticks": 20 },
+		{ "actions": ["move_right"], "ticks": 30 },
+		{ "actions": ["move_right", "jump"], "ticks": 20 },
+		{ "actions": ["move_right"], "ticks": 62 },
+		{ "actions": [], "ticks": 200 }
 	]
 }

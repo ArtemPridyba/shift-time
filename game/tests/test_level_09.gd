@@ -1,6 +1,7 @@
 extends RefCounted
-## Tests of level 09 «Crane» (card docs/levels/09.md): a runaway crane struck
-## the lamps in the prelude, so the room starts dark. The strikes come from the
+## Tests of level 09 «Crane» (card docs/levels/09.md): a runaway crane strikes
+## two lamps, slams into its stop, and the collapse (D135) drops the girders as
+## a bridge over the pit and breaks the lamps over it, so the room goes dark. The strikes come from the
 ## load's recorded phase (`CranePlan`): under Shift the load rides back and the
 ## lamps fly up, after Shift is released the same strikes play again. The
 ## solutions in tests/solutions/level_09*.json play the level.
@@ -60,79 +61,184 @@ func test_world_darkness_and_lamp_radius_are_checked() -> void:
 		"a lamp radius of 0 is reported")
 
 
-func test_level_09_lamps_fall_in_front_of_her_at_the_start() -> void:
+func test_collapse_plan_girders_fall_first_then_lamps_from_the_exit_back() -> void:
+	var plan := CollapsePlan.from_data({"lamps": [2, 3, 4], "to_row": 18, "girder_first_seconds": 0.5,
+		"girder_every_seconds": 0.5, "girder_fall_seconds": 0.5, "lamp_pause_seconds": 1.0,
+		"lamp_every_seconds": 1.0}, 10.0, {"fall_seconds": 0.5, "shatter_seconds": 0.5}, 3)
+	check(plan.girder_start(0) < plan.girder_start(1) and plan.girder_start(1) < plan.girder_start(2),
+		"the girders fall one by one from the stop towards the exit")
+	check(plan.girder_drop(0, -1) == 0.0 and plan.girder_drop(0, plan.girder_start(0)) == 0.0 \
+		and plan.girder_drop(0, plan.girder_start(0) + plan.girder_fall) == 1.0, "a girder hangs, then lies")
+	check(plan.lamp_hit(2) < plan.lamp_hit(1) and plan.lamp_hit(1) < plan.lamp_hit(0),
+		"the lamps break from the exit back towards the stop")
+	check(plan.lamp_hit(2) - plan.girders_landed() == plan.lamp_pause, "a pause between the last girder and the first lamp")
+	check(plan.lamp_fall(7, 100).is_empty(), "a lamp the collapse never touches has no fall")
+	check(float(plan.lamp_fall(2, -1)["light"]) == 1.0, "before the slam the lamps shine")
+	var down := plan.lamp_fall(2, plan.last_tick())
+	check(float(down["light"]) == 0.0 and float(down["shatter"]) == 1.0, "at the end every lamp lies broken")
+
+
+func test_collapse_data_is_checked() -> void:
+	var good := {"lamps": [0], "to_row": 18, "girder_first_seconds": 0.3, "girder_every_seconds": 0.4,
+		"girder_fall_seconds": 0.5, "lamp_pause_seconds": 1, "lamp_every_seconds": 1}
+	check(CollapsePlan.problems(good, "x", 1).is_empty(), "good collapse data has no problems")
+	var bad_lamp := good.duplicate(true)
+	bad_lamp["lamps"] = [3]
+	check(not CollapsePlan.problems(bad_lamp, "x", 1).is_empty(), "a lamp the world does not have is reported")
+	var bad_number := good.duplicate(true)
+	bad_number["lamp_every_seconds"] = 0
+	check(not CollapsePlan.problems(bad_number, "x", 1).is_empty(), "a zero time is reported")
+	var crane := {"load": "l", "hook_lead_px": 0, "falls": [{"lamp": 0, "to_row": 1}], "collapse": bad_lamp}
+	check(not CranePlan.problems(crane, "x", 1).is_empty(), "the crane data check covers its collapse")
+
+
+func test_level_09_the_crane_slams_and_the_hall_collapses_before_her_eyes() -> void:
 	var room := await _load()
 	var crane := room.get_node("Crane") as Crane
+	var collapse := room.get_node("Collapse") as Collapse
 	var load_platform := crane.load_platform()
 	var light := room.get_node("WorldLight") as WorldLight
-	check(load_platform != null, "the crane finds its load")
-	check(load_platform.phase < load_platform.once_last_phase(), "the crane is still on its way when she walks in")
+	check(load_platform != null and load_platform.phase < load_platform.once_last_phase(), "the crane is still on its way when she walks in")
 	await _ticks(2)
-	check(light.lights[2].energy > 0.5, "the last lamp still shines when she walks in, %.2f" % light.lights[2].energy)
-	# The lamps go out one by one: never two of them in the same moment.
-	var out_at: Array[int] = [-1, -1, -1]
-	for t in 12 * 60:
+	for i in light.lights.size():
+		check(light.lights[i].energy > 0.5, "lamp %d still shines when she walks in" % i)
+	var out_at: Array[int] = [-1, -1, -1, -1, -1, -1]
+	var landed_at := -1
+	for t in 16 * 60:
 		await _tree.physics_frame
-		for i in 3:
+		if landed_at < 0 and collapse.girder_lies(collapse.girders.size() - 1):
+			landed_at = t
+		for i in out_at.size():
 			if out_at[i] < 0 and light.lights[i].energy < 0.01:
 				out_at[i] = t
-	for i in 3:
+	for i in out_at.size():
 		check(out_at[i] >= 0, "lamp %d goes out while she watches" % i)
-	check(out_at[0] < out_at[1] and out_at[1] < out_at[2], "the lamps go out one by one, ticks %s" % [out_at])
-	check(out_at[2] < 10 * 60, "the room is dark within 10 s, at tick %d" % out_at[2])
-	check(load_platform.phase == load_platform.once_last_phase(), "then the crane stands at the exit ledge")
+	check(out_at[0] < out_at[1], "the hook strikes lamps 1 and 2 in turn, %s" % [out_at])
+	check(landed_at > out_at[1], "the collapse starts after the slam, girders landed at %d" % landed_at)
+	check(out_at[5] > landed_at and out_at[5] < out_at[4] and out_at[4] < out_at[3] and out_at[3] < out_at[2],
+		"then the lamps over the pit go out from the exit back towards the stop, %s" % [out_at])
+	for k in collapse.girders.size():
+		check(collapse.girder_lies(k), "girder %d lies on its stub" % k)
 	await _free(room)
 
 
-func test_level_09_last_lamp_shatters_before_the_load_stops() -> void:
+func test_level_09_hook_strikes_before_the_slam() -> void:
 	var room := await _load()
 	var crane := room.get_node("Crane") as Crane
 	var load_platform := crane.load_platform()
 	check(crane.plan.last_phase() >= 0 and crane.plan.last_phase() <= load_platform.once_last_phase(),
-		"every lamp has shattered before the load stops: the head stands still (D56)")
-	var hits: Array[int] = []
-	for fall: Dictionary in crane.plan.falls:
-		hits.append(int(fall["hit"]))
-	check(hits[0] < hits[1] and hits[1] < hits[2], "the hook strikes lamps 1, 2, 3 in turn, %s" % [hits])
+		"both lamps over the crane's way have shattered before the load slams into the stop")
 	await _free(room)
 
 
-func test_level_09_shift_brings_the_light_back_and_release_plays_the_strikes_again() -> void:
+func test_level_09_shift_brings_everything_back_and_release_plays_it_again() -> void:
 	var room := await _load()
 	var light := room.get_node("WorldLight") as WorldLight
+	var collapse := room.get_node("Collapse") as Collapse
 	var load_platform := (room.get_node("Crane") as Crane).load_platform()
+	await _ticks(14 * 60)
 	Input.action_press("rewind")
-	await _ticks(6 * 60)
-	check(load_platform.phase == 0, "under Shift the load rides back to the start of history")
+	await _ticks(14 * 60)
+	check(load_platform.phase == 0 and collapse.since < 0, "under Shift the load rides back to the start of history")
 	for i in light.lights.size():
-		check(light.lights[i].energy > 0.5, "under Shift lamp %d shines again, %.2f" % [i, light.lights[i].energy])
+		check(light.lights[i].energy > 0.5, "under Shift lamp %d shines again" % i)
 	Input.action_release("rewind")
-	await _ticks(12 * 60)
-	check(load_platform.phase == load_platform.once_last_phase(), "after release the load rides to the end again")
+	await _ticks(14 * 60)
+	check(load_platform.phase == load_platform.once_last_phase(), "after release the load slams into the stop again")
 	for i in light.lights.size():
-		check(light.lights[i].energy < 0.01, "after release lamp %d is struck again (rule A)" % i)
+		check(light.lights[i].energy < 0.01, "after release lamp %d breaks again (rule A)" % i)
+	for k in collapse.girders.size():
+		check(collapse.girder_lies(k), "and girder %d lies again" % k)
 	await _free(room)
 
 
-func test_level_09_the_parked_load_is_out_of_reach_without_the_crane() -> void:
+func test_level_09_a_girder_holds_her_only_while_it_lies() -> void:
+	var room := await _load()
+	var collapse := room.get_node("Collapse") as Collapse
+	await _ticks(2)
+	var shape := collapse.get_child(0).get_child(0) as CollisionShape2D
+	check(shape.disabled, "a hanging girder is not solid")
+	await _ticks(14 * 60)
+	check(not shape.disabled, "a girder lying on its stub is solid")
+	check(collapse.girder_rect(0) == collapse.girders[0], "it lies where the level put it")
+	await _free(room)
+
+
+func test_level_09_a_short_shift_lights_the_bridge_a_long_one_lifts_it() -> void:
+	var room := await _load()
+	var collapse := room.get_node("Collapse") as Collapse
+	var light := room.get_node("WorldLight") as WorldLight
+	var player: Player = room.get_node("Player")
+	await _ticks(14 * 60)
+	# She stands safe on ledge B by the stop.
+	player.respawn(Vector2(22.5 * CELL, 11.0 * CELL))
+	await _ticks(10)
+	check(light.lights[2].energy < 0.01, "the bridge is dark")
+	Input.action_press("rewind")
+	await _ticks(90)
+	check(light.lights[2].energy > 0.5, "a short Shift brings back the lamp nearest the stop, %.2f" % light.lights[2].energy)
+	for k in collapse.girders.size():
+		check(collapse.girder_lies(k), "while girder %d still lies" % k)
+	var last := collapse.girders.size() - 1
+	var lifted := false
+	for t in 8 * 60:
+		await _tree.physics_frame
+		if not collapse.girder_lies(last):
+			lifted = true
+			check(collapse.girder_lies(0), "the last girder to fall flies back up first")
+			break
+	check(lifted, "a long Shift lifts the girders")
+	Input.action_release("rewind")
+	await _free(room)
+
+
+func test_level_09_a_fall_into_the_pit_starts_the_room_again() -> void:
+	var room := await _load()
+	var load_platform := (room.get_node("Crane") as Crane).load_platform()
+	var player: Player = room.get_node("Player")
+	await _ticks(6 * 60)
+	check(load_platform.phase > 60, "the crane has gone on")
+	player.respawn(Vector2(15.0 * CELL, 13.0 * CELL))
+	await _ticks(90)
+	check(player.global_position.x < 4.0 * CELL, "after the fall she is back at the start, x %.0f" % player.global_position.x)
+	check(load_platform.phase < 90, "and the room starts again from its beginning, load phase %d" % load_platform.phase)
+	await _free(room)
+
+
+func test_level_09_layout_ledges_and_pits() -> void:
 	var room := await _load()
 	var load_platform := (room.get_node("Crane") as Crane).load_platform()
 	var blocks := room.get_node("Blocks") as TileMapLayer
 	var end := load_platform.rect_at(load_platform.position_at(load_platform.once_last_phase()))
 	var start := load_platform.rect_at(load_platform.position_at(0))
-	# The exit ledge begins right after the parked load, level with its top.
+	# Ledge B begins right after the parked load, level with its top.
 	var ledge := Vector2i(int(end.end.x / CELL), int(end.position.y / CELL))
 	check(blocks.get_cell_source_id(ledge) != -1 and blocks.get_cell_source_id(ledge - Vector2i(0, 1)) == -1,
-		"the load stops flush with the exit ledge, level with its top")
-	# Under the parked load: three empty cells down to the lower hall floor.
+		"the load stops flush with ledge B, level with its top")
+	# Under the parked load the pit is open to the bottom of the room.
 	var below := Vector2i(int(end.get_center().x / CELL), int(end.end.y / CELL))
-	for k in 3:
-		check(blocks.get_cell_source_id(below + Vector2i(0, k)) == -1, "nothing to climb under the parked load, row %d" % (below.y + k))
-	check(blocks.get_cell_source_id(below + Vector2i(0, 3)) != -1, "the lower hall floor is three cells under the parked load")
+	var used := blocks.get_used_rect()
+	for y in range(below.y, used.end.y):
+		check(blocks.get_cell_source_id(Vector2i(below.x, y)) == -1, "the pit under the parked load is open, row %d" % y)
 	# At the start of history the load hangs one cell from pillar A, a cell higher.
 	var pillar := Vector2i(int(start.position.x / CELL) - 2, int(start.position.y / CELL) + 1)
 	check(blocks.get_cell_source_id(pillar) != -1 and blocks.get_cell_source_id(pillar - Vector2i(0, 1)) == -1,
 		"pillar A stands a cell left of the load's start, its top a cell lower")
+	# Lamps fall to the floor of the pit, never out of the room (the overview shows it).
+	var crane := room.get_node("Crane") as Crane
+	for fall: Dictionary in crane.plan.falls:
+		check(float(fall["to_row"]) <= float(used.end.y), "a struck lamp falls inside the room, row %.0f" % float(fall["to_row"]))
+	var collapse_plan := (room.get_node("Collapse") as Collapse).plan
+	check(collapse_plan.to_row <= float(used.end.y), "the collapse's lamps fall inside the room, row %.0f" % collapse_plan.to_row)
+	# Every girder lies on a stub, and without the girders the stubs are too far apart.
+	var collapse := room.get_node("Collapse") as Collapse
+	for k in collapse.girders.size():
+		var g := collapse.girders[k]
+		var under := Vector2i(int(g.get_center().x / CELL), int(g.end.y / CELL))
+		var found := false
+		for x in range(int(g.position.x / CELL), int(ceil(g.end.x / CELL))):
+			found = found or blocks.get_cell_source_id(Vector2i(x, under.y)) != -1
+		check(found, "girder %d rests on a stub" % k)
 	await _free(room)
 
 
