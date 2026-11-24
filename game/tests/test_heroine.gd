@@ -50,14 +50,17 @@ func test_data_check_reports_broken_heroine_data() -> void:
 	broken["scale"] = 0
 	check(not HeroineData.validate(broken).is_empty(), "scale 0 must be reported")
 	broken = data.duplicate(true)
-	broken["stairs"]["keys"] = ["run_b", "no_such_pose"]
+	broken["stairs"]["keys_down"] = ["stairs_down_a", "no_such_pose"]
 	check(not HeroineData.validate(broken).is_empty(), "a stairs key that is not a pose must be reported")
 	broken = data.duplicate(true)
 	broken["stairs"]["legs"] = [["thigh_near", "shin_near"]]
 	check(not HeroineData.validate(broken).is_empty(), "stairs with one leg must be reported")
 	broken = data.duplicate(true)
-	broken["stairs"]["treads_per_step"] = 1.5
-	check(not HeroineData.validate(broken).is_empty(), "half a tread a step must be reported")
+	broken["stairs"]["stride_px"] = 0
+	check(not HeroineData.validate(broken).is_empty(), "a step of 0 px must be reported")
+	broken = data.duplicate(true)
+	broken["stairs"]["land_ahead_down_px"] = 80
+	check(not HeroineData.validate(broken).is_empty(), "a foot landing further ahead than the step must be reported")
 	broken = data.duplicate(true)
 	broken["stairs"]["max_reach"] = 1.2
 	check(not HeroineData.validate(broken).is_empty(), "a reach longer than the leg must be reported")

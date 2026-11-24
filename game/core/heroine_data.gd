@@ -35,10 +35,10 @@ static func pose_lift(data: Dictionary, pose: String) -> float:
 
 
 ## The run at `phase` (cycles of the run, any real number): the keys of
-## `run.keys` (or of another cycle, `stairs.keys`) follow each other evenly and
+## `run.keys` (or of another cycle and field, `stairs.keys_up`) follow each other evenly and
 ## blend linearly, the last into the first. Returns {"angles", "lift"}.
-static func run_pose(data: Dictionary, phase: float, cycle := "run") -> Dictionary:
-	var keys: Array = (data.get(cycle, {}) as Dictionary).get("keys", [])
+static func run_pose(data: Dictionary, phase: float, cycle := "run", field := "keys") -> Dictionary:
+	var keys: Array = (data.get(cycle, {}) as Dictionary).get(field, [])
 	if keys.is_empty():
 		return {"angles": pose_angles(data, "idle"), "lift": pose_lift(data, "idle")}
 	var at: float = fposmod(phase, 1.0) * keys.size()
@@ -300,13 +300,14 @@ static func _validate_stairs(data: Dictionary, poses: Dictionary) -> PackedStrin
 	if not stairs is Dictionary:
 		errors.append("heroine.json: stairs must be an object")
 		return errors
-	var keys: Variant = stairs.get("keys")
-	if not keys is Array or (keys as Array).size() < 2:
-		errors.append("heroine.json: stairs.keys must list at least two poses")
-	else:
+	for field in ["keys_up", "keys_down"]:
+		var keys: Variant = stairs.get(field)
+		if not keys is Array or (keys as Array).size() < 2:
+			errors.append("heroine.json: stairs.%s must list at least two poses" % field)
+			continue
 		for key: Variant in keys:
 			if not poses.has(String(key)):
-				errors.append("heroine.json: stairs key %s is not a pose" % key)
+				errors.append("heroine.json: stairs.%s: %s is not a pose" % [field, key])
 	var legs: Variant = stairs.get("legs")
 	var parts: Dictionary = data.get("parts", {})
 	if not legs is Array or (legs as Array).size() != 2:
@@ -317,14 +318,14 @@ static func _validate_stairs(data: Dictionary, poses: Dictionary) -> PackedStrin
 				errors.append("heroine.json: stairs.legs: each leg is [thigh, shin] of the parts")
 			elif not (data.get("soles", {}) as Dictionary).has(String(leg[1])):
 				errors.append("heroine.json: stairs.legs: the shin %s must have soles" % leg[1])
-	if not _number(stairs.get("treads_per_step")) or int(stairs.get("treads_per_step")) < 1 \
-			or float(stairs.get("treads_per_step")) != float(int(stairs.get("treads_per_step"))):
-		errors.append("heroine.json: stairs.treads_per_step must be a whole number, 1 or more")
-	for key in ["lock_seconds", "blend_seconds"]:
+	for key in ["stride_px", "blend_seconds", "crouch_seconds", "sole_half_px"]:
 		if not _positive(stairs.get(key)):
 			errors.append("heroine.json: stairs.%s must be a number above 0" % key)
-	if not _number(stairs.get("contact_phase")) or float(stairs.get("contact_phase")) <= 0.0 or float(stairs.get("contact_phase")) > 0.25:
-		errors.append("heroine.json: stairs.contact_phase must be above 0 and at most 0.25")
+	for key in ["land_ahead_up_px", "land_ahead_down_px", "lift_px"]:
+		if not _number(stairs.get(key)) or float(stairs.get(key)) < 0.0:
+			errors.append("heroine.json: stairs.%s must be 0 or more" % key)
+		elif _number(stairs.get("stride_px")) and key != "lift_px" and float(stairs.get(key)) >= float(stairs.get("stride_px")):
+			errors.append("heroine.json: stairs.%s must be shorter than stride_px" % key)
 	if not _number(stairs.get("max_crouch_px")) or float(stairs.get("max_crouch_px")) < 0.0:
 		errors.append("heroine.json: stairs.max_crouch_px must be 0 or more")
 	if not _number(stairs.get("max_reach")) or float(stairs.get("max_reach")) <= 0.0 or float(stairs.get("max_reach")) >= 1.0:
