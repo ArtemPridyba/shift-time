@@ -78,6 +78,17 @@ func tread_y(x: float) -> float:
 	return r.position.y + r.size.y / float(n) * (float(from_top) + 0.5)
 
 
+## The middle of every tread across, room x plus `offset_x` (the node's x in
+## the room): where her feet land walking the flight (D143). A flight drawn
+## another way gives its own treads here and in `tread_y`.
+func tread_middles(offset_x := 0.0) -> PackedFloat32Array:
+	var r := rect_px()
+	var middles := PackedFloat32Array()
+	for i in step_count():
+		middles.append(offset_x + r.position.x + tread_px() * (float(i) + 0.5))
+	return middles
+
+
 ## How deep one tread is across, in room pixels.
 func tread_px() -> float:
 	return rect_px().size.x / float(step_count())
