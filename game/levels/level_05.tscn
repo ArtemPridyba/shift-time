@@ -18,7 +18,7 @@
 [ext_resource type="Script" path="res://objects/player.gd" id="16_5hsy8"]
 [ext_resource type="Script" path="res://levels/room_time.gd" id="17_o3m35"]
 
-[node name="Level09" type="Node2D" unique_id=175121436]
+[node name="Level05" type="Node2D" unique_id=175121436]
 script = ExtResource("1_h1yy4")
 
 [node name="Blocks" type="TileMapLayer" parent="." unique_id=1601396172]
@@ -31,7 +31,7 @@ position = Vector2(96, 768)
 
 [node name="WorldBack" type="Node2D" parent="." unique_id=1303599642]
 script = ExtResource("3_44d3q")
-level_id = "level_09"
+level_id = "level_05"
 
 [node name="Entrance" type="Node2D" parent="." unique_id=350218716]
 position = Vector2(64, 640)
@@ -55,11 +55,11 @@ girders = Array[Rect2]([Rect2(1648, 736, 224, 32), Rect2(1952, 672, 160, 32), Re
 
 [node name="WorldGround" type="Node2D" parent="." unique_id=1375005006]
 script = ExtResource("9_5ejiu")
-level_id = "level_09"
+level_id = "level_05"
 
 [node name="WorldLight" type="Node2D" parent="." unique_id=1743778505]
 script = ExtResource("10_1y5o7")
-level_id = "level_09"
+level_id = "level_05"
 
 [node name="Exit" type="Area2D" parent="." unique_id=76220331 instance=ExtResource("11_s066l")]
 position = Vector2(2880, 640)

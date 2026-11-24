@@ -65,7 +65,7 @@ const WATER_LOOK_KEYS: Array[String] = [
 const BUTTON_KEYS: Array[String] = ["interact_radius_px"]
 const SHUTTER_KEYS: Array[String] = ["move_seconds"]
 const TIME_PLATE_KEYS: Array[String] = ["contact_px"]
-## Where a shutter of a level starts (level 08).
+## Where a shutter of a level starts (level 04).
 const SHUTTER_STARTS: Array[String] = ["open", "closed"]
 const LEVER_KEYS: Array[String] = ["interact_radius_px"]
 const LAMP_KEYS: Array[String] = ["break_seconds", "fall_seconds", "shatter_seconds", "fall_distance_px", "flash_seconds", "flash_radius_px", "light_radius_px"]
@@ -78,7 +78,7 @@ const FIRE_LOOK_KEYS: Array[String] = [
 	"smoke_puffs", "smoke_rise_px", "smoke_seconds", "smoke_after_seconds", "ash_pieces",
 	"ash_seconds", "ash_gravity_px", "glow_radius_px", "glow_alpha", "jet_speed_px",
 ]
-## The sprinkler pipe of level 04 (D104): rain that puts burning wood out.
+## The sprinkler pipe of level 03 (D104): rain that puts burning wood out.
 const SPRINKLER_KEYS: Array[String] = ["spin_up_seconds", "nozzle_spacing_px", "drop_speed_px", "drops_per_nozzle"]
 const STEAM_KEYS: Array[String] = ["seconds", "puffs", "rise_px", "radius_px"]
 const FLAMETHROWER_KEYS: Array[String] = ["interact_radius_px", "reach_px", "jet_px", "follow_px", "gravity", "max_fall_speed"]
@@ -158,7 +158,7 @@ static func look_mech() -> Dictionary:
 	return mech if mech is Dictionary else {}
 
 
-## The water pipes of level 04 (D108): sizes, colours, the running water.
+## The water pipes of level 03 (D108): sizes, colours, the running water.
 static func look_pipe() -> Dictionary:
 	var pipe: Variant = look().get("pipe")
 	return pipe if pipe is Dictionary else {}

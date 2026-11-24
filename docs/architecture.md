@@ -112,7 +112,7 @@ game/
   autoload/        # узлы-синглтоны: time_manager.gd, game_data.gd
   core/            # RefCounted без узлов: timeline.gd, temporal_recorder.gd, time_world.gd, content.gd, level_data.gd, input_log.gd
   objects/         # временные объекты и игрок: player.tscn/.gd, platform_moving, door, button, lever, water, water_float, crate
-  levels/          # только уровни: level_01.tscn … level_10.tscn; test_room.gd (база всех уровней), level_room.gd, room_time.gd
+  levels/          # только уровни: level_01.tscn … level_05.tscn; test_room.gd (база всех уровней), level_room.gd, room_time.gd
   ui/              # HUD, устройство на руке, меню
   data/            # time.json, player.json, objects.json, levels.json, texts.json
   art/             # backgrounds, decals, characters, objects, ui, particles

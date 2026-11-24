@@ -1,7 +1,7 @@
 class_name CollapsePlan
 extends RefCounted
-## When the girders and lamps fall after the runaway crane of level 09 slams
-## into the stop at the end of its rail (card docs/levels/09.md, D135). Counted
+## When the girders and lamps fall after the runaway crane of level 05 slams
+## into the stop at the end of its rail (card docs/levels/05.md, D135). Counted
 ## in ticks since the slam (`since`): first the girders fall one by one from the
 ## stop towards the exit and land as a broken bridge over the pit, then, after a
 ## pause, the lamps over the pit break one by one from the exit back towards the

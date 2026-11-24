@@ -77,7 +77,7 @@ func _physics_process(_delta: float) -> void:
 	_tell_world_clock()
 
 
-## Time plates (group `plate`, level 08) feel the player's step after the
+## Time plates (group `plate`, level 04) feel the player's step after the
 ## world moved, by the direction of this tick, and change their shutters
 ## through `apply_change`.
 func _tell_plates(direction: int) -> void:

@@ -10,7 +10,7 @@ extends AnimatableBody2D
 ## rides to `start + travel` one time and then stays there (level 01).
 ##
 ## A `holdable` platform can be held at its start by a latch (a `Lever` whose
-## target is this platform; level 04): while `powered`, a `once` platform that
+## target is this platform; level 03): while `powered`, a `once` platform that
 ## has not left its start yet stays there. The latch only holds, it never moves
 ## the platform: once the platform has left its start, `powered` does nothing.
 ##
@@ -34,7 +34,7 @@ const CYCLE_ONCE := "once"
 ## True for a platform a latch can hold at its start (see above).
 @export var holdable := false
 ## The platform's width in pixels; 0 keeps the width of its scene (a bridge
-## of level 04 is wider).
+## of level 03 is wider).
 @export var width := 0.0
 ## The fixed way the platform rides, drawn behind it: "", "rack" or "chain".
 @export var track := ""

@@ -1,6 +1,6 @@
 class_name Shutter
 extends AnimatableBody2D
-## A recorded shutter driven by time plates (level 08, D118): it moves toward
+## A recorded shutter driven by time plates (level 04, D118): it moves toward
 ## its `target`, closed or open, and stays there. Standing, it is a wall that
 ## rises into the ceiling to open; lying, it is a hatch over a pit that slides
 ## into the floor to open. Place it closed in the scene; `travel` is where it

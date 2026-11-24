@@ -1,12 +1,12 @@
 extends RefCounted
-## Tests of level 09 «Crane» (card docs/levels/09.md): a runaway crane strikes
+## Tests of level 05 «Crane» (card docs/levels/05.md): a runaway crane strikes
 ## two lamps, slams into its stop, and the collapse (D135) drops the girders as
 ## a bridge over the pit and breaks the lamps over it, so the room goes dark. The strikes come from the
 ## load's recorded phase (`CranePlan`): under Shift the load rides back and the
 ## lamps fly up, after Shift is released the same strikes play again. The
-## solutions in tests/solutions/level_09*.json play the level.
+## solutions in tests/solutions/level_05*.json play the level.
 
-const LEVEL_PATH := "res://levels/level_09.tscn"
+const LEVEL_PATH := "res://levels/level_05.tscn"
 const CELL := 64.0
 
 var failures: Array[String] = []
@@ -92,7 +92,7 @@ func test_collapse_data_is_checked() -> void:
 	check(not CranePlan.problems(crane, "x", 1).is_empty(), "the crane data check covers its collapse")
 
 
-func test_level_09_the_crane_slams_and_the_hall_collapses_before_her_eyes() -> void:
+func test_level_05_the_crane_slams_and_the_hall_collapses_before_her_eyes() -> void:
 	var room := await _load()
 	var crane := room.get_node("Crane") as Crane
 	var collapse := room.get_node("Collapse") as Collapse
@@ -122,7 +122,7 @@ func test_level_09_the_crane_slams_and_the_hall_collapses_before_her_eyes() -> v
 	await _free(room)
 
 
-func test_level_09_hook_strikes_before_the_slam() -> void:
+func test_level_05_hook_strikes_before_the_slam() -> void:
 	var room := await _load()
 	var crane := room.get_node("Crane") as Crane
 	var load_platform := crane.load_platform()
@@ -131,7 +131,7 @@ func test_level_09_hook_strikes_before_the_slam() -> void:
 	await _free(room)
 
 
-func test_level_09_shift_brings_everything_back_and_release_plays_it_again() -> void:
+func test_level_05_shift_brings_everything_back_and_release_plays_it_again() -> void:
 	var room := await _load()
 	var light := room.get_node("WorldLight") as WorldLight
 	var collapse := room.get_node("Collapse") as Collapse
@@ -152,7 +152,7 @@ func test_level_09_shift_brings_everything_back_and_release_plays_it_again() -> 
 	await _free(room)
 
 
-func test_level_09_a_girder_holds_her_only_while_it_lies() -> void:
+func test_level_05_a_girder_holds_her_only_while_it_lies() -> void:
 	var room := await _load()
 	var collapse := room.get_node("Collapse") as Collapse
 	await _ticks(2)
@@ -164,7 +164,7 @@ func test_level_09_a_girder_holds_her_only_while_it_lies() -> void:
 	await _free(room)
 
 
-func test_level_09_a_short_shift_lights_the_bridge_a_long_one_lifts_it() -> void:
+func test_level_05_a_short_shift_lights_the_bridge_a_long_one_lifts_it() -> void:
 	var room := await _load()
 	var collapse := room.get_node("Collapse") as Collapse
 	var light := room.get_node("WorldLight") as WorldLight
@@ -192,7 +192,7 @@ func test_level_09_a_short_shift_lights_the_bridge_a_long_one_lifts_it() -> void
 	await _free(room)
 
 
-func test_level_09_a_fall_into_the_pit_starts_the_room_again() -> void:
+func test_level_05_a_fall_into_the_pit_starts_the_room_again() -> void:
 	var room := await _load()
 	var load_platform := (room.get_node("Crane") as Crane).load_platform()
 	var player: Player = room.get_node("Player")
@@ -205,7 +205,7 @@ func test_level_09_a_fall_into_the_pit_starts_the_room_again() -> void:
 	await _free(room)
 
 
-func test_level_09_layout_ledges_and_pits() -> void:
+func test_level_05_layout_ledges_and_pits() -> void:
 	var room := await _load()
 	var load_platform := (room.get_node("Crane") as Crane).load_platform()
 	var blocks := room.get_node("Blocks") as TileMapLayer

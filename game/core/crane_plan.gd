@@ -1,7 +1,7 @@
 class_name CranePlan
 extends RefCounted
-## When the hook of a runaway crane strikes each lamp (level 09, card
-## docs/levels/09.md): the crane's load is a `once` platform, and the hook
+## When the hook of a runaway crane strikes each lamp (level 05, card
+## docs/levels/05.md): the crane's load is a `once` platform, and the hook
 ## hangs over the load's middle. A lamp is struck on the tick the hook comes
 ## within `hook_lead_px` of it; from there it falls `fall_ticks`, then shatters
 ## for `shatter_ticks`. Everything is a function of the load's recorded phase,

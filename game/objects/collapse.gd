@@ -1,6 +1,6 @@
 class_name Collapse
 extends Node2D
-## The collapse of level 09 (card docs/levels/09.md, D135): when the runaway
+## The collapse of level 05 (card docs/levels/05.md, D135): when the runaway
 ## crane's load slams into the stop at the end of its rail, the hall shakes, the
 ## girders hanging under the roof beyond the stop fall one by one and land on
 ## the stubs of old supports as a broken bridge over the pit, then the lamps over

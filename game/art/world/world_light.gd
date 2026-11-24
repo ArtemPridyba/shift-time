@@ -27,7 +27,7 @@ var _world: Dictionary
 var _glow: Node2D
 var _shine: Array[float] = []
 var _seconds_per_frame := 1.0 / 60.0
-## Where falls of lamps come from: `Quakes` (level 01) or `Crane` (level 09),
+## Where falls of lamps come from: `Quakes` (level 01) or `Crane` (level 05),
 ## a sibling with `lamp_fall(i)` and `swing(i)`.
 var _quakes: Node
 ## Per lamp: {"drop", "light", "shatter", "to_row"} while one falls (Quakes.lamp_fall).
@@ -51,7 +51,7 @@ func _ready() -> void:
 	var dark := CanvasModulate.new()
 	dark.name = "Darkness"
 	dark.color = WorldData.color(_world, "darkness")
-	# A level may be darker than the kit (level 09: the dark is the difficulty).
+	# A level may be darker than the kit (level 05: the dark is the difficulty).
 	if layout.get("darkness") is String:
 		dark.color = Color.from_string(str(layout["darkness"]), dark.color)
 	add_child(dark)
@@ -62,7 +62,7 @@ func _ready() -> void:
 		var light := PointLight2D.new()
 		light.name = "Light%d" % (i + 1)
 		light.texture = disc
-		# A lamp may light a wider island than the kit's (level 09: the pillar by the crane).
+		# A lamp may light a wider island than the kit's (level 05: the pillar by the crane).
 		var own_radius := float(_lamps[i].get("radius_px", radius)) if _lamps[i] is Dictionary else radius
 		light.texture_scale = own_radius * 2.0 / float(disc.get_width())
 		light.color = Color.from_string(str(_lamp.get("color", "#ffb066")), Color.ORANGE)

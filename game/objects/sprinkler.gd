@@ -1,6 +1,6 @@
 class_name Sprinkler
 extends Node2D
-## A recorded sprinkler pipe (level 04, D104): a lever opens it and water
+## A recorded sprinkler pipe (level 03, D104): a lever opens it and water
 ## rains from its nozzles onto what lies below. It wets wood (group `water`,
 ## `water_global_rect`), so a burning bridge under it is put out; it is not a
 ## tank, so the player never wades or drowns in it (the player reads only
@@ -11,7 +11,7 @@ extends Node2D
 ## (full rain) in `spin_up_seconds` while `powered`, and back while not; the
 ## rain wets only at full flow.
 ##
-## A level can make it automatic (level 04, part two: the hall's fire system):
+## A level can make it automatic (level 03, part two: the hall's fire system):
 ## `start_seconds` in the level's `objects` entry (`apply_settings`) holds the
 ## rain back until that world frame, so a sprinkler powered from the start
 ## opens on its own a moment into the room's history, in every branch the
@@ -33,7 +33,7 @@ const DROP_COLOR := Color(0.78, 0.85, 0.9, 0.9)
 ## Pipe length and rain height, pixels.
 @export var size := Vector2(640, 256)
 @export var powered := false
-## False when a WaterPipe draws the pipe along the nozzles (level 04, D108).
+## False when a WaterPipe draws the pipe along the nozzles (level 03, D108).
 @export var draw_pipe := true
 
 var flow := 0

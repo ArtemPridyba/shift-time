@@ -1,6 +1,6 @@
 class_name WaterPipe
 extends Node2D
-## A water pipe drawn by code (level 04 playtest, D108): a thick pipe along
+## A water pipe drawn by code (level 03 playtest, D108): a thick pipe along
 ## `points` that shows the water in it. It keeps no history and is not in the
 ## group `temporal`: it reads the recorded state of the sprinkler it feeds
 ## (`source_path`) every frame. While the sprinkler is powered the pipe is
