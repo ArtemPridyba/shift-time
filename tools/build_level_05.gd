@@ -1,22 +1,25 @@
 extends SceneTree
-## Builds level 05 `levels/level_05.tscn` «Crane» (card docs/levels/05.md): a
-## room of 48x17 cells in the Night shop, sized to the heroine like level 01
-## (D112): the hall is 6 cells high under the dark roof. She walks out into a
-## lit hall; at once a runaway overhead crane rides right, its hook strikes two
-## lamps, and its load slams into the stop at the end of the rail (D130). The
-## slam sets off the collapse (D135): girders fall from the roof onto the stubs
-## in the pit beyond as a broken bridge, then the lamps over the pit break, from
-## the exit back towards the stop. Under Shift everything goes back; at the
-## start of history the load hangs by pillar A. She stands on it, lets Shift go,
-## rides to ledge B and crosses the bridge in the dark; a short Shift lights
-## the nearest lamps while the girders still lie, a long one lifts the girders.
+## Builds level 05 `levels/level_05.tscn` «Crane» (card docs/levels/05.md, D139):
+## a room of 48x17 cells in the Night shop, sized to the heroine like level 01
+## (D112). A gallery of girders hangs from the crane's rail under the roof, each
+## with its lamp. She walks out on the floor at the left; at once the runaway
+## crane rides from the far right towards her and its ram knocks the girders off
+## one by one, their lamps falling with them: the two on the right land on stubs
+## in the pit as a low bridge to the exit, the two in the middle are lost to the
+## bottom of the pit, the last one lands on the floor by her. The crane slams
+## into its stop; it is dark.
 ##
-## Left to right: the start floor (row 12), a pit of two cells, pillar A (two
-## cells), one cell to the load's start (one cell higher, row 11); the load
-## rides 9 cells over the pit and stops flush with ledge B (row 11). Beyond B
-## the pit with four stubs and the exit ledge (row 11). The pits are open to the
-## bottom: a fall is death. Timing: `crane` and `objects` of the level's entry
-## in data/levels.json.
+## Under Shift the crane rides back and the girder knocked last rises first: she
+## rides it up to the gallery, crosses the middle girders as they rise and
+## reaches the crane operator's post. There she pulls the stop lever while the
+## crane is between the post and the right girders: in the new history the crane
+## stands there, the right girders lie as the bridge, the rest hang lit. She lets
+## Shift go, drops onto the bridge and walks under the overhang to the exit.
+##
+## Left to right: the start floor (row 13), the pit (open to the bottom: a fall
+## is death), the post on the gallery (row 9) on its pillar, two stubs, the
+## overhang that walls the gallery off from the exit, the exit ledge (row 13).
+## Timing: `crane` and `objects` of the level's entry in data/levels.json.
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
 ##   godot --headless --path game --script $PWD/tools/build_level_05.gd
@@ -39,32 +42,38 @@ const MAP := [
 	"#..............................................#",
 	"#..............................................#",
 	"#..............................................#",
-	"#...........................................EE.#",
-	"#...........................................EE.#",
-	"#S...................####......#..........######",
-	"#####..##............####..#...#......#...######",
-	"#####..##............####..#...#...#..#...######",
-	"#####..##............####..#...#...#..#...######",
-	"#####..##............####..#...#...#..#...######",
-	"#####..##............####..#...#...#..#...######",
+	"#............####..............................#",
+	"#..............#............####################",
+	"#..............#............####################",
+	"#S.............#...........................EE..#",
+	"#########......#........#..................EE..#",
+	"#########......#........#..#####################",
+	"#########......#........#..#####################",
+	"#########......#........#..#####################",
 ]
 
 ## The doorway the hero walks out of (decoration only), in cells.
 const ENTRANCE_CELLS := Rect2i(1, 10, 1, 2)
-## The crane's load: where its top edge meets the grid at the start of history
-## (the middle in x, the top surface at the row), how far it rides, in cells.
-const LOAD_CENTRE := Vector2(11.0, 11.0)
-const LOAD_TRAVEL := Vector2(9.0, 0.0)
-const LOAD_WIDTH_CELLS := 2
+## The crane's ram: where its top edge meets the grid at the start of history
+## (the middle in x, the top at the row), how far it rides, in cells. It hangs
+## from the hook over the gallery and carries nobody.
+const LOAD_CENTRE := Vector2(33.0, 7.0)
+const LOAD_TRAVEL := Vector2(-30.5, 0.0)
+const LOAD_WIDTH_CELLS := 1
 const LOAD_HEIGHT := 32.0
-## Where the girders of the collapse lie once fallen (cells: x, top row, width),
-## from the stop towards the exit; each rests on a stub of an old support (D135).
-const GIRDERS: Array[Rect2] = [
-	Rect2(25.75, 11.5, 3.5, 0.5),
-	Rect2(30.5, 10.5, 2.5, 0.5),
-	Rect2(34.75, 12.5, 2.0, 0.5),
-	Rect2(37.9, 11.5, 2.7, 0.5),
+## The girders of the gallery (cells: x where it hangs, width; x and top row
+## where it lies), from the left; each hangs on row 9. The bridge girder hangs
+## far to the right over the slab and comes down sideways (`CollapsePlan.path`).
+const GIRDER_HEIGHT := 0.5
+const GIRDERS: Array[Dictionary] = [
+	{"x": 5.0, "width": 4.0, "rest_x": 5.0, "rest_row": 12.5},
+	{"x": 9.0, "width": 4.0, "rest_x": 9.0, "rest_row": 16.5, "lost": true},
+	{"x": 17.0, "width": 4.0, "rest_x": 17.0, "rest_row": 16.5, "lost": true},
+	{"x": 27.5, "width": 4.0, "rest_x": 22.0, "rest_row": 12.5},
 ]
+const HANG_ROW := 9.0
+## The crane's stop lever on the operator's post (the cell it stands in).
+const LEVER_CELL := Vector2i(14, 8)
 ## The beacon sits on the wall by the exit door's upper left corner (as in 01).
 const BEACON_FROM_DOOR := Vector2(-66.0, -118.0)
 
@@ -120,16 +129,38 @@ func _initialize() -> void:
 	load_platform.travel = LOAD_TRAVEL * CELL
 	load_platform.width = float(LOAD_WIDTH_CELLS * CELL)
 	load_platform.position = Vector2(LOAD_CENTRE.x * CELL, LOAD_CENTRE.y * CELL + LOAD_HEIGHT / 2.0)
+	# The stop lever holds it wherever it is (D139); it rams girders, not her.
+	load_platform.holdable = true
+	load_platform.brake = true
+	load_platform.solid = false
+	load_platform.collision_layer = 0
+	load_platform.collision_mask = 0
 	_own(root, load_platform)
 
-	# The collapse the load's slam into the stop sets off (D135).
+	# The gallery the crane's ram knocks down (D139).
 	var collapse := Collapse.new()
 	collapse.name = "Collapse"
+	var hangs: Array[Rect2] = []
 	var rests: Array[Rect2] = []
-	for g in GIRDERS:
-		rests.append(Rect2(g.position * CELL, g.size * CELL))
-	collapse.girders = rests
+	var lost := PackedInt32Array()
+	for k in GIRDERS.size():
+		var g: Dictionary = GIRDERS[k]
+		var size := Vector2(float(g["width"]), GIRDER_HEIGHT) * CELL
+		hangs.append(Rect2(Vector2(float(g["x"]), HANG_ROW) * CELL, size))
+		rests.append(Rect2(Vector2(float(g["rest_x"]), float(g["rest_row"])) * CELL, size))
+		if bool(g.get("lost", false)):
+			lost.append(k)
+	collapse.girders = hangs
+	collapse.rests = rests
+	collapse.lost = lost
 	_own(root, collapse)
+
+	var lever: Lever = (load("res://objects/lever.tscn") as PackedScene).instantiate()
+	lever.object_id = "crane_stop"
+	lever.name = "CraneStop"
+	lever.target_id = "crane_load"
+	lever.position = Vector2((LEVER_CELL.x + 0.5) * CELL, (LEVER_CELL.y + 1) * CELL)
+	_own(root, lever)
 
 	var ground := WorldGround.new()
 	ground.name = "WorldGround"

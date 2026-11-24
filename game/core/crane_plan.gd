@@ -11,7 +11,9 @@ extends RefCounted
 ##
 ## Data: `crane` of the level's entry in data/levels.json:
 ## { "load": object id of the platform, "hook_lead_px": number,
-##   "falls": [{"lamp": index in world.lamps, "to_row": the floor row}, ...] }.
+##   "falls": [{"lamp": index in world.lamps, "to_row": the floor row}, ...],
+##   "collapse": the girders the crane knocks off (`CollapsePlan`) }; `falls`
+## may be empty when the lamps fall with the girders.
 ## The fall and shatter seconds are those of `kit_objects.quake` in look.json.
 
 var load_id := ""
@@ -41,19 +43,12 @@ static func from_data(data: Variant, ticks_per_second: float, look: Dictionary) 
 ## middle starts and stops, `delay_ticks` and `move_ticks` as the platform's;
 ## `lamp_x[i]`: where lamp i hangs. A lamp the hook never reaches is never hit.
 func aim(start_x: float, end_x: float, delay_ticks: int, move_ticks: int, lamp_x: Array) -> void:
-	var dir := signf(end_x - start_x)
-	var length := absf(end_x - start_x)
 	for fall: Dictionary in falls:
 		var lamp := int(fall["lamp"])
 		fall["hit"] = -1
-		if lamp < 0 or lamp >= lamp_x.size() or length <= 0.0:
+		if lamp < 0 or lamp >= lamp_x.size():
 			continue
-		# How far the hook has to ride before it touches the lamp.
-		var reach := (float(lamp_x[lamp]) - start_x) * dir - hook_lead_px
-		if reach > length:
-			continue
-		var at := 0 if reach <= 0.0 else int(ceil(reach / length * float(move_ticks)))
-		fall["hit"] = delay_ticks + mini(at, move_ticks)
+		fall["hit"] = CollapsePlan.reach_phase(start_x, end_x, delay_ticks, move_ticks, float(lamp_x[lamp]), hook_lead_px)
 
 
 ## The fall of lamp `lamp` at load phase `phase`: {"drop", "light", "shatter",
@@ -94,8 +89,8 @@ static func problems(data: Variant, where: String, lamp_count: int) -> PackedStr
 	if not (lead is float or lead is int) or float(lead) < 0.0:
 		errors.append("%s: 'crane.hook_lead_px' must be a number from 0" % where)
 	var list: Variant = data.get("falls")
-	if not list is Array or (list as Array).is_empty():
-		errors.append("%s: 'crane.falls' must be a non-empty list" % where)
+	if not list is Array or ((list as Array).is_empty() and not data.has("collapse")):
+		errors.append("%s: 'crane.falls' must be a list, non-empty unless the crane has a collapse" % where)
 		return errors
 	for i in list.size():
 		var one: Variant = list[i]

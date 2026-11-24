@@ -2,12 +2,13 @@
 	"level": "level_05",
 	"expect": "no_exit",
 	"segments": [
-		{ "actions": [], "ticks": 40 },
-		{ "actions": ["rewind"], "ticks": 250 },
-		{ "actions": ["rewind", "move_right"], "ticks": 12 },
-		{ "actions": ["rewind", "move_right", "jump"], "ticks": 20 },
-		{ "actions": ["rewind", "move_right"], "ticks": 30 },
-		{ "actions": ["rewind", "move_right", "jump"], "ticks": 20 },
-		{ "actions": ["rewind", "move_right", "jump"], "ticks": 600 }
+		{ "actions": [], "ticks": 700 },
+		{ "actions": ["move_right"], "ticks": 20 },
+		{ "actions": ["move_right", "jump"], "ticks": 20 },
+		{ "actions": ["move_right"], "ticks": 10 },
+		{ "actions": ["rewind"], "ticks": 120 },
+		{ "actions": ["rewind", "move_right"], "ticks": 120 },
+		{ "actions": ["rewind"], "ticks": 200 },
+		{ "actions": ["rewind", "move_right"], "ticks": 500 }
 	]
 }
