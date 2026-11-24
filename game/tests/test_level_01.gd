@@ -186,6 +186,11 @@ func test_level_01_platform_2_is_level_with_platform_1_when_it_arrives() -> void
 	var board := float(((second.get_node("CollisionShape2D") as CollisionShape2D).shape as RectangleShape2D).size.y)
 	var reach := pit_floor - (bottom.y - board / 2.0)
 	check(reach > jump_height + 32.0, "from the pit floor platform 2 is out of reach: its top is %.0f px up, a jump %.0f px" % [reach, jump_height])
+	# Down beside platform 1 it is two cells under the ledge (D138): only
+	# rewinding lifts her up, a jump does not.
+	var ledge_top := 8.0 * 64.0
+	var climb := (bottom.y - board / 2.0) - ledge_top
+	check(climb > jump_height + 16.0, "from platform 2 down below the ledge is out of a jump: %.0f px up, a jump %.0f px" % [climb, jump_height])
 	check(second.position_at(arrival - 120).y < first_end.y - 64.0, "platform 2 is clearly above platform 1's level two seconds before")
 	check(second.once and first.once, "both platforms of level 01 ride once")
 	await _free(room)
