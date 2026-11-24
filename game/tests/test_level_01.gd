@@ -811,8 +811,8 @@ func test_level_01_is_one_painted_room() -> void:
 	var nodes := (layout.duplicate(true) as Dictionary)
 	nodes["backdrop"]["painted"]["Door"]["gear"] = [488, 386]
 	nodes["backdrop"]["painted"]["Door"]["clip_y"] = "high"
-	nodes["backdrop"]["painted"]["Platform1"]["patch"] = [494, 617, 0, 67]
-	check(WorldData.validate_layout(nodes, "x").size() == 3, "a broken gear, clip_y and patch of a painted node are caught: %s"
+	nodes["backdrop"]["painted"]["Exit/ExitDoor"]["opening"] = [1790, 306, 0, 184]
+	check(WorldData.validate_layout(nodes, "x").size() == 3, "a broken gear, clip_y and opening of a painted node are caught: %s"
 			% [WorldData.validate_layout(nodes, "x")])
 	var room := await _load()
 	var painted := room.get_node_or_null("WorldBack/Backdrop") as WorldBackdrop
@@ -853,23 +853,20 @@ func test_level_01_world_timer_and_sparking_wire() -> void:
 	await _free(room)
 
 
-## 24.11 notes: the platforms are pieces of the painted floor, on the picture's
-## layer with its light, their painted feet line on their top as they ride.
-func test_level_01_platforms_are_cut_from_the_painted_floor() -> void:
+## 24.11 notes: what code draws over the painted room takes the picture's
+## light, not the room's darkness: dim in the dark, lit under a lamp's cone,
+## going dark with the lamp that falls.
+func test_level_01_objects_take_the_pictures_light() -> void:
 	var room := await _load()
 	var painted := room.get_node("WorldBack/Backdrop") as WorldBackdrop
-	check(painted.canvases.size() == 2, "both platforms draw on the picture's layer: %d" % painted.canvases.size())
-	for canvas in painted.canvases:
-		check(canvas.material == painted.picture.material and canvas.get_parent() == painted.layer,
-				"%s has the picture's light" % canvas.name)
-	var config: Dictionary = WorldData.backdrop(WorldData.layout(WorldData.entry("level_01")))["painted"]["Platform1"]
-	var platform: MovingPlatform = room.get_node("Platform1")
-	var start := platform.position
-	await _ticks(4 * 60)
-	check(platform.position != start, "platform 1 has ridden")
-	var feet := platform.painted_rect().position.y + float(config["feet_y"]) - float(config["patch"][1])
-	var top := platform.position.y - platform._size().y / 2.0
-	check(absf(feet - top) < 0.5, "the painted feet line rides on the platform's top: %.1f, top %.1f" % [feet, top])
-	check(platform.painted_rect().size.x == 128.0, "the piece is as wide as the platform")
+	var light := painted.object_material
+	check(light != null and (light.shader.code.contains("unshaded")), "the objects' light is unshaded: the room's darkness does not dim them twice")
+	for path: String in ["Door", "Platform1", "Platform2", "Exit/ExitDoor"]:
+		check((room.get_node(path) as CanvasItem).material == light, "%s takes the picture's light" % path)
+	check(light.get_shader_parameter("lamp_count") == painted.picture.material.get_shader_parameter("lamp_count")
+			and light.get_shader_parameter("lamp_at") == painted.picture.material.get_shader_parameter("lamp_at"),
+			"its lamps are the picture's lamps")
+	await _ticks(2)
+	check(light.get_shader_parameter("lamp_shine") == painted.picture.material.get_shader_parameter("lamp_shine"),
+			"and they shine as the picture's do")
 	await _free(room)
-

@@ -398,3 +398,9 @@ func _draw_kit(slab: Texture2D, size: Vector2) -> void:
 		ObjectLook.draw_turned(self, gear, at, Vector2(gear_px, gear_px), -angle * wheel_px / gear_px)
 	if wheel != null:
 		ObjectLook.draw_turned(self, wheel, hub, Vector2(wheel_px, wheel_px), angle)
+
+
+## The picture's light instead of the room's darkness (`WorldBackdrop`,
+## 24.11 level 01 notes).
+func use_picture_light(light: ShaderMaterial) -> void:
+	material = light

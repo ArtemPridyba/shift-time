@@ -24,12 +24,9 @@ extends AnimatableBody2D
 ## with it, so under Shift they go back exactly. Numbers:
 ## `kit_objects.platform` of `data/look.json`.
 ##
-## In a painted room (`world.backdrop`, D131) the picture has the track, and
-## the platform is a piece of the painted floor (`patch` of its entry in
-## `painted`, 24.11 level 01 notes): the end of a floor plate with its top face
-## and riveted edge, mirrored for the left end, drawn on the picture's own
-## layer with its light, so it is as dark or as lit as the floor beside it.
-## Only the gear under it is drawn here.
+## In a painted room (`world.backdrop`, D131) the picture has the track (the
+## rail column, the chain beam): only the plank and its gear are drawn, with
+## the picture's light (`use_picture_light`, 24.11 level 01 notes).
 ##
 ## Temporal object contract: docs/architecture.md, section 4.1.
 
@@ -50,12 +47,8 @@ const CYCLE_ONCE := "once"
 ## The fixed way the platform rides, drawn behind it: "", "rack" or "chain".
 @export var track := ""
 
-## The level's picture (D131): {"patch": [x, y, w, h], "feet_y"} in room px of
-## the picture; empty when the kit draws the platform.
-var _painted := {}
-var _canvas: Node2D
-var _lit: Texture2D
-var _picture_rect := Rect2()
+## True when the level's picture has the track (D131).
+var _painted := false
 
 ## Tick on the path: there, pause, back, pause. In `once` mode: wait, ride, stay.
 var phase := 0
@@ -122,7 +115,7 @@ func capture_state() -> Dictionary:
 func restore_state(state: Dictionary) -> void:
 	phase = int(state["phase"])
 	position = state["position"]
-	_redraw()
+	queue_redraw()
 	if holdable:
 		powered = bool(state.get("powered", false))
 
@@ -135,7 +128,7 @@ func simulate_tick(_tick: int) -> void:
 	else:
 		phase = (phase + 1) % cycle_ticks()
 	position = position_at(phase)
-	_redraw()
+	queue_redraw()
 
 
 func on_time_direction_changed(direction: int) -> void:
@@ -238,85 +231,25 @@ func gear_angle() -> float:
 	return mech_travel() / maxf(r, 1.0)
 
 
-func _redraw() -> void:
-	queue_redraw()
-	if _canvas != null:
-		_canvas.queue_redraw()
-
-
-## The level's picture has the track and the floor the platform is cut from.
-func use_backdrop(config: Dictionary) -> void:
-	_painted = config
+## The level's picture has the track the platform rides.
+func use_backdrop(_config: Dictionary) -> void:
+	_painted = true
 	queue_redraw()
 
 
-## The canvas on the picture's layer (`WorldBackdrop`): it draws with the
-## picture's light, in room pixels; `lit` is the picture over `picture_rect`.
-func use_picture(canvas: Node2D, lit: Texture2D, picture_rect: Rect2) -> void:
-	_canvas = canvas
-	_lit = lit
-	_picture_rect = picture_rect
-	canvas.draw.connect(_draw_on_picture)
-	canvas.queue_redraw()
-
-
-## Where the platform is cut from the picture, in room px; empty without one.
-func painted_patch() -> Rect2:
-	var patch: Variant = _painted.get("patch")
-	if not patch is Array or (patch as Array).size() != 4:
-		return Rect2()
-	return Rect2(float(patch[0]), float(patch[1]), float(patch[2]), float(patch[3]))
-
-
-## The piece of floor in room px, right half as painted, left half mirrored:
-## its painted feet line (`feet_y`) on the platform's top.
-func painted_rect() -> Rect2:
-	var patch := painted_patch()
-	var size := _size()
-	var feet := float(_painted.get("feet_y", patch.position.y))
-	var top := position.y - size.y / 2.0
-	return Rect2(position.x - size.x / 2.0, top - (feet - patch.position.y), size.x, patch.size.y)
-
-
-func _draw_on_picture() -> void:
-	var patch := painted_patch()
-	if _lit == null or patch.size == Vector2.ZERO or _picture_rect.size == Vector2.ZERO:
-		return
-	var texel := _lit.get_size() / _picture_rect.size
-	var source := Rect2((patch.position - _picture_rect.position) * texel, patch.size * texel)
-	var r := painted_rect()
-	var half := r.size.x / 2.0
-	_canvas.draw_texture_rect_region(_lit, Rect2(r.position.x + half, r.position.y, half, r.size.y), source)
-	# The left half: the same piece mirrored, by its texture coordinates (the
-	# points stay in room px, where the picture's light is reckoned).
-	var size := _lit.get_size()
-	var u0 := source.position.x / size.x
-	var u1 := source.end.x / size.x
-	var v0 := source.position.y / size.y
-	var v1 := source.end.y / size.y
-	var x0 := r.position.x
-	var x1 := r.position.x + half
-	_canvas.draw_polygon(
-			PackedVector2Array([Vector2(x0, r.position.y), Vector2(x1, r.position.y), Vector2(x1, r.end.y), Vector2(x0, r.end.y)]),
-			PackedColorArray([Color.WHITE]),
-			PackedVector2Array([Vector2(u1, v0), Vector2(u0, v0), Vector2(u0, v1), Vector2(u1, v1)]), _lit)
+## The picture's light instead of the room's darkness (`WorldBackdrop`).
+func use_picture_light(light: ShaderMaterial) -> void:
+	material = light
 
 
 func _draw_kit(plank: Texture2D, size: Vector2) -> void:
 	var look := ObjectLook.of("platform")
 	var top := -size.y / 2.0
-	if painted_patch().size != Vector2.ZERO:
-		var gear_on := ObjectLook.picture("shutter_gear_small")
-		var below := painted_rect().end.y - position.y
-		if gear_on != null:
-			var px := ObjectLook.number(look, "gear_px", 22.0)
-			ObjectLook.draw_turned(self, gear_on, Vector2(0.0, below), Vector2(px, px), gear_angle())
-		return
 	var shift := _base() - position
 	var gear := ObjectLook.picture("shutter_gear_small")
 	var gear_px := ObjectLook.number(look, "gear_px", 22.0)
 	var tint := ObjectLook.color(look, "track_tint", Color.WHITE)
-	if track == "rack":
+	if track == "rack" and not _painted:
 		var rack := ObjectLook.picture("platform_rack")
 		var w := ObjectLook.number(look, "rack_px", 18.0)
 		var y0 := shift.y + minf(0.0, travel.y) - ObjectLook.number(look, "track_above_px", 64.0)
@@ -324,7 +257,7 @@ func _draw_kit(plank: Texture2D, size: Vector2) -> void:
 		if rack != null:
 			ObjectLook.draw_region_down(self, rack, Rect2(Vector2.ZERO, rack.get_size()),
 					Rect2(shift.x - w / 2.0, y0, w, y1 - y0), tint)
-	elif track == "chain":
+	elif track == "chain" and not _painted:
 		var chain := ObjectLook.picture("platform_chain")
 		var h := ObjectLook.number(look, "chain_px", 10.0)
 		var x0 := shift.x + minf(0.0, travel.x)
@@ -338,7 +271,7 @@ func _draw_kit(plank: Texture2D, size: Vector2) -> void:
 				ObjectLook.draw_turned(self, gear, Vector2(x, y), Vector2(gear_px, gear_px), gear_angle() * signf(travel.x), tint)
 	var plank_h := float(plank.get_height()) / ObjectLook.texel("platform")
 	_draw_plank(plank, Rect2(-size.x / 2.0, top, size.x, plank_h), ObjectLook.number(look, "cap_px", 24.0))
-	if track == "rack" and gear != null:
+	if (track == "rack" or _painted) and gear != null:
 		ObjectLook.draw_turned(self, gear, Vector2(0.0, top + plank_h), Vector2(gear_px, gear_px), gear_angle())
 
 

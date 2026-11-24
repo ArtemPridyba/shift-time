@@ -258,6 +258,14 @@ Request N-12: things the player uses. Separate pieces on one sheet with wide emp
 Request N-13: the staircase into the pit. A broken brick staircase going down from left to right, seen exactly from the side like a technical drawing, flat even light, on flat green #00FF00. About 20 steps run in a straight line from the top left corner of the picture to the bottom right corner, the slope about 3 high to 5 across. Steps of worn sooty red brick with a riveted iron angle on the edge of each step; a few steps chipped, a few loose bricks lying on them. Under the steps, the side of the staircase: brick down to the bottom edge of the picture, darker than the steps. Above the steps: flat green only. Only the staircase, nothing else.
 ```
 
+### Н-14. Платформа под фон комнаты (24.11.2026)
+
+Платформы уровня 01 сейчас — старая доска Н-7 (тёмная сталь), на фоне картинки Ф-1 она чужая (замечания Бориса 24.11, `docs/levels/01.md`). Нужна новая в стиле картинки комнаты. В игре платформа — 2 клетки на полклетки (128 × 32 px, 4:1), героиня стоит на середине её верха; колонну и цепь, по которым она ездит, картинка комнаты уже рисует (D153). Свет и мягкость добавит игра (D153), поэтому просим ровный свет. Приложить первой картинкой фон комнаты `docs/art/gemini/raw/f1_room_v1.jpg` (стиль, цвет, ржавчина), второй — кадр с платформой `docs/art/level01_fixes.jpg` (нижний правый, где она стоит сейчас). Готовую картинку — в `raw/` как `n14_platform.jpg`, вырезать: `python3 tools/cut_kit.py n14_platform`; вставит следующий чат (О).
+
+```text
+Request N-14: a moving platform for the attached factory hall, in exactly the same painted style, colours and rust as the FIRST image. One piece in the middle of the picture on flat green #00FF00, wide empty green around it, flat even light, no shadows on the green. A short steel platform, about 4 times as wide as it is tall, seen from the side with a slight look from above, like the floors in the first image: its flat top surface visible as a strip across the upper third, riveted rusty red-brown steel plates; under it the front face, a riveted steel beam; a worn signal-yellow edge along the front of the top surface; under the middle of the beam a small carriage with two rollers. Both ends finished, not cut. Nothing else in the picture.
+```
+
 ## 5. Проверка и правки
 
 Принимать картинку, если: вид строго сбоку без перспективы; свет ровный, без теней и свечения; фон — ровный зелёный без теней и шахматки; одна деталь (или лист деталей, которые не касаются друг друга); кисть и цвета как у эталонного кадра; нет пурпура, циана и надписей.

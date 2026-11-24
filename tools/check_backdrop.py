@@ -14,7 +14,7 @@
 
 The picture is 16:9 and covers the room's width; the room (32x17 cells of 64
 px) fills its top 1088 of 1152 px. In the game the picture may lie higher
-(`rect` y of world.backdrop; level 01: 22 px, D150) so that the middle of a
+(`rect` y of world.backdrop; level 01: 22 px, D151) so that the middle of a
 painted top face, not its back edge, is on the cyan line. Reads the tile map and the nodes of
 game/levels/<level>.tscn and the lamps of the level in game/data/levels.json.
 """
