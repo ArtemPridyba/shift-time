@@ -699,7 +699,8 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 ## A number between `low` and `high` (`low` itself is allowed unless `above_low`).
 const LOOK_PIPE_COLORS: Array[String] = ["shell", "shell_light", "empty", "water", "dash"]
 const LOOK_KIT_OBJECTS := {
-	"shutter": ["blade_region", "stripe_region", "housing_frame_px", "brick_tint", "wheel_px", "wheel_turns", "gear_px"],
+	"shutter": ["blade_region", "painted_blade_region", "stripe_region", "housing_frame_px", "brick_tint", "wheel_px", "wheel_turns", "gear_px"],
+	"picture_light": ["dark", "lit_color", "lit_gain", "haze_color", "haze", "soft_px"],
 	"platform": ["cap_px", "rack_px", "chain_px", "gear_px", "track_above_px", "track_below_px", "chain_below_px"],
 	"exit_door": ["height_px", "open_distance_px", "floor_tolerance_px", "wheel_px", "wheel_turns",
 		"wheel_seconds", "out_seconds", "out_px", "slide_seconds", "rail_px", "light", "light_energy", "light_radius_px"],
@@ -788,7 +789,7 @@ static func validate_kit_objects(objects: Variant) -> PackedStringArray:
 			elif value is String:
 				if not Color.html_is_valid(value):
 					errors.append("%s: '%s' must be a color like \"#9fd0ff\"" % [where, key])
-			elif not _is_number(value) or float(value) < 0.0 or (float(value) == 0.0 and key != "start_minutes"):
+			elif not _is_number(value) or float(value) < 0.0 or (float(value) == 0.0 and not key in ["start_minutes", "soft_px", "haze"]):
 				errors.append("%s: '%s' must be a number above 0" % [where, key])
 	return errors
 

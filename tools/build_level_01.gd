@@ -53,6 +53,12 @@ const MAP := [
 ## The doorway the hero walks out of (decoration only), in cells.
 const ENTRANCE_CELLS := Rect2i(1, 8, 1, 2)
 
+## The shutter's blade hangs under the painted gearbox of the room's picture
+## (D131), its rack against the painted gear (`painted.Door.gear` in
+## levels.json): its centre x and width in px, inside the doorway's cells.
+const DOOR_CENTRE_X := 526.0
+const DOOR_WIDTH := 48.0
+
 ## Platform 1 starts flush with the upper floor over the top of the stairs
 ## (columns 9-10, top at row 10) and rides 12 cells right. Platform 2 starts
 ## flush with the exit ledge on its column rail (columns 23-24, top at row 8)
@@ -61,10 +67,10 @@ const ENTRANCE_CELLS := Rect2i(1, 8, 1, 2)
 ## data/levels.json, checked by a test). Centres, in cells. Both are two cells
 ## wide (D112).
 ## The factory clock hangs on the brick housing of the shutter, high up.
-const CLOCK_CELL := Vector2(7.75, 3.4)
+const CLOCK_CELL := Vector2(7.75, 3.06)
 ## The torn cable that sparks (Д4): hangs from the truss here, its end this far
 ## below, the sparks die on the upper floor.
-const WIRE_CELL := Vector2(3.6, 3.3)
+const WIRE_CELL := Vector2(3.6, 2.96)
 const WIRE_END := Vector2(14.0, 84.0)
 const FLOOR_ROW := 10
 ## The beacon sits on the wall by the exit door's upper left corner, from the
@@ -144,6 +150,8 @@ func _initialize() -> void:
 	door.housing_height = float((door_cells.position.y - HALL_TOP_ROW) * CELL)
 	door.housing_width = float(CELL)
 	door.position = (Vector2(door_cells.position) + Vector2(door_cells.size) / 2.0) * CELL
+	door.position.x = DOOR_CENTRE_X
+	door.width = DOOR_WIDTH
 	_own(root, door)
 
 	_add_platform(root, "platform_1", PLATFORM_1_CENTRE, PLATFORM_1_TRAVEL, "chain")

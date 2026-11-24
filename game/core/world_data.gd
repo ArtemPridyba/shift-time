@@ -253,7 +253,28 @@ static func validate_backdrop(painted: Variant, where: String) -> PackedStringAr
 		for path: Variant in nodes:
 			if not nodes[path] is Dictionary:
 				errors.append("%s.painted.%s must be an object" % [at, path])
+				continue
+			var node: Dictionary = nodes[path]
+			for key: String in ["clip_y"]:
+				if node.has(key) and not _is_number(node[key]):
+					errors.append("%s.painted.%s.%s must be a number" % [at, path, key])
+			for key: String in ["wheel", "gear"]:
+				if node.has(key) and not _is_circle(node[key]):
+					errors.append("%s.painted.%s.%s must be [x, y, size] in room px" % [at, path, key])
+			for key: String in ["opening"]:
+				if node.has(key) and not _is_rect(node[key]):
+					errors.append("%s.painted.%s.%s must be [x, y, w, h] in room px" % [at, path, key])
 	return errors
+
+
+## [x, y, size] with a size above 0.
+static func _is_circle(value: Variant) -> bool:
+	if not value is Array or (value as Array).size() != 3:
+		return false
+	for n: Variant in value:
+		if not _is_number(n):
+			return false
+	return float(value[2]) > 0.0
 
 
 static func _is_rect(value: Variant) -> bool:

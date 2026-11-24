@@ -162,6 +162,7 @@
     "_about": "Objects of a level dressed from the Night shop kit (task Д4): pictures by name from world.textures, sizes in room pixels. A mechanism turns by the recorded travel of its object; the exit door, the clock and the beacon keep no history.",
     "shutter": {
       "blade_region": [0, 96, 64, 256],
+      "painted_blade_region": [0, 0, 64, 512],
       "stripe_region": [64, 452, 64, 44],
       "housing_frame_px": 6,
       "rivet_px": 2.5,
@@ -170,6 +171,15 @@
       "wheel_px": 40,
       "wheel_turns": 1.5,
       "gear_px": 22
+    },
+    "picture_light": {
+      "_about": "Objects drawn by code over a painted room (world.backdrop) take the picture's light (24.11, level 01 notes): their colour times dark outside the lamps' cones, times lit_color and lit_gain in the middle of a cone; haze lifts their darkest parts towards haze_color (0: no haze, 1: nothing darker than it), like the hazy picture; soft_px blurs them by that many texels to match the soft picture (0: sharp).",
+      "dark": 0.75,
+      "lit_color": "#ffd6ad",
+      "lit_gain": 1.7,
+      "haze_color": "#3c2e2c",
+      "haze": 0.35,
+      "soft_px": 1.5
     },
     "platform": {
       "cap_px": 24,
