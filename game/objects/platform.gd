@@ -13,6 +13,10 @@ extends AnimatableBody2D
 ## target is this platform; level 03): while `powered`, a `once` platform that
 ## has not left its start yet stays there. The latch only holds, it never moves
 ## the platform: once the platform has left its start, `powered` does nothing.
+## A `brake` platform (the crane of level 05, D139) is held wherever it is while
+## `powered`: a stop lever pulled in the past stops it there in the new history.
+## A platform that is not `solid` (the crane's ram over the gallery) never
+## blocks the player and has no collision of its own (the builder clears it).
 ##
 ## Dressed from the Night shop kit (task Д4): the plank is the `platform`
 ## picture (its ends kept, its middle stretched to the width). `track` adds the
@@ -33,6 +37,10 @@ const CYCLE_ONCE := "once"
 @export var travel := Vector2(480, 0)
 ## True for a platform a latch can hold at its start (see above).
 @export var holdable := false
+## With `holdable`: the latch holds the platform wherever it is, not only at its start.
+@export var brake := false
+## False for a platform the player never touches (see above).
+@export var solid := true
 ## The platform's width in pixels; 0 keeps the width of its scene (a bridge
 ## of level 03 is wider).
 @export var width := 0.0
@@ -126,13 +134,13 @@ func on_time_direction_changed(direction: int) -> void:
 
 ## True while a latch holds this platform at its start.
 func is_held() -> bool:
-	return holdable and powered and once and phase <= _delay_ticks
+	return holdable and powered and once and (brake or phase <= _delay_ticks)
 
 
 ## True when the platform in `state` would overlap the player's body above the
 ## feet: standing on it is riding, anything deeper is crushing.
 func blocks_player_at(state: Dictionary, player_rect: Rect2) -> bool:
-	if not player_rect.has_area():
+	if not solid or not player_rect.has_area():
 		return false
 	var body := Rect2(player_rect.position, player_rect.size - Vector2(0.0, carry_margin))
 	return rect_at(state["position"]).intersects(body)

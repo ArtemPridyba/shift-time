@@ -4,8 +4,9 @@ extends Node2D
 ## on a rail under the roof, its hook over the middle of the load, two slings
 ## from the hook down to the load. The load is a `once` platform of the room
 ## (`crane.load` of the level's entry in data/levels.json) that carries the
-## heroine; on its way the hook strikes the hanging lamps and they fall
-## (`CranePlan`). `WorldLight` asks `lamp_fall` here, as it asks `Quakes`.
+## heroine, or a ram that carries nobody (D139); on its way the hook strikes the
+## hanging lamps and they fall (`CranePlan`), or the ram knocks the girders of
+## the gallery off and their lamps fall with them (`Collapse`). `WorldLight` asks `lamp_fall` here, as it asks `Quakes`.
 ##
 ## Like a mechanism, the crane keeps no history: what it draws and which lamp
 ## has fallen come from the load's recorded phase, so under Shift the load
@@ -16,7 +17,7 @@ extends Node2D
 ## Set by tests or read once from the level entry.
 var plan: CranePlan
 var _load: MovingPlatform
-## The collapse the slam into the stop sets off (`Collapse`), when the level has one.
+## The gallery its ram knocks down (`Collapse`), when the level has one.
 var _collapse: Collapse
 var _look := {}
 var _ceiling_y := 384.0
@@ -42,10 +43,11 @@ func lamp_fall(lamp: int) -> Dictionary:
 	_aim()
 	if plan == null or _load == null:
 		return {}
-	var fall := plan.lamp_fall(lamp, _load.phase)
-	if fall.is_empty() and _collapse != null:
-		return _collapse.lamp_fall(lamp)
-	return fall
+	if _collapse != null:
+		var with_girder := _collapse.lamp_fall(lamp)
+		if not with_girder.is_empty():
+			return with_girder
+	return plan.lamp_fall(lamp, _load.phase)
 
 
 ## True once the load has reached the stop at the end of the rail.
@@ -59,7 +61,7 @@ func swing(lamp: int) -> float:
 	if _collapse == null:
 		return 0.0
 	var amount := _collapse.shake_amount()
-	return deg_to_rad(ObjectLook.number(ObjectLook.of("quake"), "swing_degrees", 7.0)) * amount * sin(float(_collapse.since) * 0.17 + float(lamp) * 0.9)
+	return deg_to_rad(ObjectLook.number(ObjectLook.of("quake"), "swing_degrees", 7.0)) * amount * sin(float(_collapse.slam) * 0.17 + float(lamp) * 0.9)
 
 
 func _aim() -> void:
@@ -104,9 +106,12 @@ func _draw() -> void:
 		KitTextures.draw_across(self, beam, _rail)
 	else:
 		draw_rect(_rail, iron)
-	# The stop at the end of the rail the load slams into.
-	var stop := Rect2(Vector2(maxf(_rail.end.x - ObjectLook.number(_look, "rail_over_px", 64.0) + 12.0, _rail.position.x), _rail.end.y),
-		Vector2(ObjectLook.number(_look, "stop_px", 18.0), ObjectLook.number(_look, "stop_px", 18.0) * 2.0))
+	# The stop at the end of the rail the load slams into, on the side it rides to.
+	var stop_px := ObjectLook.number(_look, "stop_px", 18.0)
+	var over := ObjectLook.number(_look, "rail_over_px", 64.0)
+	var to_right := _load.travel.x >= 0.0
+	var stop_x := _rail.end.x - over + 12.0 if to_right else _rail.position.x + over - 12.0 - stop_px
+	var stop := Rect2(Vector2(stop_x, _rail.end.y), Vector2(stop_px, stop_px * 2.0))
 	draw_rect(stop, ObjectLook.color(ObjectLook.mech(), "yellow", Color("#d4a21e")).darkened(0.35))
 	var x := _load.position.x
 	var hook := ObjectLook.picture("crane")

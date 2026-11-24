@@ -712,7 +712,7 @@ const LOOK_KIT_OBJECTS := {
 	"button": ["base_px", "cap_px", "pressed_px"],
 	"crate": ["size_px"],
 	"crane": ["rail_px", "rail_over_px", "cable_px", "cable_color", "sling_inset_px", "hook_eye_px", "stop_px"],
-	"collapse": ["hang_below_ceiling_px", "stub_px", "flange_px", "chain", "rust", "shake_seconds", "shake_px"],
+	"collapse": ["stub_px", "flange_px", "chain", "rust", "shake_seconds", "shake_px"],
 }
 const LOOK_PIPE_NUMBERS: Array[String] = ["feed_width_px", "main_width_px", "wall_px", "flange_every_px", "flange_px", "dash_length_px", "dash_gap_px", "dash_speed_px"]
 const LOOK_MECH_COLORS: Array[String] = ["iron", "iron_light", "iron_shadow", "iron_dark", "outline", "valve", "valve_light", "rust", "yellow"]

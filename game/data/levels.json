@@ -113,73 +113,53 @@
 		"prelude_seconds": 0.5,
 		"intro_seconds": 0.6,
 		"objects": {
-			"crane_load": { "cycle": "once", "speed": 120, "delay_seconds": 0.8 }
+			"crane_load": { "cycle": "once", "speed": 140, "delay_seconds": 0.8 }
 		},
 		"crane": {
-			"_about": "The runaway crane of level 05 (card docs/levels/05.md): the load is the platform crane_load; its hook strikes a lamp of world.lamps when it comes within hook_lead_px of it, and the lamp falls to the row to_row (17: the bottom edge of the room, the floor of the pit; never below it, or the overview shows lamps falling out of the level). When the load slams into the stop at the end of the rail, the collapse (D135) begins: girders fall one by one from the stop towards the exit and land on stubs as a broken bridge, then after lamp_pause_seconds the lamps of collapse.lamps break one by one from the exit back towards the stop; after slip_pause_seconds from the last girder landing the girders slip off their stubs into the pit one by one from the stop towards the exit, every slip_every_seconds, each shuddering slip_warn_seconds first and falling slip_fall_seconds (D137): the bridge lies only for a while. Seconds of the world clock; fall and shatter seconds: kit_objects.quake in look.json.",
+			"_about": "The runaway crane of level 05 (card docs/levels/05.md, D139): the load crane_load is a ram that rides from the far right along the rail towards the start and carries nobody; the stop lever crane_stop holds it wherever it is. The ram knocks a girder of the gallery off when it comes within hook_lead_px of the girder's middle, and the girder's lamp falls with it (collapse.lamps: the lamp of each girder from the left, -1 for none; girder_fall_seconds: how long each girder comes down). The bridge girder (the last) is dragged sideways and lowered slowly: the ram reaches the girder before it (the one by the post) just before the bridge lies, so they never are both there unless the crane is stopped between them. When the ram reaches the stop the hall shakes. falls: lamps the hook strikes on its own (none here). Seconds of the world clock; lamp fall and shatter seconds: kit_objects.quake in look.json.",
 			"load": "crane_load",
-			"hook_lead_px": 16,
-			"falls": [
-				{ "lamp": 0, "to_row": 17 },
-				{ "lamp": 1, "to_row": 17 }
-			],
+			"hook_lead_px": 100,
+			"falls": [],
 			"collapse": {
-				"lamps": [2, 3, 4, 5],
-				"to_row": 17,
-				"girder_first_seconds": 0.3,
-				"girder_every_seconds": 0.45,
-				"girder_fall_seconds": 0.5,
-				"lamp_pause_seconds": 3.8,
-				"lamp_every_seconds": 1.0,
-				"slip_pause_seconds": 3.8,
-				"slip_every_seconds": 1.3,
-				"slip_warn_seconds": 0.9,
-				"slip_fall_seconds": 0.8
+				"lamps": [0, 1, 2, 3],
+				"girder_fall_seconds": [1.0, 1.0, 1.0, 5.0]
 			}
 		},
 		"world": {
-			"_about": "Level 05 in the Night shop (same kit and scale as level 01, D112), 48 cells wide: the hall is 6 cells high under the dark roof; the pits are open to the bottom (a fall is death, D135). darkness: this room is darker than the kit: the lamps go out ahead of her while the bridge slips away behind her. Lamps 1 and 2 hang over the crane's way and fall when its hook strikes them; lamps 3 to 6 hang over the pit between the girders and break in the collapse (crane above).",
+			"_about": "Level 05 in the Night shop (same kit and scale as level 01, D112), 48 cells wide: the gallery of girders hangs on row 9 under the crane's rail, the floor at the left is on row 13, the exit way at the right on row 14 under a slab, the pit between is open to the bottom (a fall is death). Lamps 0 to 3 hang over the girders and fall with them; lamp 4 lights the crane operator's post and its stop lever. darkness: this room is darker than the kit.",
 			"ceiling": 6,
 			"darkness": "#17171e",
 			"back": [
-				{ "kind": "window", "rect": [2.2, 7.3, 1.15, 3] },
-				{ "kind": "window", "rect": [8.4, 7.3, 1.15, 3] },
-				{ "kind": "window", "rect": [14.6, 7.3, 1.15, 3] },
-				{ "kind": "window", "rect": [20.0, 7.3, 1.15, 3] },
-				{ "kind": "soot", "rect": [8.1, 6.5, 1.7, 0.9] },
-				{ "kind": "column", "rect": [6.0, 6, 0.3, 8] },
-				{ "kind": "column", "rect": [13.0, 6, 0.3, 8] },
-				{ "kind": "column", "rect": [19.2, 6, 0.3, 8] },
+				{ "kind": "window", "rect": [2.2, 9.6, 1.15, 3] },
+				{ "kind": "window", "rect": [11.4, 9.8, 1.15, 3] },
+				{ "kind": "window", "rect": [25.0, 10.2, 1.15, 2.6] },
+				{ "kind": "window", "rect": [33.0, 9.8, 1.15, 2.6] },
+				{ "kind": "window", "rect": [44.2, 7.3, 1.15, 2.2] },
+				{ "kind": "soot", "rect": [11.1, 9.0, 1.7, 0.9] },
+				{ "kind": "column", "rect": [8.5, 6, 0.3, 8] },
+				{ "kind": "column", "rect": [18.4, 6, 0.3, 8] },
+				{ "kind": "column", "rect": [32.6, 6, 0.3, 8] },
 				{ "kind": "rust", "rect": [16.0, 11.2, 1.3, 0.8] },
 				{ "kind": "cracks", "rect": [4.0, 8.6, 1.1, 0.8] },
-				{ "kind": "cracks", "rect": [23.0, 12.4, 1.1, 0.75] },
-				{ "kind": "plaster", "rect": [11.0, 12.2, 1.0, 1.0] },
-				{ "kind": "stain", "rect": [17.6, 12.6, 1.3, 0.9] },
+				{ "kind": "cracks", "rect": [29.0, 8.4, 1.1, 0.8] },
+				{ "kind": "plaster", "rect": [6.0, 12.2, 1.0, 0.7] },
+				{ "kind": "stain", "rect": [20.6, 12.6, 1.3, 0.9] },
 				{ "kind": "pipe", "rect": [3.4, 6, 0.18, 4] },
-				{ "kind": "window", "rect": [27.6, 7.3, 1.15, 3] },
-				{ "kind": "window", "rect": [35.3, 7.3, 1.15, 3] },
-				{ "kind": "window", "rect": [44.2, 7.3, 1.15, 2.2] },
-				{ "kind": "column", "rect": [25.0, 6, 0.3, 5] },
-				{ "kind": "column", "rect": [32.6, 6, 0.3, 8] },
-				{ "kind": "column", "rect": [39.2, 6, 0.3, 8] },
-				{ "kind": "column", "rect": [45.8, 6, 0.3, 5] },
 				{ "kind": "pipe", "rect": [42.6, 6, 0.18, 5] },
-				{ "kind": "soot", "rect": [36.8, 6.5, 1.8, 0.9] },
-				{ "kind": "cracks", "rect": [29.0, 8.4, 1.1, 0.8] }
+				{ "kind": "soot", "rect": [36.8, 6.5, 1.8, 0.9] }
 			],
 			"front": [
-				{ "kind": "bricks", "rect": [14.2, 13.78, 1.2, 0.22] }
+				{ "kind": "bricks", "rect": [5.2, 13.78, 1.2, 0.22] }
 			],
 			"lamps": [
-				{ "x": 13.5, "drop": 1.1, "radius_px": 360 },
-				{ "x": 17.6, "drop": 1.0 },
-				{ "x": 25.3, "drop": 1.1, "radius_px": 300 },
-				{ "x": 30.0, "drop": 1.0, "radius_px": 300 },
-				{ "x": 34.0, "drop": 1.1, "radius_px": 300 },
-				{ "x": 41.3, "drop": 1.0, "radius_px": 300 }
+				{ "x": 7.0, "drop": 1.0, "radius_px": 300 },
+				{ "x": 11.0, "drop": 1.0, "radius_px": 300 },
+				{ "x": 19.0, "drop": 1.0, "radius_px": 300 },
+				{ "x": 29.5, "drop": 1.0, "radius_px": 300 },
+				{ "x": 15.0, "drop": 1.2, "radius_px": 340 }
 			],
 			"ground": {
-				"concrete": [[21, 11, 4, 6], [27, 12, 1, 5], [31, 11, 1, 6], [35, 13, 1, 4], [38, 12, 1, 5], [42, 11, 6, 6]],
+				"concrete": [[1, 13, 8, 4], [13, 9, 4, 1], [15, 10, 1, 7], [24, 13, 1, 4], [27, 14, 20, 3], [28, 10, 19, 2]],
 				"roof": [[0, 0, 48, 6]]
 			}
 		},
