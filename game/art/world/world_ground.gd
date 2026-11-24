@@ -23,11 +23,15 @@ var _roof: Array[Rect2i] = []
 var _stair_cells := {}
 var _front: Array = []
 var _cell := Vector2(64, 64)
+## True when the level's picture (`world.backdrop`) draws the ground instead.
+var painted := false
 
 
 func _ready() -> void:
 	_world = WorldData.look()
 	var layout := WorldData.layout(WorldData.entry(level_id))
+	# The painted room (D131) has the floors, the roof and the rubble.
+	painted = not WorldData.backdrop(layout).is_empty()
 	_front = layout.get("front", [])
 	var ground: Variant = layout.get("ground", {})
 	for r: Variant in (ground as Dictionary).get("concrete", []) if ground is Dictionary else []:
@@ -73,7 +77,7 @@ func _covered(cell: Vector2i) -> bool:
 
 
 func _draw() -> void:
-	if _cells.is_empty():
+	if _cells.is_empty() or painted:
 		return
 	var masonry := KitTextures.tile("masonry")
 	var concrete := KitTextures.tile("concrete")

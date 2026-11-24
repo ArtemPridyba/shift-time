@@ -20,7 +20,22 @@ signal opened
 var elapsed := -1.0
 
 var _look := {}
+## The painted opening in this node's coordinates when the level's picture
+## has the frame (`world.backdrop`, D131); empty: the kit draws it.
+var _opening := Rect2()
 var _light: PointLight2D
+
+
+## The level's picture has the frame (D131): {"opening": [x, y, w, h]} in room
+## pixels. The leaf covers that opening; frame and rail are not drawn.
+func use_backdrop(config: Dictionary) -> void:
+	var r: Variant = config.get("opening")
+	if r is Array and (r as Array).size() == 4:
+		var level := owner as Node2D
+		var at := Vector2(float(r[0]), float(r[1]))
+		var corner := to_local(level.to_global(at)) if level != null else at - global_position
+		_opening = Rect2(corner, Vector2(float(r[2]), float(r[3])))
+	queue_redraw()
 
 
 func _ready() -> void:
@@ -85,12 +100,16 @@ func frame_rect() -> Rect2:
 
 ## The dark opening inside the frame, where the stairs show.
 func opening_rect() -> Rect2:
+	if _opening.has_area():
+		return _opening
 	var f := frame_rect()
 	return Rect2(f.position + f.size * Vector2(0.27, 0.14), f.size * Vector2(0.46, 0.72))
 
 
 ## The leaf at rest: it covers the frame's rim.
 func leaf_rect() -> Rect2:
+	if _opening.has_area():
+		return _opening.grow(3.0)
 	var f := frame_rect()
 	var leaf := ObjectLook.picture("exit_leaf")
 	var h := f.size.y * 0.87
@@ -107,7 +126,9 @@ func _draw() -> void:
 	else:
 		draw_rect(open, Color("#15181c"))
 	var frame := ObjectLook.picture("exit_frame")
-	if frame != null:
+	if _opening.has_area():
+		pass
+	elif frame != null:
 		draw_texture_rect(frame, f, false)
 	else:
 		draw_rect(f, Color("#2a2a30"), false, 6.0)
@@ -117,7 +138,7 @@ func _draw() -> void:
 	leaf_at.position += Vector2(slide + out * 0.5, -out * 0.25)
 	var rail := ObjectLook.picture("exit_rail")
 	var rail_h := _num("rail_px", 20.0)
-	if rail != null:
+	if rail != null and not _opening.has_area():
 		draw_texture_rect(rail, Rect2(Vector2(f.position.x + f.size.x * 0.3, f.position.y - rail_h * 0.6),
 				Vector2(leaf_at.size.x + 8.0 + f.size.x * 0.4, rail_h)), false)
 	if out > 0.0:

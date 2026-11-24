@@ -210,17 +210,24 @@
       "radius_px": 150
     },
     "quake": {
-      "_about": "A quake of world time (Д4): the camera shakes shake_px at strength 1 for shake_seconds at shake_hz, the hanging lamps swing swing_degrees, dust_count specks fall from the ceiling for dust_seconds; what falls (quakes.falls of a level) takes fall_seconds to land, a lamp then shatters for shatter_seconds into lamp_shards pieces; a lump of plaster is lump_px wide. Seconds are world seconds.",
+      "_about": "A quake of world time (Д4): the camera shakes shake_px at strength 1 for shake_seconds at shake_hz, the hanging lamps swing swing_degrees, dust_count specks fall from the ceiling for dust_seconds; what falls (quakes.falls of a level) takes fall_seconds to land, a lamp then hits the floor, hops lamp_bounce_px and rolls onto its side while it shatters for shatter_seconds: lamp_shards pieces of glass fly out at up to shard_speed_px across and shard_hop_px up per second, fall with gravity_px per second squared and lie on the treads or the floor, catching the eye with a faint glint shard_glint (0..1), and sparks streaks of spark_px fly out of the impact in the first half; a lump of plaster is lump_px wide. Seconds are world seconds.",
       "shake_px": 7,
       "shake_seconds": 1.4,
       "shake_hz": 9,
       "swing_degrees": 7,
       "fall_seconds": 0.8,
-      "shatter_seconds": 0.6,
+      "shatter_seconds": 0.9,
       "dust_count": 36,
       "dust_seconds": 2.2,
       "lump_px": 30,
-      "lamp_shards": 7,
+      "lamp_shards": 14,
+      "lamp_bounce_px": 12,
+      "shard_speed_px": 280,
+      "shard_hop_px": 300,
+      "gravity_px": 1500,
+      "sparks": 10,
+      "spark_px": 46,
+      "shard_glint": 0.3,
       "dust_color": "#b9ad98"
     },
     "wire": {

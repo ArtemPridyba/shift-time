@@ -741,8 +741,10 @@ func test_level_01_quake_drops_the_lamp_and_shift_lifts_it_back_without_a_jump()
 	var time: RoomTime = room.get_node("RoomTime")
 	var quakes: Quakes = room.get_node("Quakes")
 	var light: WorldLight = room.get_node("WorldLight")
+	var painted: WorldBackdrop = room.get_node("WorldBack/Backdrop")
 	var lamp := 2
 	check(quakes.lamp_fall(lamp).get("drop") == 0.0, "at the start the third lamp hangs")
+	check(painted.lamp_weights()[lamp] > 0.5, "its painted cone shows: %.2f" % painted.lamp_weights()[lamp])
 	var shook := false
 	while time.world_seconds() < 6.4:
 		await _ticks(1)
@@ -755,7 +757,23 @@ func test_level_01_quake_drops_the_lamp_and_shift_lifts_it_back_without_a_jump()
 		drops.append(float(quakes.lamp_fall(lamp)["drop"]))
 	check(quakes.lamp_fall(lamp)["drop"] == 1.0 and quakes.lamp_fall(lamp)["shatter"] == 1.0, "after 14 s the lamp lies broken on the floor")
 	check(light.lights[lamp].energy < 0.001 and lit > 0.0, "and its island of light is gone")
+	check(painted.lamp_weights()[lamp] < 0.001 and painted.lamp_weights()[lamp + 1] > 0.5,
+			"its painted cone is dark, the next lamp's still shines")
 	check(_largest_step(drops) < 0.2, "it falls without a jump, largest step %.2f" % _largest_step(drops))
+	var look := ObjectLook.of("quake")
+	var origin := Vector2(WorldData.lamp_at(WorldData.layout(WorldData.entry("level_01"))["lamps"][lamp]).x, 12.6 * WorldData.CELL - 8.0)
+	var lying := 0
+	var left := origin.x
+	var right := origin.x
+	for k in int(ObjectLook.number(look, "lamp_shards", 14.0)):
+		var at: Vector2 = light._shard(lamp, k, origin, 1.0, look)["at"]
+		check(light._shard(lamp, k, origin, 0.0, look)["at"] == origin, "shard %d starts at the impact" % k)
+		if absf(at.y - (light._ground_y(at.x, origin.y + 8.0) - 1.5)) < 0.01:
+			lying += 1
+		left = minf(left, at.x)
+		right = maxf(right, at.x)
+	check(lying == int(ObjectLook.number(look, "lamp_shards", 14.0)), "every shard lies on a tread or the floor: %d" % lying)
+	check(left < origin.x - 30.0 and right > origin.x + 30.0, "they spread to both sides: %.0f..%.0f" % [left, right])
 	Input.action_press("rewind")
 	var back: Array[float] = []
 	while time.world_seconds() > 12.0:
@@ -763,11 +781,40 @@ func test_level_01_quake_drops_the_lamp_and_shift_lifts_it_back_without_a_jump()
 		back.append(float(quakes.lamp_fall(lamp)["drop"]))
 	check(back.size() > 20 and _largest_step(back) < 0.2, "under Shift it flies back up without a jump, largest step %.2f" % _largest_step(back))
 	check(quakes.lamp_fall(lamp)["drop"] == 0.0 and light.lights[lamp].energy > 0.0, "before 14 s it hangs and shines again")
+	check(painted.lamp_weights()[lamp] > 0.5, "and its painted cone is back")
 	Input.action_release("rewind")
 	while time.world_seconds() < 16.5:
 		await _ticks(1)
 	check(quakes.lamp_fall(lamp)["drop"] == 1.0, "released, the recorded quake drops it again (rule A)")
 	await _free(room)
+
+
+func test_level_01_is_one_painted_room() -> void:
+	var layout := WorldData.layout(WorldData.entry("level_01"))
+	check(WorldData.validate_layout(layout, "level_01").is_empty(), "the painted room passes the data check")
+	var broken := (layout.duplicate(true) as Dictionary)
+	broken["backdrop"]["dark"] = "res://assets/art/backdrop/nothing.jpg"
+	broken["backdrop"]["cone"].erase("spread")
+	broken["backdrop"]["rect"] = [0, 0, 0, 18]
+	check(WorldData.validate_layout(broken, "x").size() == 3, "a missing picture, cone number and empty rect are caught: %s"
+			% [WorldData.validate_layout(broken, "x")])
+	var room := await _load()
+	var painted := room.get_node_or_null("WorldBack/Backdrop") as WorldBackdrop
+	check(painted != null and painted.layer.layer < 0 and painted.layer.follow_viewport_enabled,
+			"the picture lies behind the level on its own layer, moving with the camera")
+	check(painted.picture.material is ShaderMaterial, "its cones of light are a shader")
+	check(room.get_node("WorldBack").get_child_count() == 1, "the kit's wall, sky and pieces are not built")
+	check((room.get_node("WorldGround") as WorldGround).painted, "the ground is the picture's")
+	check((room.get_node("Stairs") as Stairs).painted and room.get_node("Entrance").get("painted") == true,
+			"the stairs and the entrance are the picture's")
+	var exit_door: ExitDoor = room.get_node("Exit/ExitDoor")
+	var opening := Rect2(exit_door.global_position + exit_door.opening_rect().position, exit_door.opening_rect().size)
+	check(opening.is_equal_approx(Rect2(1790, 328, 112, 184)), "the exit's leaf covers the painted opening: %s" % opening)
+	var weights := painted.lamp_weights()
+	check(weights.size() == 5 and weights[0] > 0.5, "five lamps light five cones")
+	await _free(room)
+	var later := WorldData.layout(WorldData.entry("level_05"))
+	check(WorldData.backdrop(later).is_empty(), "level 05 keeps the kit for now")
 
 
 func _largest_step(values: Array[float]) -> float:

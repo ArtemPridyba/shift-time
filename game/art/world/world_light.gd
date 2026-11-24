@@ -34,6 +34,8 @@ var _quakes: Node
 var _falls: Array[Dictionary] = []
 var _swings: Array[float] = []
 var _bases: Array[Vector2] = []
+## The flight a falling lamp's shards may land on (a sibling `Stairs`), or null.
+var _stairs: Stairs
 
 
 func _ready() -> void:
@@ -88,11 +90,18 @@ func _ready() -> void:
 	_glow.material = glow_material
 	_glow.draw.connect(_draw_glow)
 	add_child(_glow)
+	_stairs = get_node_or_null("../Stairs") as Stairs
 	_quakes = get_node_or_null("../Quakes")
 	if _quakes == null:
 		_quakes = get_node_or_null("../Crane")
 	show_at(0.0)
 	_light_heroine.call_deferred()
+
+
+## How bright lamp `i` is now against its full light, about 0..1: flicker,
+## fall and the flash of its breaking (the painted room's cones follow it).
+func shine(i: int) -> float:
+	return _shine[i] if i >= 0 and i < _shine.size() else 0.0
 
 
 ## The room's clock (`RoomTime`, group `world_clock`).
@@ -188,7 +197,10 @@ func _draw() -> void:
 
 
 ## A lamp torn loose by a quake: a stub of chain on the ceiling, the lamp on
-## its way down, then on its side on the floor with glass round it.
+## its way down; it hits the floor, hops once and rolls onto its side, its
+## glass bursts into shards that fly out in arcs and come to rest on the treads
+## (`Stairs`) or the floor. All of it is a formula of the recorded fall, so
+## under Shift the shards fly back together and the lamp back up.
 func _draw_fallen(i: int, at: Vector2, picture: Texture2D, chain: Texture2D) -> void:
 	var fall := _falls[i]
 	var look := ObjectLook.of("quake")
@@ -198,23 +210,108 @@ func _draw_fallen(i: int, at: Vector2, picture: Texture2D, chain: Texture2D) -> 
 		KitTextures.draw_down(self, chain, Rect2(at.x - width / 2.0, top_y, width, minf(at.y - top_y, 40.0)))
 	var size := Vector2(picture.get_size()) / KitTextures.texel("lamp") if picture != null else Vector2(22, 30)
 	var shatter := float(fall["shatter"])
-	var centre := at + Vector2(0, _drop_px(i) + size.y * 0.1)
-	# It tips over as it lands.
-	var turn := 1.35 * shatter + 0.25 * float(fall["drop"])
+	# One hop off the floor in the first half of the breaking, then it lies.
+	var hop_part := clampf(shatter * 2.0, 0.0, 1.0)
+	var hop := ObjectLook.number(look, "lamp_bounce_px", 12.0) * 4.0 * hop_part * (1.0 - hop_part)
+	var roll := 1.0 - (1.0 - shatter) * (1.0 - shatter)
+	var centre := at + Vector2(10.0 * roll, _drop_px(i) + size.y * 0.1 - hop)
+	var turn := 1.5 * roll + 0.25 * float(fall["drop"])
 	if picture != null:
-		ObjectLook.draw_turned(self, picture, centre + Vector2(8.0 * shatter, 0), size, turn, Color(1, 1, 1))
+		# Without its glass and light the lamp is a dull iron cage.
+		var dull := Color(1, 1, 1).lerp(Color(0.72, 0.7, 0.68), shatter)
+		ObjectLook.draw_turned(self, picture, centre, size, turn, dull)
 	if shatter <= 0.0:
 		return
-	var floor_y := float(fall["to_row"]) * WorldData.CELL
-	var glass := WorldData.color(_world, "glass").lightened(0.3)
-	var shards := int(ObjectLook.number(look, "lamp_shards", 7.0))
-	for k in shards:
-		var dir := -1.0 if k % 2 == 0 else 1.0
-		var reach := (12.0 + 9.0 * float(k)) * dir
-		var x := at.x + reach * shatter
-		var y := floor_y - 3.0 - 34.0 * 4.0 * shatter * (1.0 - shatter) * (0.6 + 0.1 * float(k % 4))
-		var s := 2.0 + float(k % 3)
-		draw_colored_polygon(PackedVector2Array([Vector2(x, y - s), Vector2(x + s, y + s * 0.6), Vector2(x - s, y + s * 0.4)]), glass)
+	_draw_shards(self, i, at, WorldData.color(_world, "glass").lightened(0.35), 0.0)
+
+
+## The glass of fallen lamp `i` on `item`: drawn lit with the room, and once
+## more faintly in the glow (`glint` 0..1) so it catches the eye in the dark.
+func _draw_shards(item: CanvasItem, i: int, at: Vector2, glass: Color, glint: float) -> void:
+	var fall := _falls[i]
+	var shatter := float(fall["shatter"])
+	if shatter <= 0.0:
+		return
+	var look := ObjectLook.of("quake")
+	var origin := Vector2(at.x, float(fall["to_row"]) * WorldData.CELL - 8.0)
+	for k in int(ObjectLook.number(look, "lamp_shards", 14.0)):
+		var shard := _shard(i, k, origin, shatter, look)
+		var s := float(shard["size"])
+		var turned := Transform2D(float(shard["angle"]), shard["at"] as Vector2)
+		var points := PackedVector2Array([Vector2(-s, -s * 0.35), Vector2(s * 0.8, -s * 0.5), Vector2(s * 0.4, s * 0.45)])
+		var color := glass.darkened(0.25 * float(shard["shade"]))
+		if glint > 0.0:
+			color.a = glint * (0.5 + 0.5 * float(shard["shade"]))
+		item.draw_colored_polygon(turned * points, color)
+
+
+## Shard `k` of lamp `i` at `shatter` (0..1 of the breaking): it flies from
+## `origin` with its own speed under gravity and stops where it meets the
+## ground. {"at": Vector2, "angle", "size", "shade"}.
+func _shard(i: int, k: int, origin: Vector2, shatter: float, look: Dictionary) -> Dictionary:
+	var r1 := _noise(i, k, 1.0)
+	var r2 := _noise(i, k, 2.0)
+	var r3 := _noise(i, k, 3.0)
+	var speed := Vector2((r1 * 2.0 - 1.0) * ObjectLook.number(look, "shard_speed_px", 170.0),
+			-(0.35 + 0.65 * r2) * ObjectLook.number(look, "shard_hop_px", 260.0))
+	var gravity := ObjectLook.number(look, "gravity_px", 1500.0)
+	var seconds := shatter * ObjectLook.number(look, "shatter_seconds", 0.6)
+	var spin := (r2 - 0.5) * 24.0
+	var step := 1.0 / 60.0
+	var t := 0.0
+	var at := origin
+	# Step the arc until the shard meets the ground, then it lies there.
+	while t < seconds:
+		var dt := minf(step, seconds - t)
+		var next := at + speed * dt + Vector2(0.0, gravity * dt * dt * 0.5)
+		speed.y += gravity * dt
+		var ground := _ground_y(next.x, origin.y + 8.0) - 1.5
+		if next.y > ground and ground < at.y - 0.5:
+			# It meets the riser of a higher tread: it bounces back off it.
+			speed.x = -speed.x * 0.3
+			next.x = at.x
+			ground = _ground_y(next.x, origin.y + 8.0) - 1.5
+		if speed.y > 0.0 and next.y >= ground:
+			at = Vector2(next.x, ground)
+			t += dt
+			break
+		at = next
+		t += dt
+	return {"at": at, "angle": spin * t, "size": 3.0 + 5.0 * r3, "shade": r1}
+
+
+## The ground under room x where a fall lies: a tread of the stairs, or the floor.
+func _ground_y(x: float, floor_y: float) -> float:
+	if _stairs != null:
+		var r := _stairs.rect_px()
+		if x >= r.position.x and x < r.end.x:
+			return _stairs.tread_y(x)
+	return floor_y
+
+
+## A fixed number 0..1 for lamp `i`, piece `k`, channel `c`: the same every time.
+static func _noise(i: int, k: int, c: float) -> float:
+	return fposmod(sin(float(k) * 12.9898 + float(i) * 78.233 + c * 37.719) * 43758.5453, 1.0)
+
+
+## Sparks of the breaking lamp: short streaks out of the impact that fade.
+func _draw_sparks(i: int, at: Vector2) -> void:
+	var fall := _falls[i]
+	var look := ObjectLook.of("quake")
+	var part := float(fall["shatter"]) * 2.0
+	if part <= 0.0 or part >= 1.0:
+		return
+	var origin := Vector2(at.x, float(fall["to_row"]) * WorldData.CELL - 10.0)
+	var reach := ObjectLook.number(look, "spark_px", 46.0)
+	var bulb := WorldData.color(_world, "bulb")
+	for k in int(ObjectLook.number(look, "sparks", 10.0)):
+		var angle := -PI * (0.08 + 0.84 * _noise(i, k, 5.0))
+		var dir := Vector2.from_angle(angle)
+		var far := reach * (0.5 + 0.5 * _noise(i, k, 6.0)) * part
+		var tip := origin + dir * far + Vector2(0.0, 30.0 * part * part)
+		var color := bulb
+		color.a = 1.0 - part
+		_glow.draw_line(tip - dir * 7.0, tip, color, 1.5)
 
 
 func _draw_glow() -> void:
@@ -226,6 +323,9 @@ func _draw_glow() -> void:
 	for i in _lamps.size():
 		var at := WorldData.lamp_at(_lamps[i], _ceiling) + Vector2(0, 7)
 		if not _falls[i].is_empty():
+			_draw_sparks(i, at)
+			_draw_shards(_glow, i, WorldData.lamp_at(_lamps[i], _ceiling), Color("#cfe6ff"),
+					ObjectLook.number(ObjectLook.of("quake"), "shard_glint", 0.3))
 			at.y += _drop_px(i)
 		else:
 			# The bulb swings with its lamp.
