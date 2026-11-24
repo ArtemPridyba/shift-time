@@ -6,7 +6,7 @@ Shift Time is a 2D side-view puzzle-platformer in Godot for **Game Off 2026** (t
 
 - **Goal:** win Game Off 2026. Deadline 1 December 2026, 21:37 UTC (13:37 PST); we submit on 30 November.
 - **Result:** an itch.io page where the game runs in the browser. The web build is required, Windows is secondary.
-- **Scope:** the first chapter, 10 levels, floor 7 when cutting. Each level introduces one mechanic: mechanisms, water, fire, light and darkness, reverse items, cause and effect, interference with the past.
+- **Scope:** five levels in the jam (D132, D133), numbered 01–05 in the order of play: 01 Effect, 02 Flow, 03 Interference, 04 Plates, 05 Crane. On 24.11.2026 they were renumbered: old 04 → 03, 08 → 04, 09 → 05; `docs/history.md` and old notes keep the old numbers. The other planned levels wait in `docs/levels/later/` under their old numbers. Each level introduces one mechanic.
 - **After the jam the game is sold:** every asset must allow commercial use.
 
 Documents are in Russian. Read only what the task needs:
@@ -15,7 +15,7 @@ Documents are in Russian. Read only what the task needs:
 - `docs/roadmap.md` — weeks, gates, task cards with labels, cut list. Read only your task's section: `grep -n '^### 2.3' docs/roadmap.md`.
 - `docs/concept.md` — rules of the game and scope, the source of truth.
 - `docs/architecture.md` — time model, folders, components, data, tests, CI. Read it before any task that changes the time rules, the code structure or the tests.
-- `docs/levels/NN.md` — level cards; a level's solution test is written from its card.
+- `docs/levels/NN.md` — level cards (01–05; postponed ones in `docs/levels/later/`); a level's solution test is written from its card.
 - `docs/decisions.md` — the shared register of open questions and answers.
 - `docs/history.md` — decisions with reasons and the session journal. Search it, don't read it whole.
 - `docs/how-we-work.md` — for people: tools, labels, first messages, Antigravity setup.
@@ -83,8 +83,8 @@ Everything a step reads stays in the conversation and is read again by every lat
 - `game/` — the Godot project (`game/project.godot`).
 - `game/autoload/` — singletons (`time_manager.gd`, …): anything that must be a `Node` and global lives here, not in `core/`.
 - `game/core/` — rules in plain GDScript (`RefCounted`, no nodes, no UI): timeline, recorder, time world, live sources, time-direction logic. Must stay testable headless.
-- `game/objects/` — temporal objects as scenes plus scripts (mechanisms drawn by code in `objects/mech/`, particles that run backwards in `objects/fx/`, numbers in `data/look.json`), one scene per object: door, platform, crate, water, button, lever, valve, gear, wood zone, lamp, sprinkler, time plate and shutter (level 08), crane (level 09), reverse items (flamethrower, trampoline).
-- `game/levels/` — one scene per level, `level_01.tscn` … `level_10.tscn`. Two people never edit one level at once.
+- `game/objects/` — temporal objects as scenes plus scripts (mechanisms drawn by code in `objects/mech/`, particles that run backwards in `objects/fx/`, numbers in `data/look.json`), one scene per object: door, platform, crate, water, button, lever, valve, gear, wood zone, lamp, sprinkler, time plate and shutter (level 04), crane and collapse (level 05), reverse items (flamethrower, trampoline).
+- `game/levels/` — one scene per level, `level_01.tscn` … `level_05.tscn`. Two people never edit one level at once.
 - `game/ui/` — HUD, menus, time-direction indicator. Presentation only.
 - `game/data/` — numbers and settings as JSON (recording step, history length, burn time, player, level list, texts). The team edits these without code.
 - `game/assets/` — images and sounds; every file has a line in `docs/art/log.md`.
