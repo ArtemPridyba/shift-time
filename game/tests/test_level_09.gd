@@ -1,6 +1,6 @@
 extends RefCounted
 ## Tests of level 09 «Crane» (card docs/levels/09.md): a runaway crane strikes
-## two lamps, slams into its stop, and the collapse (D132) drops the girders as
+## two lamps, slams into its stop, and the collapse (D135) drops the girders as
 ## a bridge over the pit and breaks the lamps over it, so the room goes dark. The strikes come from the
 ## load's recorded phase (`CranePlan`): under Shift the load rides back and the
 ## lamps fly up, after Shift is released the same strikes play again. The

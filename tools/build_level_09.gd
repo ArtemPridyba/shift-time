@@ -4,7 +4,7 @@ extends SceneTree
 ## (D112): the hall is 6 cells high under the dark roof. She walks out into a
 ## lit hall; at once a runaway overhead crane rides right, its hook strikes two
 ## lamps, and its load slams into the stop at the end of the rail (D130). The
-## slam sets off the collapse (D132): girders fall from the roof onto the stubs
+## slam sets off the collapse (D135): girders fall from the roof onto the stubs
 ## in the pit beyond as a broken bridge, then the lamps over the pit break, from
 ## the exit back towards the stop. Under Shift everything goes back; at the
 ## start of history the load hangs by pillar A. She stands on it, lets Shift go,
@@ -58,7 +58,7 @@ const LOAD_TRAVEL := Vector2(9.0, 0.0)
 const LOAD_WIDTH_CELLS := 2
 const LOAD_HEIGHT := 32.0
 ## Where the girders of the collapse lie once fallen (cells: x, top row, width),
-## from the stop towards the exit; each rests on a stub of an old support (D132).
+## from the stop towards the exit; each rests on a stub of an old support (D135).
 const GIRDERS: Array[Rect2] = [
 	Rect2(25.75, 11.5, 3.5, 0.5),
 	Rect2(30.5, 10.5, 2.5, 0.5),
@@ -122,7 +122,7 @@ func _initialize() -> void:
 	load_platform.position = Vector2(LOAD_CENTRE.x * CELL, LOAD_CENTRE.y * CELL + LOAD_HEIGHT / 2.0)
 	_own(root, load_platform)
 
-	# The collapse the load's slam into the stop sets off (D132).
+	# The collapse the load's slam into the stop sets off (D135).
 	var collapse := Collapse.new()
 	collapse.name = "Collapse"
 	var rests: Array[Rect2] = []
