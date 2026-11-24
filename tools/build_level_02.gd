@@ -1,21 +1,18 @@
 extends SceneTree
-## Builds level 02 `levels/level_02.tscn` (task 3.1, 17.11.2026; reworked after
-## Artem's playtests 21.11.2026, D97, D98 and D100, card docs/levels/02.md): a
-## room of 53x17 cells, about 1.8 screens wide, the camera follows the hero. He walks out
-## of a doorway onto a ledge at mid height. Right of it is a well with a float and
-## a grate on its floor, beyond that a wall as high as the full water line,
-## behind the wall a small pool with its own float by the far wall and, beyond
-## the pool on the full line, a dry landing and the way out: a narrow shaft
-## down to a low tunnel under the rock and steps up to the exit. The well runs
-## through its grate into the pool: at the start of the history the well is full
-## and the pool empty, then the well drains and, a little later, the pipe fills
-## the pool. The tunnel is as deep as the pool and fills from the same pipe at
-## the same moment and pace, so its water always stands as high as the pool's
-## (D100): the full pool that carried the hero up to the landing has flooded
-## the way out, too long to cross on one breath, and Shift sends both down
-## again. The timing (prelude, walk-in, drain and fill times, when the pipe
-## starts) lives in data/levels.json, the water line is the same height over
-## everything.
+## Builds level 02 `levels/level_02.tscn` «Поток», rebuilt 24.11.2026 after
+## Artem's sketch (D150, card docs/levels/02.md): the height and the look of
+## level 01 (17 rows, the roof on rows 0-1, the Night shop kit), longer than one
+## screen; the camera follows the heroine.
+##
+## Left: the start floor with button 1, pool 1 (full) with its float by the far
+## wall, the wall between the pools with a sluice at the bottom of pool 1, and
+## the deep pool 2 (empty) with its float by the far wall. Button 1 opens the
+## sluice: pool 1 runs into pool 2 until both stand on one line (pool 1's floor
+## is the full line of pool 2). Right: the floor with button 2 and a tunnel that
+## dips under the rock between two gates; its water stands to the brim. Button 2
+## starts the tunnel's drain and opens the far gate; the pump fails before the
+## tunnel is dry and fills it to the brim again; only then the near gate opens.
+## The heroine crosses with Shift held. The numbers live in data/levels.json.
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
 ##   godot --headless --path game --script $PWD/tools/build_level_02.gd
@@ -26,59 +23,60 @@ extends SceneTree
 const CELL := 64
 const TILESET_RES := "res://levels/blockout/blockout_tileset.tres"
 const SCENE_PATH := "res://levels/level_02.tscn"
+const LEVEL_ID := "level_02"
 
 const MAP := [
-	"#####################################################",
-	"#...............................#####################",
-	"#...............................#####################",
-	"#...............................#####################",
-	"#.................................###########.....EE#",
-	"#.................................###########.....EE#",
-	"#...............##..........#####.###########....####",
-	"#...............##..........#####.###########...#####",
-	"#...............##..........#####..............######",
-	"#...............##..........#####.............#######",
-	"#S..............#####################################",
-	"#####...........#####################################",
-	"#####...........#####################################",
-	"#####...........#####################################",
-	"#####...........#####################################",
-	"#####################################################",
-	"#####################################################",
+	"#######################################################",
+	"#######################################################",
+	"#.....................................................#",
+	"#.....................................................#",
+	"#.....................................................#",
+	"#.....................................................#",
+	"#.....................................................#",
+	"#.....................................................#",
+	"#S....................................................#",
+	"#####.........##..............####################....#",
+	"#####.........##.................##############....EE.#",
+	"#####.........##.................##############....EE.#",
+	"################..........#####..................######",
+	"################..........######................#######",
+	"################..........#############################",
+	"#######################################################",
+	"#######################################################",
 ]
 
-## The doorway the hero walks out of (decoration only), in cells: two cells,
-## 128 px, as in level 01 (D82).
-const ENTRANCE_CELLS := Rect2i(1, 9, 1, 2)
+## The doorway the heroine walks out of (decoration), two cells as in level 01.
+const ENTRANCE_CELLS := Rect2i(1, 7, 1, 2)
+## The start floor and the wall between the pools stand on this row; it is
+## pool 1's full line.
+const LINE_ROW := 9
+## Pool 1: columns 5-13 down to its floor on row 12, three cells of water;
+## its float by the wall between the pools.
+const POOL_1_COLUMNS := Vector2i(5, 14)
+const POOL_1_FLOOR_ROW := 12
+const POOL_1_FLOAT_COLUMN := 12.0
+## Pool 2: columns 16-25, full to row 12 (pool 1's floor and the right floor),
+## its floor on row 15; its float by the right floor.
+const POOL_2_COLUMNS := Vector2i(16, 26)
+const POOL_2_TOP_ROW := 12
+const POOL_2_FLOOR_ROW := 15
+const POOL_2_FLOAT_COLUMN := 24.0
+## The sluice: on the face of the wall at the bottom of pool 1, one cell high.
+const SLUICE_CELL := Vector2i(14, 11)
+## The buttons: on the start floor and on the right floor before the tunnel.
+const BUTTON_1_CELL := Vector2i(3, 9)
+const BUTTON_2_CELL := Vector2i(28, 12)
+## The tunnel: water from the brim (row 12, the floor at the gates) down to the
+## floor under the rock (row 14), from the first step to the last.
+const TUNNEL_COLUMNS := Vector2i(31, 49)
+const TUNNEL_TOP_ROW := 12
+const TUNNEL_FLOOR_ROW := 14
+## The gates stand in the mouths on the floor (rows 10-11) and sink into it.
+const GATE_IN_COLUMN := 30
+const GATE_OUT_COLUMN := 49
+const GATE_ROWS := Vector2i(10, 12)
+const BEACON_FROM_DOOR := Vector2(-66.0, -118.0)
 
-## The full water line: the top of the wall, row 6. Everything else is measured
-## from it: the hero's ledge is 5 cells under it (row 11), the well floor 9
-## (row 15), the pool floor 4 (row 10), the landing and the way out are on it.
-const LINE_ROW := 6
-## The well tank covers the ledge too (columns 1-15, so the ledge is under water
-## when the water is full) down to the well floor.
-const WELL_COLUMNS := Vector2i(1, 16)
-const WELL_FLOOR_ROW := 15
-## The pool tank: columns 18-27 down to the pool floor.
-const POOL_COLUMNS := Vector2i(18, 28)
-const POOL_FLOOR_ROW := 10
-
-## The well float lies on the well floor, centred on this column (cells, from
-## the left): a jump from its edge to the wall is 1.5 cells, a hero's jump is
-## about 2.3 (D112: the jump of one heroine height).
-const FLOAT_CENTRE_COLUMN := 13.0
-## The pool float stands by the far wall, centred on this column: from its edge
-## to the landing is half a cell, from the wall top to it far more than a jump,
-## so only a hero who rides it up from the pool floor reaches the landing.
-const POOL_FLOAT_CENTRE_COLUMN := 26.0
-## The landing beyond the pool is columns 28-32 on the full line. Beyond it
-## the way out: a shaft one cell wide (column 33) down to the tunnel floor, as
-## deep as the pool (row 10), so the hero sinks straight down without getting
-## ahead; the tunnel (columns 34-44, rows 8-9) under solid rock, open above
-## from column 45; steps of one cell (columns 46-49) up to the line and the
-## exit. The tunnel tank covers all
-## of it, from the line down, behind the rock (water draws behind the blocks).
-const TUNNEL_COLUMNS := Vector2i(33, 49)
 
 func _initialize() -> void:
 	var root := Node2D.new()
@@ -106,6 +104,14 @@ func _initialize() -> void:
 				"E":
 					exit_cells = Rect2i(cell, Vector2i.ONE) if exit_cells.size == Vector2i.ZERO else exit_cells.expand(cell + Vector2i.ONE)
 
+	# The Night shop world (as level 01): the back wall, the ground after the
+	# gates (it hides a sunk blade), the light; the tiles stay the collision.
+	blocks.visible = false
+	var back := WorldBack.new()
+	back.name = "WorldBack"
+	back.level_id = LEVEL_ID
+	_own(root, back)
+
 	var entrance := Node2D.new()
 	entrance.set_script(load("res://objects/entrance_frame.gd"))
 	entrance.name = "Entrance"
@@ -113,20 +119,66 @@ func _initialize() -> void:
 	entrance.position = Vector2(ENTRANCE_CELLS.position * CELL)
 	_own(root, entrance)
 
-	# The well starts full and drains through its grate from the first tick
-	# (`powered`); the pool and the tunnel start empty and still, the pipe the
-	# well runs into starts both a little later: a prelude event in
-	# levels.json, each water at its pace from there.
-	var well := _add_water(root, "well", WELL_COLUMNS, WELL_FLOOR_ROW, Water.LEVEL_MAX, -1, true)
-	_add_float(root, well, "Float", FLOAT_CENTRE_COLUMN)
-	var pool := _add_water(root, "pool", POOL_COLUMNS, POOL_FLOOR_ROW, 0, 1, false)
-	_add_float(root, pool, "Float", POOL_FLOAT_CENTRE_COLUMN)
-	_add_water(root, "tunnel", TUNNEL_COLUMNS, POOL_FLOOR_ROW, 0, 1, false)
+	# Pool 1 starts full and still, pool 2 empty; button 1 opens the sluice
+	# and runs both. The tunnel starts full; button 2 starts its drain, which
+	# turns into a fill (turn_after_seconds in levels.json).
+	var pool_1 := _add_water(root, "pool_1", POOL_1_COLUMNS, LINE_ROW, POOL_1_FLOOR_ROW, Water.LEVEL_MAX, -1, 1)
+	_add_float(root, pool_1, POOL_1_FLOAT_COLUMN)
+	var pool_2 := _add_water(root, "pool_2", POOL_2_COLUMNS, POOL_2_TOP_ROW, POOL_2_FLOOR_ROW, 0, 1, -1)
+	_add_float(root, pool_2, POOL_2_FLOAT_COLUMN)
+	_add_water(root, "tunnel", TUNNEL_COLUMNS, TUNNEL_TOP_ROW, TUNNEL_FLOOR_ROW, Water.LEVEL_MAX, -1, 1)
+
+	var gate_in: WaterGate = (load("res://objects/water_gate.tscn") as PackedScene).instantiate()
+	gate_in.name = "GateIn"
+	gate_in.object_id = "gate_in"
+	gate_in.watch_id = "tunnel"
+	gate_in.opens_after_flood = true
+	_place_gate(root, gate_in, GATE_IN_COLUMN)
+	var gate_out: Door = (load("res://objects/door.tscn") as PackedScene).instantiate()
+	gate_out.name = "GateOut"
+	gate_out.object_id = "gate_out"
+	gate_out.linked_id = "button_2"
+	_place_gate(root, gate_out, GATE_OUT_COLUMN)
+
+	var ground := WorldGround.new()
+	ground.name = "WorldGround"
+	ground.level_id = LEVEL_ID
+	_own(root, ground)
+
+	# The sluice is drawn over the wall: it sinks into it to let pool 1 out.
+	var sluice: Door = (load("res://objects/door.tscn") as PackedScene).instantiate()
+	sluice.name = "Sluice"
+	sluice.object_id = "sluice"
+	sluice.linked_id = "button_1"
+	sluice.height = float(CELL)
+	sluice.travel = -float(CELL)
+	sluice.position = Vector2(SLUICE_CELL.x * CELL + 16.0, (SLUICE_CELL.y + 0.5) * CELL)
+	_own(root, sluice)
+
+	var button_1 := _add_button(root, "Button1", "button_1", BUTTON_1_CELL, ["sluice", "pool_1", "pool_2"])
+	_add_sparks(root, button_1, NodePath())
+	var button_2 := _add_button(root, "Button2", "button_2", BUTTON_2_CELL, ["tunnel", "gate_out"])
+	_add_sparks(root, button_2, NodePath("../../Tunnel"))
+
+	var light := WorldLight.new()
+	light.name = "WorldLight"
+	light.level_id = LEVEL_ID
+	_own(root, light)
 
 	var exit: ExitZone = (load("res://objects/exit_zone.tscn") as PackedScene).instantiate()
 	exit.size = Vector2(exit_cells.size * CELL)
 	exit.position = (Vector2(exit_cells.position) + Vector2(exit_cells.size) / 2.0) * CELL
 	_own(root, exit)
+	var exit_door := ExitDoor.new()
+	exit_door.name = "ExitDoor"
+	exit_door.position = Vector2(0.0, exit.size.y / 2.0)
+	exit.add_child(exit_door)
+	exit_door.owner = root
+	var beacon := Beacon.new()
+	beacon.name = "Beacon"
+	beacon.position = exit_door.position + BEACON_FROM_DOOR
+	exit.add_child(beacon)
+	beacon.owner = root
 
 	var player: Node2D = (load("res://objects/player.tscn") as PackedScene).instantiate()
 	_own(root, player)
@@ -143,35 +195,62 @@ func _initialize() -> void:
 	quit()
 
 
-## A tank from the full water line down to `floor_row`, over the columns
-## `[from, to)`, at `level`, running (`flow` -1 drains, +1 fills) from the
-## first tick when `powered`; its node at the bottom centre. The grate or pipe
-## is on the left.
-func _add_water(root: Node, id: String, columns: Vector2i, floor_row: int, level: int, flow: int, powered: bool) -> Water:
+## A tank over the columns `[from, to)` from `top_row` down to `floor_row`, at
+## `level`, running `flow` (-1 drains, +1 fills) once powered; its node at the
+## bottom centre, the grate or the pipe on `outlet_side`.
+func _add_water(root: Node, id: String, columns: Vector2i, top_row: int, floor_row: int, level: int, flow: int, outlet_side: int) -> Water:
 	var water: Water = (load("res://objects/water.tscn") as PackedScene).instantiate()
 	water.name = id.to_pascal_case()
 	water.object_id = id
 	var left := float(columns.x * CELL)
 	var right := float(columns.y * CELL)
-	var top := float(LINE_ROW * CELL)
+	var top := float(top_row * CELL)
 	var bottom := float(floor_row * CELL)
 	water.position = Vector2((left + right) / 2.0, bottom)
 	water.size = Vector2(right - left, bottom - top)
 	water.level = level
-	water.powered = powered
+	water.powered = false
 	water.open_flow = flow
-	water.outlet_side = -1
+	water.outlet_side = outlet_side
 	_own(root, water)
 	return water
 
 
-## A float on `water`, centred on `column`; the water sets its height.
-func _add_float(root: Node, water: Water, node_name: String, column: float) -> void:
+func _add_float(root: Node, water: Water, column: float) -> void:
 	var float_body: WaterFloat = (load("res://objects/water_float.tscn") as PackedScene).instantiate()
-	float_body.name = node_name
+	float_body.name = "Float"
 	float_body.position = Vector2(column * CELL - water.position.x, 0.0)
 	water.add_child(float_body)
 	float_body.owner = root
+
+
+## A gate two cells high in the mouth at `column`, standing on the floor; it
+## sinks into the floor to open.
+func _place_gate(root: Node, gate: Door, column: int) -> void:
+	var rows := GATE_ROWS.y - GATE_ROWS.x
+	gate.height = float(rows * CELL)
+	gate.travel = -float(rows * CELL)
+	gate.position = Vector2((column + 0.5) * CELL, (GATE_ROWS.x + rows / 2.0) * CELL)
+	_own(root, gate)
+
+
+func _add_button(root: Node, node_name: String, id: String, cell: Vector2i, targets: Array) -> PushButton:
+	var button: PushButton = (load("res://objects/push_button.tscn") as PackedScene).instantiate()
+	button.name = node_name
+	button.object_id = id
+	button.target_ids = PackedStringArray(targets)
+	button.position = Vector2((cell.x + 0.5) * CELL, cell.y * CELL - PushButton.SIZE.y / 2.0)
+	_own(root, button)
+	return button
+
+
+func _add_sparks(root: Node, button: PushButton, fault_path: NodePath) -> void:
+	var sparks := ButtonSparks.new()
+	sparks.name = "Sparks"
+	sparks.button_path = NodePath("..")
+	sparks.fault_water_path = fault_path
+	button.add_child(sparks)
+	sparks.owner = root
 
 
 func _own(root: Node, child: Node) -> void:
