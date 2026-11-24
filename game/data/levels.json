@@ -75,16 +75,52 @@
 	{
 		"id": "level_02",
 		"scene": "res://levels/level_02.tscn",
-		"prelude_seconds": 3.5,
-		"intro_seconds": 0.3,
-		"prelude_events": [
-			{ "second": 0.5, "id": "pool", "state": { "powered": true } },
-			{ "second": 0.5, "id": "tunnel", "state": { "powered": true } }
-		],
+		"prelude_seconds": 0.5,
+		"intro_seconds": 0.6,
 		"objects": {
-			"well": { "full_seconds": 6, "outlet_inset_px": 416, "lifts_player": false },
-			"pool": { "full_seconds": 3.5, "outlet_inset_px": 48, "lifts_player": false },
-			"tunnel": { "full_seconds": 3.5, "outlet_inset_px": 32, "lifts_player": false }
+			"pool_1": { "full_seconds": 3.5, "outlet_inset_px": 24, "lifts_player": false },
+			"pool_2": { "full_seconds": 3.5, "outlet_inset_px": 0, "lifts_player": false },
+			"sluice": { "open_seconds": 0.6, "close_seconds": 0.6 },
+			"tunnel": { "full_seconds": 8.5, "turn_after_seconds": 8, "outlet_inset_px": 576, "lifts_player": false },
+			"gate_out": { "open_seconds": 1.5, "close_seconds": 1.5 },
+			"gate_in": { "open_level": 9500, "open_seconds": 1.5, "close_seconds": 1.5 }
+		},
+		"world": {
+			"_about": "Level 02 in the Night shop (same kit, height and scale as level 01, D112, D150), 55 cells wide and 17 high, the roof on rows 0-1. Lamps: 0 over the start and button 1, 1 over pool 1's float, 2 over pool 2's float, 3 over button 2 and the near gate, 4-5 over the tunnel, 6 by the exit.",
+			"ceiling": 2,
+			"back": [
+				{ "kind": "truss", "rect": [1, 2, 53, 0.6] },
+				{ "kind": "window", "rect": [6.4, 3.6, 1.15, 2.8] },
+				{ "kind": "window", "rect": [19.4, 3.6, 1.15, 2.8] },
+				{ "kind": "window", "rect": [36.4, 3.6, 1.15, 2.8] },
+				{ "kind": "window", "rect": [44.4, 3.6, 1.15, 2.8] },
+				{ "kind": "column", "rect": [15.85, 2, 0.3, 7] },
+				{ "kind": "column", "rect": [29.85, 2, 0.3, 7] },
+				{ "kind": "soot", "rect": [2.1, 3.4, 1.7, 0.9] },
+				{ "kind": "rust", "rect": [10.2, 2.8, 1.6, 0.9] },
+				{ "kind": "rust", "rect": [21.0, 9.6, 1.3, 0.7] },
+				{ "kind": "cracks", "rect": [8.0, 7.1, 1.1, 0.8] },
+				{ "kind": "cracks", "rect": [41.2, 6.4, 1.1, 0.75] },
+				{ "kind": "plaster", "rect": [33.4, 4.6, 1.1, 1.1] },
+				{ "kind": "stain", "rect": [24.1, 10.2, 1.3, 0.9] },
+				{ "kind": "pipe", "rect": [17.0, 2, 0.18, 7] },
+				{ "kind": "pipe", "rect": [52.4, 2, 0.18, 7] }
+			],
+			"front": [
+				{ "kind": "bricks", "rect": [17.7, 14.78, 1.2, 0.22] },
+				{ "kind": "lump", "rect": [18.0, 14.7, 0.45, 0.3] },
+				{ "kind": "beam", "rect": [42.3, 13.84, 1.5, 0.16] }
+			],
+			"lamps": [
+				{ "x": 3.6, "drop": 2.6 },
+				{ "x": 11.0, "drop": 2.2 },
+				{ "x": 23.5, "drop": 2.6 },
+				{ "x": 28.6, "drop": 2.4 },
+				{ "x": 35.5, "drop": 4.0, "radius_px": 360 },
+				{ "x": 43.5, "drop": 4.0, "radius_px": 360 },
+				{ "x": 51.5, "drop": 2.4 }
+			],
+			"ground": { "concrete": [[0, 9, 5, 8], [14, 9, 2, 8]], "roof": [[0, 0, 55, 2]] }
 		},
 		"title": "02 Flow"
 	},

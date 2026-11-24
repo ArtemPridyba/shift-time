@@ -21,13 +21,18 @@ const GATE_COLOR := Color("#5a6068")
 ## The gate opens when the watched tank's level is at or under this
 ## (0 … `Water.LEVEL_MAX`); above it the gate closes.
 @export_range(0, 10000) var open_level := 500
+## The other way round (level 02, D150): the gate opens when the tank is at or
+## above `open_level` after its failing pump has turned (`Water.turned`), so it
+## lets the hero in only once the tank is flooded again. Before the turn it
+## stays shut, however high the tank stands.
+@export var opens_after_flood := false
 
 
 func apply_settings(settings: Dictionary) -> void:
 	open_level = int(settings.get("open_level", open_level))
 	super.apply_settings(settings)
 	var tank := _watched()
-	if tank != null and tank.level <= open_level:
+	if tank != null and _opens_for(tank):
 		powered = true
 		open = OPEN_MAX
 		_apply()
@@ -36,8 +41,14 @@ func apply_settings(settings: Dictionary) -> void:
 func simulate_tick(tick: int) -> void:
 	var tank := _watched()
 	if tank != null:
-		powered = tank.level <= open_level
+		powered = _opens_for(tank)
 	super.simulate_tick(tick)
+
+
+func _opens_for(tank: Water) -> bool:
+	if opens_after_flood:
+		return tank.turned() and tank.level >= open_level
+	return tank.level <= open_level
 
 
 ## The tank this gate watches; null when it is not in the room.
@@ -52,10 +63,15 @@ func _watched() -> Water:
 	return null
 
 
-## A plain slab: no cyan accent and no gauge, it is a water gate, not a
+## The steel shutter of the kit, like any door; without the kit picture a
+## plain slab: no cyan accent and no gauge, it is a water gate, not a
 ## mechanism of time.
 func _draw() -> void:
 	var size := _size()
+	var slab := ObjectLook.picture("shutter_slab")
+	if slab != null:
+		_draw_kit(slab, size)
+		return
 	draw_rect(Rect2(-size / 2.0, size), GATE_COLOR)
 	for i in 3:
 		var y := -size.y / 2.0 + size.y * (i + 1) / 4.0
