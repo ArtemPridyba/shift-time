@@ -38,17 +38,28 @@ var _distance := 0.0
 ## The phase of the run or of the walk on stairs, in cycles.
 var _phase := 0.0
 ## On a flight of stairs (D120), what the player told `step` this tick:
-## `ground` (rig x -> rig y of the tread there), `tread_px` and `tread_x` (the
-## left edge of a tread, rig x). Empty on a plain floor and in the air.
+## `ground` (rig x -> rig y of the tread there), `at` (where she is in the
+## room), `treads` (room x of the middle of every tread) and `flight` (room x
+## of the flight's two ends). Empty on a plain floor and in the air.
 var _footing: Dictionary = {}
 var _walking := false
-## Where the front foot lands at a step of the stairs cycle, rig x facing right.
-var _contact_x := 0.0
-## On stairs the carrying foot stays where it landed: which leg (0, 1; -1 none),
-## whether it has just landed, and where each leg landed last, in the room.
-var _planted_leg := -1
-var _just_planted := false
+## A step on stairs (D143): the leg in the air (0, 1; -1: no step), the way she
+## walks (+1 right, -1 left), where each foot stands in the room (the one in
+## the air: where it left), where the swinging foot lands, where her middle is
+## (room x) when the step starts and when it lands, how far the step has gone
+## (0..1), and whether the flight goes up her way.
+var _swing_leg := -1
+var _step_dir := 0.0
 var _planted_at: Array[Vector2] = [Vector2.ZERO, Vector2.ZERO]
+var _step_to := Vector2.ZERO
+var _body_from_x := 0.0
+var _body_to_x := 0.0
+var _step_s := 0.0
+var _climbing := false
+## How far down her body is on stairs now, body px; it follows its target
+## within `stairs.crouch_seconds`, so the pelvis does not jerk.
+var _crouch_now := 0.0
+var _delta := 0.0
 ## 1 while the lowest sole stands on the floor, 0 while the pelvis keeps its
 ## idle height in the air; blends like the angles.
 var _ground := 1.0
@@ -184,7 +195,6 @@ func build(data: Dictionary) -> void:
 	_angles = HeroineData.pose_angles(_data, "idle").duplicate()
 	_lift = 0.0
 	_ground = 1.0
-	_contact_x = _stairs_contact_x()
 	_footing = {}
 	_phase = 0.0
 	_apply_angles(_angles)
@@ -224,21 +234,22 @@ func step(velocity: Vector2, on_floor: bool, delta: float, footing := {}) -> voi
 	var target_lift: float
 	var target_ground := 1.0
 	_footing = footing if on_floor else {}
-	if not on_floor:
-		_planted_leg = -1
+	_delta = delta
+	if not on_floor or _footing.is_empty():
+		_swing_leg = -1
+		_crouch_now = 0.0
 	if on_floor and absf(velocity.x) >= float(run.get("min_speed_px", 1.0)):
 		_distance += absf(velocity.x) * delta
 		var cycle := "run"
+		var keys := "keys"
 		if _footing.is_empty():
 			_phase += absf(velocity.x) * delta / float(run.get("cycle_px", 1.0))
 		else:
 			cycle = "stairs"
-			_phase = _stairs_phase(absf(velocity.x) * delta, delta)
+			_walk_stairs(signf(velocity.x))
+			keys = "keys_up" if _climbing else "keys_down"
 		_phase = fposmod(_phase, 1.0)
-		var leg := -1 if _footing.is_empty() else (0 if _phase < 0.5 else 1)
-		_just_planted = leg >= 0 and leg != _planted_leg
-		_planted_leg = leg
-		var key := HeroineData.run_pose(_data, _phase, cycle)
+		var key := HeroineData.run_pose(_data, _phase, cycle, keys)
 		target_angles = key["angles"]
 		target_lift = float(key["lift"])
 		_pose = "run"
@@ -248,7 +259,7 @@ func step(velocity: Vector2, on_floor: bool, delta: float, footing := {}) -> voi
 		target_lift = HeroineData.pose_lift(_data, "idle")
 		_pose = "idle"
 		_walking = false
-		_planted_leg = -1
+		_swing_leg = -1
 	else:
 		var air := HeroineData.air_pose(_data, velocity.y)
 		target_angles = air["angles"]
@@ -630,10 +641,11 @@ func _apply() -> void:
 	_update_cable()
 
 
-## On stairs (D120): the body goes along the slope and comes down as far as
-## its legs need; walking, the carrying foot stays in the middle of the tread
-## it landed on, the other swings over the treads; standing, both boots stand
-## on their treads. A boot that would go into a tread is lifted onto it.
+## On stairs (D120, D143): the body goes along the slope and comes down as far
+## as its legs need, within `max_crouch_px`; walking, the standing foot stays
+## on its tread and the other goes along `_swing_point` to its landing; at
+## rest, both boots stand on the treads under them. A boot that would go into
+## a tread is lifted onto it.
 func _stand_on_treads() -> void:
 	var stairs: Dictionary = _data.get("stairs", {})
 	var legs: Array = stairs.get("legs", [])
@@ -645,50 +657,114 @@ func _stand_on_treads() -> void:
 	# Where each foot must stand (rig px) and how much its reach counts.
 	var targets: Array[Vector2] = []
 	var weights: Array[float] = []
-	if _walking:
-		if _just_planted and _planted_leg >= 0:
-			_planted_at[_planted_leg] = at + _landing(ground)
-			_just_planted = false
-		# Around a landing both feet count: the one coming down and the one
-		# leaving, fading over contact_phase of the cycle.
-		var c := float(stairs.get("contact_phase", 0.1))
-		var to_landing := wrapf((0.5 if _planted_leg == 0 else 1.0) - _phase, -0.5, 0.5)
-		var since := wrapf(_phase - (0.0 if _planted_leg == 0 else 0.5), -0.5, 0.5)
-		for i in legs.size():
-			if i == _planted_leg:
-				targets.append(_planted_at[i] - at)
-				weights.append(1.0)
-			elif to_landing < c:
-				targets.append(_landing(ground))
-				weights.append(1.0 - to_landing / c)
-			else:
-				targets.append(_planted_at[i] - at)
-				weights.append(clampf(1.0 - since / c, 0.0, 1.0))
-	else:
-		for leg: Array in legs:
-			var shin := String(leg[1])
+	var stepping := _walking and _swing_leg >= 0
+	for i in legs.size():
+		if not stepping:
+			var shin := String(legs[i][1])
 			targets.append(Vector2(_sole_middle(shin).x, _leg_ground(shin, ground)))
+			weights.append(1.0)
+		elif i == _swing_leg:
+			targets.append(_swing_point(ground, at))
+			# The leg in the air counts as it leaves and as it lands.
+			weights.append(maxf(1.0 - smoothstep(0.0, 0.3, _step_s), smoothstep(0.6, 1.0, _step_s)))
+		else:
+			targets.append(_planted_at[i] - at)
 			weights.append(1.0)
 	var down := 0.0
 	for i in legs.size():
 		down = maxf(down, weights[i] * _crouch(legs[i], targets[i], max_reach))
-	# She bends her knees only so far; a foot left behind beyond that comes off
+	# She bends her knees only so far; a foot left further behind comes off
 	# its tread, as a heel does at the end of a step.
-	root_joint.position.y += minf(down, float(stairs.get("max_crouch_px", 0.0)) / absf(_body.scale.y))
+	down = minf(down, float(stairs.get("max_crouch_px", 0.0)) / absf(_body.scale.y))
+	var seconds := float(stairs.get("crouch_seconds", 0.0))
+	_crouch_now = down if seconds <= 0.0 or _delta <= 0.0 else lerpf(_crouch_now, down, 1.0 - exp(-_delta / seconds))
+	root_joint.position.y += _crouch_now
 	for i in legs.size():
 		var leg: Array = legs[i]
-		if not _walking or i == _planted_leg:
-			_reach(String(leg[0]), String(leg[1]), targets[i], ground)
-		_lift_clear(String(leg[0]), String(leg[1]), ground, _walking and i != _planted_leg)
+		_reach(String(leg[0]), String(leg[1]), targets[i], ground)
+		_lift_clear(String(leg[0]), String(leg[1]), ground, stepping and i == _swing_leg)
 
 
-## Where the front foot lands now, rig px: the middle of the tread under the
-## landing point of the stairs cycle, on its top.
-func _landing(ground: Callable) -> Vector2:
-	var tread := maxf(float(_footing.get("tread_px", 1.0)), 1.0)
-	var tread_x := float(_footing.get("tread_x", 0.0))
-	var x := tread_x + (floorf((signf(_body.scale.x) * _contact_x - tread_x) / tread) + 0.5) * tread
-	return Vector2(x, float(ground.call(x)))
+## Where the swinging foot is now, rig px: from where it left to where it
+## lands, by how far the step has gone; going up it rises early, going down
+## it goes straight; it arcs `lift_px` over that way and keeps clear of the
+## treads it passes.
+func _swing_point(ground: Callable, at: Vector2) -> Vector2:
+	var stairs: Dictionary = _data.get("stairs", {})
+	var s := _step_s
+	var from := _planted_at[_swing_leg] - at
+	var to := _step_to - at
+	var x := lerpf(from.x, to.x, smoothstep(0.0, 1.0, s))
+	var v := 1.0 - (1.0 - s) * (1.0 - s) if to.y < from.y else s
+	var arc := float(stairs.get("lift_px", 0.0)) * sin(PI * s)
+	var y := lerpf(from.y, to.y, v) - arc
+	var half := float(stairs.get("sole_half_px", 6.0))
+	var top := minf(float(ground.call(x)), minf(float(ground.call(x - half)), float(ground.call(x + half))))
+	return Vector2(x, minf(y, top - arc))
+
+
+## Walking on stairs (D143): her steps are planned on the treads, not on the
+## clock. A step starts with one foot standing and ends when her middle comes
+## to where the other foot, landing about `stride_px` ahead of the standing
+## one, is `land_ahead_up_px` (or `_down_px`) in front of her; the phase of the pose cycle
+## follows the steps, the first leg landing at 0 and the second at 0.5.
+func _walk_stairs(dir: float) -> void:
+	var at: Vector2 = _footing.get("at", Vector2.ZERO)
+	var ground: Callable = _footing["ground"]
+	_climbing = float(ground.call(dir * 16.0)) < float(ground.call(-dir * 16.0))
+	if _swing_leg < 0 or dir != _step_dir:
+		# She starts on the flight or turns: the standing foot is under her.
+		var stance := 1 if _swing_leg < 0 else _swing_leg
+		_swing_leg = 1 - stance
+		_step_dir = dir
+		var x := _foothold(at.x, at.x, 0.0)
+		_planted_at[stance] = Vector2(x, at.y + float(ground.call(x - at.x)))
+		var legs: Array = (_data.get("stairs", {}) as Dictionary).get("legs", [])
+		_planted_at[_swing_leg] = at + _sole_middle(String(legs[_swing_leg][1]))
+		_body_from_x = at.x
+		_plan_step(at, ground)
+	for i in 3:
+		var span := maxf(_step_dir * (_body_to_x - _body_from_x), 1.0)
+		_step_s = clampf(_step_dir * (at.x - _body_from_x) / span, 0.0, 1.0)
+		if _step_s < 1.0:
+			break
+		# The foot lands; the other one leaves its tread.
+		_planted_at[_swing_leg] = _step_to
+		_swing_leg = 1 - _swing_leg
+		_body_from_x = _body_to_x
+		_plan_step(at, ground)
+	_phase = (0.5 if _swing_leg == 0 else 0.0) + 0.5 * _step_s
+
+
+## Where the swinging foot will land and where her middle is then.
+func _plan_step(at: Vector2, ground: Callable) -> void:
+	var stairs: Dictionary = _data.get("stairs", {})
+	var stride := float(stairs.get("stride_px", 40.0))
+	var ahead := float(stairs.get("land_ahead_up_px" if _climbing else "land_ahead_down_px", 0.0))
+	var stance_x := _planted_at[1 - _swing_leg].x
+	var x := _foothold(stance_x + _step_dir * stride, stance_x, stride * 0.5)
+	_body_to_x = x - _step_dir * ahead
+	# Her middle never goes back to land a step.
+	if _step_dir * (_body_to_x - _body_from_x) < stride * 0.25:
+		_body_to_x = _body_from_x + _step_dir * stride * 0.25
+	_step_to = Vector2(x, at.y + float(ground.call(x - at.x)))
+
+
+## The room x where a foot aiming at `target` lands: the middle of the tread
+## nearest to it, at least `min_ahead` beyond `from` her way; off the flight,
+## the floor at `target` itself.
+func _foothold(target: float, from: float, min_ahead: float) -> float:
+	var flight: Vector2 = _footing.get("flight", Vector2(-INF, INF))
+	if target < flight.x or target > flight.y:
+		return target
+	var best := target
+	var best_gap := INF
+	for middle: float in _footing.get("treads", PackedFloat32Array()):
+		var gap := absf(middle - target)
+		if gap < best_gap and (min_ahead <= 0.0 or _step_dir * (middle - from) >= min_ahead):
+			best = middle
+			best_gap = gap
+	return best
 
 
 ## How far the body must come down, in body pixels, so the leg reaches its
@@ -797,42 +873,6 @@ func _lift_clear(thigh_name: String, shin_name: String, ground: Callable, swingi
 		_reach(thigh_name, shin_name, Vector2(_sole_middle(shin_name).x + forward, _leg_ground(shin_name, ground)), ground)
 		if swinging:
 			forward = 4.0 * signf(_body.scale.x)
-
-
-## The phase on stairs: she walks on, and the phase is pulled within
-## `lock_seconds` to where each foot lands in the middle of a tread,
-## `treads_per_step` treads a step. It never runs backwards.
-func _stairs_phase(advance: float, delta: float) -> float:
-	var stairs: Dictionary = _data.get("stairs", {})
-	var tread := maxf(float(_footing.get("tread_px", 1.0)), 1.0)
-	var steps := float(int(stairs.get("treads_per_step", 1)))
-	var base := advance / (2.0 * steps * tread)
-	var facing := signf(_body.scale.x)
-	# Treads from a tread's edge to the front foot at its landing, along her way.
-	var treads := (_contact_x - facing * float(_footing.get("tread_x", 0.0))) / tread
-	var target := (treads - 0.5) / (2.0 * steps)
-	var lock := float(stairs.get("lock_seconds", 0.1))
-	var k := 1.0 if lock <= 0.0 else 1.0 - exp(-delta / lock)
-	return _phase + maxf(base + wrapf(target - _phase, -0.5, 0.5) * k, 0.25 * base)
-
-
-## How far ahead of her (facing right) the front foot lands in the stairs cycle:
-## the middle of the first leg's soles at phase 0 and the second's at 0.5.
-func _stairs_contact_x() -> float:
-	var stairs: Dictionary = _data.get("stairs", {})
-	var legs: Array = stairs.get("legs", [])
-	var soles: Dictionary = _data.get("soles", {})
-	if legs.size() != 2 or soles.is_empty():
-		return 0.0
-	var sum := 0.0
-	var count := 0
-	for i in 2:
-		_apply_angles(HeroineData.run_pose(_data, 0.5 * float(i), "stairs")["angles"])
-		var shin := String(legs[i][1])
-		for point: Array in soles.get(shin, []):
-			sum += _part_point(shin, Vector2(float(point[0]), float(point[1]))).x
-			count += 1
-	return sum / float(maxi(count, 1)) * absf(_body.scale.y)
 
 
 func _apply_angles(angles: Dictionary) -> void:

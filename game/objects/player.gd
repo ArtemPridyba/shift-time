@@ -104,8 +104,8 @@ func _footing() -> Dictionary:
 			continue
 		return {
 			"ground": func(x: float) -> float: return origin.y + stairs.tread_y(at.x + x - origin.x) - at.y,
-			"tread_px": stairs.tread_px(),
-			"tread_x": origin.x + flight.position.x - at.x,
+			"treads": stairs.tread_middles(origin.x),
+			"flight": Vector2(origin.x + flight.position.x, origin.x + flight.end.x),
 			"at": at,
 			"slope": origin.y + stairs.surface_y(at.x - origin.x) - at.y,
 		}
