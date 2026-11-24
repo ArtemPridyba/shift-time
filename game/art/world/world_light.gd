@@ -112,7 +112,7 @@ func show_at(seconds: float) -> void:
 			var shatter := float(fall["shatter"])
 			var flash := 0.9 * (1.0 - shatter) * (1.0 - shatter) if shatter > 0.0 else 0.0
 			e *= maxf(float(fall["light"]), flash)
-			lights[i].position = _bases[i] + Vector2(0, _drop_px(i))
+			lights[i].position = _bases[i] + Vector2(0, _drop_px(i) - float(fall.get("lift", 0.0)))
 		lights[i].energy = e
 		_shine[i] = e / energy
 	if _glow != null:
@@ -155,16 +155,18 @@ func _draw() -> void:
 		if not _falls[i].is_empty() and float(_falls[i]["drop"]) > 0.0:
 			_draw_fallen(i, at, picture, chain)
 			continue
-		# While the room shakes the lamp swings on its chain from the ceiling.
+		# While the room shakes the lamp swings on its chain from the ceiling;
+		# a winch (level 09) winds it up into the roof.
 		draw_set_transform(Vector2(at.x, top_y), _swings[i])
-		at = Vector2(0.0, at.y - top_y)
+		at = Vector2(0.0, at.y - top_y - float(_falls[i].get("lift", 0.0)))
 		# The lamp picture at its own size, the bulb where the glow is.
 		var size := Vector2(picture.get_size()) / KitTextures.texel("lamp") if picture != null else Vector2.ZERO
 		var top := at.y + 7.0 - size.y * float(_lamp.get("picture_bulb", 0.66)) if picture != null else at.y - 14.0
 		# The chain it hangs on.
 		if chain != null:
 			var width := float(chain.get_width()) / KitTextures.texel("lamp_chain")
-			KitTextures.draw_down(self, chain, Rect2(at.x - width / 2.0, 0.0, width, top + 2.0))
+			if top + 2.0 > 0.0:
+				KitTextures.draw_down(self, chain, Rect2(at.x - width / 2.0, 0.0, width, top + 2.0))
 		else:
 			var link := Vector2(at.x, 0.0)
 			while link.y < top:

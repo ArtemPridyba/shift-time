@@ -123,7 +123,14 @@
 				{ "lamp": 0, "to_row": 14 },
 				{ "lamp": 1, "to_row": 14 },
 				{ "lamp": 2, "to_row": 14 }
-			]
+			],
+    "winch": {
+      "_about": "The winch of lamp 3 (D131): its lever (in the lower hall) powers the object winch, which winds the lamp lift_px up into the roof in lift_seconds of the world clock. Wound fully up, the hook passes under it; hanging lower, the hook tears it and its power cable, and the exit door stays shut.",
+      "object": "winch",
+      "lamp": 2,
+      "lift_px": 84,
+      "lift_seconds": 1.2
+    }
 		},
 		"world": {
 			"_about": "Level 09 in the Night shop (same kit and scale as level 01, D112): the hall is 6 cells high under the dark roof; the lower hall floor is row 14. darkness: this room is darker than the kit, the dark is the difficulty. The three lamps hang on the crane's way (radius_px: a wider island than the kit's, so lamp 1 lights pillar A) and fall when its hook strikes them (crane above).",
@@ -154,7 +161,8 @@
 			"lamps": [
 				{ "x": 11.5, "drop": 1.1, "radius_px": 420 },
 				{ "x": 17.0, "drop": 1.0 },
-				{ "x": 22.4, "drop": 1.1 }
+				{ "x": 22.4, "drop": 1.1,
+          "radius_px": 440 }
 			],
 			"ground": { "concrete": [[26, 11, 6, 6]], "roof": [[0, 0, 32, 6]] }
 		},

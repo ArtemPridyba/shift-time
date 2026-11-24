@@ -254,6 +254,19 @@
       "cable_color": "#2a2622",
       "sling_inset_px": 10,
       "hook_eye_px": 6
+    },
+    "winch": {
+      "_about": "The lamp winch of level 09 (D131): a drum drum_px in radius on a column turns drum_turns times while it winds the lamp up into a hatch hatch_px wide (hatch_color) in the roof; its cable cable_px wide in cable_color. The power cable to the exit beacon (power_color) is torn off torn_gap_px from the hatch when the hook tears the lamp; its sparking end hangs torn_end_x, torn_end_y from the hatch (kit_objects.wire).",
+      "drum_px": 14,
+      "drum_turns": 3,
+      "hatch_px": 34,
+      "hatch_color": "#0b0b0f",
+      "cable_px": 2,
+      "cable_color": "#1d1a18",
+      "power_color": "#3b2a1c",
+      "torn_gap_px": 30,
+      "torn_end_x": 12,
+      "torn_end_y": 60
     }
   },
   "pipe": {

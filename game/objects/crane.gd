@@ -16,6 +16,8 @@ extends Node2D
 ## Set by tests or read once from the level entry.
 var plan: CranePlan
 var _load: MovingPlatform
+## The winch of one lamp (`Winch`), when the level has one.
+var _winch: Winch
 var _look := {}
 var _ceiling_y := 384.0
 var _rail := Rect2()
@@ -40,7 +42,18 @@ func lamp_fall(lamp: int) -> Dictionary:
 	_aim()
 	if plan == null or _load == null:
 		return {}
+	if _winch != null and _winch.lamp == lamp and not _winch.torn:
+		# Wound up under the roof, or still hanging low before the hook comes.
+		var hanging := plan.lamp_fall(lamp, -1)
+		hanging["lift"] = _winch.lift_px()
+		return hanging
 	return plan.lamp_fall(lamp, _load.phase)
+
+
+## True while the hook is at lamp `lamp` (`CranePlan.strikes`), for the winch.
+func strikes(lamp: int) -> bool:
+	_aim()
+	return plan != null and _load != null and plan.strikes(lamp, _load.phase)
 
 
 ## The crane never swings a lamp; only `Quakes` do.
@@ -61,6 +74,8 @@ func _aim() -> void:
 	for child in room.get_children():
 		if child is MovingPlatform and (child as MovingPlatform).object_id == plan.load_id:
 			_load = child
+		if child is Winch:
+			_winch = child
 	if _load == null:
 		return
 	var layout := WorldData.layout(entry)

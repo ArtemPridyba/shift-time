@@ -136,6 +136,101 @@ func test_level_09_the_parked_load_is_out_of_reach_without_the_crane() -> void:
 	await _free(room)
 
 
+
+func test_crane_plan_hook_strikes_while_it_passes_the_lamp() -> void:
+	var plan := CranePlan.from_data({"load": "l", "hook_lead_px": 10, "falls": [{"lamp": 0, "to_row": 5}]},
+		48.0, {"fall_seconds": 0.5, "shatter_seconds": 0.5})
+	plan.aim(100.0, 500.0, 10, 100, [300.0])
+	var hit := int(plan.falls[0]["hit"])
+	var gone := int(plan.falls[0]["pass"])
+	check(gone > hit, "the hook takes some ticks to pass the lamp, %d..%d" % [hit, gone])
+	check(not plan.strikes(0, hit - 1) and plan.strikes(0, hit) and plan.strikes(0, gone) and not plan.strikes(0, gone + 1),
+		"the hook is at the lamp from the strike until it has gone hook_lead_px past it")
+	check(not plan.strikes(1, hit), "a lamp the crane never strikes is never at the hook")
+
+
+func test_crane_winch_data_is_checked() -> void:
+	var good := {"load": "l", "hook_lead_px": 0, "falls": [{"lamp": 0, "to_row": 1}],
+		"winch": {"object": "w", "lamp": 0, "lift_px": 80, "lift_seconds": 1}}
+	check(CranePlan.problems(good, "x", 1).is_empty(), "good winch data has no problems")
+	var plan := CranePlan.from_data(good, 60.0, {})
+	check(str(plan.winch["object"]) == "w" and int(plan.winch["lamp"]) == 0, "the plan reads its winch")
+	for broken: Dictionary in [{"object": "", "lamp": 0, "lift_px": 80, "lift_seconds": 1},
+			{"object": "w", "lamp": 1, "lift_px": 80, "lift_seconds": 1},
+			{"object": "w", "lamp": 0, "lift_px": 0, "lift_seconds": 1},
+			{"object": "w", "lamp": 0, "lift_px": 80}]:
+		var bad := good.duplicate(true)
+		bad["winch"] = broken
+		check(not CranePlan.problems(bad, "x", 2).is_empty(), "broken winch data is reported: %s" % [broken])
+
+
+func test_level_09_without_the_winch_the_hook_tears_the_door_power() -> void:
+	var room := await _load()
+	var winch := room.get_node("Winch") as Winch
+	var door := room.find_child("ExitDoor", true, false) as ExitDoor
+	var light := room.get_node("WorldLight") as WorldLight
+	check(winch.lamp == 2, "the winch holds lamp 3")
+	check(door.has_power(), "at the start the exit door has power")
+	await _ticks(10 * 60)
+	check(winch.torn and not door.has_power(), "the hook tears lamp 3 with the exit door's power cable")
+	check(light.lights[2].energy < 0.01, "lamp 3 is dark")
+	# A pull now winds up nothing: the lamp is already on the floor.
+	await _stand_by(room, "WinchLever")
+	await _press("interact")
+	await _ticks(3 * 60)
+	check(winch.powered and winch.torn and light.lights[2].energy < 0.01, "pulling the lever after the strike brings nothing back")
+	await _free(room)
+
+
+func test_level_09_a_pull_under_shift_keeps_lamp_3_and_the_door_power() -> void:
+	var room := await _load()
+	var winch := room.get_node("Winch") as Winch
+	var door := room.find_child("ExitDoor", true, false) as ExitDoor
+	var light := room.get_node("WorldLight") as WorldLight
+	var load_platform := (room.get_node("Crane") as Crane).load_platform()
+	await _ticks(8 * 60)
+	await _stand_by(room, "WinchLever")
+	Input.action_press("rewind")
+	await _ticks(7 * 60)
+	check(not winch.torn and door.has_power(), "under Shift the cable heals")
+	await _press("interact")
+	Input.action_release("rewind")
+	await _ticks(12 * 60)
+	check(load_platform.phase == load_platform.once_last_phase(), "the crane rides to the exit ledge again")
+	check(winch.lift == Winch.FULL and not winch.torn, "lamp 3 is wound up into the roof and the hook passes under it")
+	check(light.lights[2].energy > 0.5, "lamp 3 still shines by the exit, %.2f" % light.lights[2].energy)
+	check(door.has_power(), "the exit door keeps its power")
+	check(light.lights[0].energy < 0.01 and light.lights[1].energy < 0.01, "lamps 1 and 2 are struck as before")
+	await _free(room)
+
+
+func test_level_09_a_step_leads_from_the_lower_hall_back_to_pillar_a() -> void:
+	var room := await _load()
+	var blocks := room.get_node("Blocks") as TileMapLayer
+	# Pillar A: cells 7-8 from row 12; the step: cell 9 of row 13, a cell lower.
+	check(blocks.get_cell_source_id(Vector2i(9, 13)) != -1 and blocks.get_cell_source_id(Vector2i(9, 12)) == -1,
+		"a step one cell high stands in the lower hall by pillar A")
+	check(blocks.get_cell_source_id(Vector2i(8, 12)) != -1 and blocks.get_cell_source_id(Vector2i(8, 11)) == -1,
+		"pillar A is one cell above the step")
+	var lever := room.get_node("WinchLever") as Lever
+	check(is_equal_approx(lever.position.y, 14.0 * CELL) and lever.position.x > 640.0 and lever.position.x < 1600.0,
+		"the winch lever stands on the lower hall floor")
+	await _free(room)
+
+
+## Puts the heroine by the node `node_name`.
+func _stand_by(room: Node, node_name: String) -> void:
+	var player: Player = room.get_node("Player")
+	var target: Node2D = room.get_node(node_name)
+	player.respawn(target.global_position - Vector2(20.0, 0.0))
+	await _ticks(10)
+
+
+func _press(action: String) -> void:
+	Input.action_press(action)
+	await _ticks(6)
+	Input.action_release(action)
+
 func _load() -> Node:
 	Input.action_release("rewind")
 	_reset_time()
