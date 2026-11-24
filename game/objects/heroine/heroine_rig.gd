@@ -157,7 +157,7 @@ func build(data: Dictionary) -> void:
 		# A part may be drawn larger than on the sheet (the gauntlet reads at 94 px).
 		var size := float(part.get("size", 1.0))
 		joint.scale = Vector2(size, size)
-		var sprite := _picture(dir, String(part.get("texture", "")), _vec(part.get("pivot")), bakes)
+		var sprite := _picture(dir, String(part.get("texture", "")), _vec(part.get("pivot")), bakes, float(part.get("top", 0.0)))
 		sprite.name = "Picture_" + name
 		if bool(part.get("far", false)):
 			sprite.modulate = far_tint
@@ -981,12 +981,19 @@ func _to_rig(node: Node2D) -> Transform2D:
 ## game, so it is drawn back at sheet scale and shows 1:1 on screen. Nearest
 ## pixels: at 1:1 linear filtering at a fraction of a pixel blurs the picture
 ## (the showcase's large doll keeps linear).
-func _picture(dir: String, texture: String, pivot: Vector2, bakes: Dictionary) -> Sprite2D:
+## `top`: the rows of the picture above this y (picture px) are not drawn.
+func _picture(dir: String, texture: String, pivot: Vector2, bakes: Dictionary, top := 0.0) -> Sprite2D:
 	var bake := float(bakes.get(texture, 1.0))
 	var sprite := Sprite2D.new()
 	sprite.texture = load("%s/%s.png" % [dir, texture])
 	sprite.centered = false
 	sprite.offset = -pivot * bake
+	if top > 0.0:
+		var size := sprite.texture.get_size()
+		var cut := minf(top * bake, size.y)
+		sprite.region_enabled = true
+		sprite.region_rect = Rect2(0.0, cut, size.x, size.y - cut)
+		sprite.offset.y += cut
 	sprite.scale = Vector2.ONE / bake
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS if _full else CanvasItem.TEXTURE_FILTER_NEAREST
 	return sprite
