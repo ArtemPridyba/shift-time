@@ -43,7 +43,7 @@ var _phase := 0.0
 ## of the flight's two ends). Empty on a plain floor and in the air.
 var _footing: Dictionary = {}
 var _walking := false
-## A step on stairs (D141): the leg in the air (0, 1; -1: no step), the way she
+## A step on stairs (D143): the leg in the air (0, 1; -1: no step), the way she
 ## walks (+1 right, -1 left), where each foot stands in the room (the one in
 ## the air: where it left), where the swinging foot lands, where her middle is
 ## (room x) when the step starts and when it lands, how far the step has gone
@@ -641,7 +641,7 @@ func _apply() -> void:
 	_update_cable()
 
 
-## On stairs (D120, D141): the body goes along the slope and comes down as far
+## On stairs (D120, D143): the body goes along the slope and comes down as far
 ## as its legs need, within `max_crouch_px`; walking, the standing foot stays
 ## on its tread and the other goes along `_swing_point` to its landing; at
 ## rest, both boots stand on the treads under them. A boot that would go into
@@ -703,7 +703,7 @@ func _swing_point(ground: Callable, at: Vector2) -> Vector2:
 	return Vector2(x, minf(y, top - arc))
 
 
-## Walking on stairs (D141): her steps are planned on the treads, not on the
+## Walking on stairs (D143): her steps are planned on the treads, not on the
 ## clock. A step starts with one foot standing and ends when her middle comes
 ## to where the other foot, landing about `stride_px` ahead of the standing
 ## one, is `land_ahead_up_px` (or `_down_px`) in front of her; the phase of the pose cycle

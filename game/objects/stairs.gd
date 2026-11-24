@@ -79,7 +79,7 @@ func tread_y(x: float) -> float:
 
 
 ## The middle of every tread across, room x plus `offset_x` (the node's x in
-## the room): where her feet land walking the flight (D141). A flight drawn
+## the room): where her feet land walking the flight (D143). A flight drawn
 ## another way gives its own treads here and in `tread_y`.
 func tread_middles(offset_x := 0.0) -> PackedFloat32Array:
 	var r := rect_px()
