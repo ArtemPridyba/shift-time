@@ -459,19 +459,28 @@ func far_motes_now() -> Array[Dictionary]:
 ## vanish in the gauntlet: the device takes time from the world. They light
 ## nothing (D76).
 func _draw_motes() -> void:
+	# Rects of one texture: the whole swarm is one draw call (FPS, 24.11).
+	var dot := KitTextures.dot()
 	var centre := device_point()
 	for mote in motes_now():
 		var alpha := float(mote["alpha"])
 		if alpha > 0.0:
 			var at := centre + (mote["offset"] as Vector2)
-			_motes.draw_circle(at, float(mote["size"]) * 1.9, Color(_accent, alpha * 0.45), true, -1.0, true)
-			_motes.draw_circle(at, float(mote["size"]) * 0.8, Color(_core, alpha), true, -1.0, true)
+			_dot(dot, at, float(mote["size"]) * 1.9, Color(_accent, alpha * 0.45))
+			_dot(dot, at, float(mote["size"]) * 0.8, Color(_core, alpha))
 	# The trial far motes (D85.6): a soft wide disc and a brighter middle.
 	for far in far_motes_now():
 		var alpha := float(far["alpha"])
 		if alpha > 0.004:
-			_motes.draw_circle(far["at"] as Vector2, float(far["radius"]), Color(_accent, alpha * 0.45), true, -1.0, true)
-			_motes.draw_circle(far["at"] as Vector2, float(far["radius"]) * 0.45, Color(_core, alpha), true, -1.0, true)
+			_dot(dot, far["at"] as Vector2, float(far["radius"]), Color(_accent, alpha * 0.45))
+			_dot(dot, far["at"] as Vector2, float(far["radius"]) * 0.45, Color(_core, alpha))
+
+
+func _dot(dot: Texture2D, at: Vector2, radius: float, color: Color) -> void:
+	# The texture's rim is soft from 0.7 of its radius: a little larger, so
+	# the dot looks as big as the circle it replaces.
+	var r := radius * 1.15
+	_motes.draw_texture_rect(dot, Rect2(at - Vector2(r, r), Vector2(r, r) * 2.0), false, color)
 
 
 ## The threads out now (D85): the head of each on its way in (0..1), how far it
@@ -512,7 +521,10 @@ func _draw_threads() -> void:
 	var per_px := 1.0 / maxf(absf(to_screen.get_scale().y), 0.0001)
 	var gauntlet := to_screen * device_point()
 	var soft := _accent.lerp(_core, 0.2)
-	var item := _threads.get_canvas_item()
+	# Every strip goes into one of two triangle arrays, the bodies and over
+	# them the cores: two draw calls for all threads, not two per thread.
+	var bodies := [PackedVector2Array(), PackedColorArray(), PackedInt32Array()]
+	var cores := [PackedVector2Array(), PackedColorArray(), PackedInt32Array()]
 	for thread in threads_now():
 		var head := float(thread["head"])
 		var points := TimeThreads.trail(spec, thread["start"] as Vector2, head, float(thread["swirl"]))
@@ -530,19 +542,25 @@ func _draw_threads() -> void:
 			thin.append(float(spec.get("core_px", 1.0)) * 2.0 * per_px)
 			body.append(Color(soft, a * 0.8))
 			core.append(Color(_core, a * 0.7 * sharp))
-		_feathered_strip(item, centres, wide, body)
-		_feathered_strip(item, centres, thin, core)
+		_feathered_strip(bodies, centres, wide, body)
+		_feathered_strip(cores, centres, thin, core)
+	var item := _threads.get_canvas_item()
+	for strips: Array in [bodies, cores]:
+		if not (strips[0] as PackedVector2Array).is_empty():
+			RenderingServer.canvas_item_add_triangle_array(item, strips[2], strips[0], strips[1])
 
 
 ## A strip along `centres`, `widths` wide, coloured `colours` along its middle
-## and clear at both sides, so it has no hard edge.
-func _feathered_strip(item: RID, centres: PackedVector2Array, widths: PackedFloat32Array, colours: PackedColorArray) -> void:
+## and clear at both sides, so it has no hard edge; added to `into`
+## ([points, colours, indices] of one triangle array).
+func _feathered_strip(into: Array, centres: PackedVector2Array, widths: PackedFloat32Array, colours: PackedColorArray) -> void:
 	var count := centres.size()
 	if count < 2:
 		return
-	var points := PackedVector2Array()
-	var tints := PackedColorArray()
-	var indices := PackedInt32Array()
+	var points := into[0] as PackedVector2Array
+	var tints := into[1] as PackedColorArray
+	var indices := into[2] as PackedInt32Array
+	var base := points.size()
 	for j in count:
 		var ahead := centres[mini(j + 1, count - 1)] - centres[maxi(j - 1, 0)]
 		var side := Vector2(-ahead.y, ahead.x).normalized() * widths[j] * 0.5
@@ -550,10 +568,12 @@ func _feathered_strip(item: RID, centres: PackedVector2Array, widths: PackedFloa
 		points.append_array([centres[j] - side, centres[j], centres[j] + side])
 		tints.append_array([clear, colours[j], clear])
 		if j > 0:
-			var p := (j - 1) * 3
-			var q := j * 3
+			var p := base + (j - 1) * 3
+			var q := base + j * 3
 			indices.append_array([p, p + 1, q, p + 1, q + 1, q, p + 1, p + 2, q + 1, p + 2, q + 2, q + 1])
-	RenderingServer.canvas_item_add_triangle_array(item, indices, points, tints)
+	into[0] = points
+	into[1] = tints
+	into[2] = indices
 
 
 ## A shader uniform of the light, for tests.
