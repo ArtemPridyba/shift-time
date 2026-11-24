@@ -179,3 +179,9 @@ func _ease(x: float) -> float:
 
 func _num(key: String, fallback: float) -> float:
 	return ObjectLook.number(_look, key, fallback)
+
+
+## The picture's light instead of the room's darkness (`WorldBackdrop`,
+## 24.11 level 01 notes).
+func use_picture_light(light: ShaderMaterial) -> void:
+	material = light
