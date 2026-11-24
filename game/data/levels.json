@@ -6,8 +6,8 @@
 		"intro_seconds": 0.8,
 		"objects": {
 			"door": { "cycle": "once", "hold_open_seconds": 0.5, "close_seconds": 3.5 },
-			"platform_1": { "cycle": "once", "speed": 192 },
-			"platform_2": { "cycle": "once", "speed": 40, "delay_seconds": 0.8 }
+			"platform_1": { "cycle": "once", "speed": 144 },
+			"platform_2": { "cycle": "once", "speed": 40, "delay_seconds": 2.1333 }
 		},
 		"world": {
 			"_about": "The look of the room (task Д3; rebuilt to the Gemini picture of the whole room docs/art/gemini/raw/f1_room_v1.jpg, D138): pieces of the Night shop kit by grid cells, rect [x, y, w, h]; lamps hang on drop cells of cable from row ceiling, the lower face of the roof. The hall is 8 cells high over the upper floor; ground.roof: the solid rows above it, drawn as the dark roof. Numbers of the kit: world in look.json. Sizes follow the heroine (D112, docs/art/scale.md): a window 1.15x3 cells is 1.4x3.6 m, its sill a little above her head.",

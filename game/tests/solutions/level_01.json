@@ -7,7 +7,7 @@
 		{ "actions": ["rewind"], "ticks": 110 },
 		{ "actions": ["move_right", "rewind"], "ticks": 36 },
 		{ "actions": ["rewind"], "ticks": 30 },
-		{ "actions": [], "ticks": 230 },
+		{ "actions": [], "ticks": 300 },
 		{ "actions": ["move_right"], "ticks": 30 },
 		{ "actions": [], "ticks": 30 },
 		{ "actions": ["rewind"], "ticks": 300 },
