@@ -20,6 +20,7 @@ func _ready() -> void:
 	var exit := get_node_or_null("Exit") as ExitZone
 	if exit != null:
 		exit.reached.connect(_on_exit_reached)
+	_add_world_timer()
 
 
 func _physics_process(delta: float) -> void:
@@ -41,6 +42,19 @@ func _on_exit_reached() -> void:
 	var per_second := float(Content.time().get("physics_ticks_per_second", 60))
 	_exit_ticks_left = maxi(int(round(seconds * per_second)), 1)
 	completed.emit()
+
+
+## The `WORLD 00:14.2` timer on every level (Д4), unless `world_timer.show`
+## of `data/time_hud.json` is false.
+func _add_world_timer() -> void:
+	var data: Dictionary = Content.time_hud().get("world_timer", {})
+	var room_time := get_node_or_null("RoomTime") as RoomTime
+	if room_time == null or not bool(data.get("show", true)):
+		return
+	var timer := WorldTimer.new()
+	timer.name = "WorldTimer"
+	timer.watch(room_time)
+	add_child(timer)
 
 
 ## The reset key, drowning and burning bring the hero in again.

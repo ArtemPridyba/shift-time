@@ -9,7 +9,9 @@ extends Node2D
 ## Д2, the light preset `lamp_dust`: five lamps on a screen) and is seen only
 ## there. A weak light of her own lights only the heroine
 ## (light mask 2), so she reads between the islands (D76). Nothing here is
-## recorded or collides.
+## recorded or collides. In a level with quakes (`Quakes`, a sibling node, D127)
+## the lamps swing while the room shakes and a falling lamp drops to the floor,
+## goes dark and breaks; all of it is read from the recorded quake.
 
 const HEROINE_MASK := 2
 
@@ -25,6 +27,11 @@ var _world: Dictionary
 var _glow: Node2D
 var _shine: Array[float] = []
 var _seconds_per_frame := 1.0 / 60.0
+var _quakes: Quakes
+## Per lamp: {"drop", "light", "shatter", "to_row"} while one falls (Quakes.lamp_fall).
+var _falls: Array[Dictionary] = []
+var _swings: Array[float] = []
+var _bases: Array[Vector2] = []
 
 
 func _ready() -> void:
@@ -55,7 +62,10 @@ func _ready() -> void:
 		light.position = at + Vector2(0, float(_lamp.get("below_px", 150)))
 		add_child(light)
 		lights.append(light)
+		_bases.append(light.position)
 		_shine.append(1.0)
+		_falls.append({})
+		_swings.append(0.0)
 		var dust := TimeParticles.new()
 		dust.name = "Dust%d" % (i + 1)
 		dust.preset = "lamp_dust"
@@ -71,12 +81,14 @@ func _ready() -> void:
 	_glow.material = glow_material
 	_glow.draw.connect(_draw_glow)
 	add_child(_glow)
+	_quakes = get_node_or_null("../Quakes") as Quakes
 	show_at(0.0)
 	_light_heroine.call_deferred()
 
 
 ## The room's clock (`RoomTime`, group `world_clock`).
 func on_world_tick(tick: int, _recorded: bool) -> void:
+	_read_quakes()
 	show_at(float(tick) * _seconds_per_frame)
 
 
@@ -85,32 +97,73 @@ func show_at(seconds: float) -> void:
 	var energy := maxf(float(_lamp.get("energy", 1.0)), 0.001)
 	for i in lights.size():
 		var e := WorldData.lamp_energy(_lamp, i, seconds)
+		var fall := _falls[i]
+		if not fall.is_empty():
+			# The light dies on the way down; the impact flashes once on the floor.
+			var shatter := float(fall["shatter"])
+			var flash := 0.9 * (1.0 - shatter) * (1.0 - shatter) if shatter > 0.0 else 0.0
+			e *= maxf(float(fall["light"]), flash)
+			lights[i].position = _bases[i] + Vector2(0, _drop_px(i))
 		lights[i].energy = e
 		_shine[i] = e / energy
 	if _glow != null:
 		_glow.queue_redraw()
 
 
+## The quake's part: swings and falls of the lamps now (`Quakes`, D127).
+func _read_quakes() -> void:
+	if _quakes == null:
+		return
+	var changed := false
+	for i in _lamps.size():
+		var fall := _quakes.lamp_fall(i)
+		var swing := _quakes.swing(i)
+		if fall != _falls[i] or swing != _swings[i]:
+			changed = true
+		_falls[i] = fall
+		_swings[i] = swing
+	if changed:
+		queue_redraw()
+
+
+## How far lamp `i` has fallen now, in pixels.
+func _drop_px(i: int) -> float:
+	var fall := _falls[i]
+	if fall.is_empty():
+		return 0.0
+	var at := WorldData.lamp_at(_lamps[i], _ceiling)
+	var bottom := float(fall["to_row"]) * WorldData.CELL - 10.0
+	return maxf(bottom - at.y, 0.0) * float(fall["drop"])
+
+
 ## Chains and caged lamps: lit by the lamps like everything else.
 func _draw() -> void:
 	var picture := KitTextures.piece("lamp")
 	var chain := KitTextures.piece("lamp_chain")
-	for lamp: Dictionary in _lamps:
-		var at := WorldData.lamp_at(lamp, _ceiling)
+	for i in _lamps.size():
+		var at := WorldData.lamp_at(_lamps[i], _ceiling)
+		var top_y := _ceiling * WorldData.CELL
+		if not _falls[i].is_empty() and float(_falls[i]["drop"]) > 0.0:
+			_draw_fallen(i, at, picture, chain)
+			continue
+		# While the room shakes the lamp swings on its chain from the ceiling.
+		draw_set_transform(Vector2(at.x, top_y), _swings[i])
+		at = Vector2(0.0, at.y - top_y)
 		# The lamp picture at its own size, the bulb where the glow is.
 		var size := Vector2(picture.get_size()) / KitTextures.texel("lamp") if picture != null else Vector2.ZERO
 		var top := at.y + 7.0 - size.y * float(_lamp.get("picture_bulb", 0.66)) if picture != null else at.y - 14.0
 		# The chain it hangs on.
 		if chain != null:
 			var width := float(chain.get_width()) / KitTextures.texel("lamp_chain")
-			KitTextures.draw_down(self, chain, Rect2(at.x - width / 2.0, _ceiling * WorldData.CELL, width, top + 2.0 - _ceiling * WorldData.CELL))
+			KitTextures.draw_down(self, chain, Rect2(at.x - width / 2.0, 0.0, width, top + 2.0))
 		else:
-			var link := Vector2(at.x, _ceiling * WorldData.CELL)
+			var link := Vector2(at.x, 0.0)
 			while link.y < top:
 				draw_rect(Rect2(link - Vector2(1.5, 0), Vector2(3, 5)), WorldData.color(_world, "iron").lightened(0.1), false, 1.0)
 				link.y += 6.0
 		if picture != null:
 			draw_texture_rect(picture, Rect2(at.x - size.x / 2.0, top, size.x, size.y), false)
+			draw_set_transform(Vector2.ZERO)
 			continue
 		# A caged lamp (D115): a small rusty cap, a wire cage round the bulb.
 		var rust := WorldData.color(_world, "rust").darkened(0.35)
@@ -122,6 +175,37 @@ func _draw() -> void:
 		for x in [-9.0, -3.0, 3.0, 9.0]:
 			draw_line(at + Vector2(x, -1), at + Vector2(x * 0.7, 8.0 + sqrt(maxf(81.0 - x * x, 0.0)) * 0.9), wire, 1.2)
 		draw_line(at + Vector2(-9, 8), at + Vector2(9, 8), wire, 1.2)
+		draw_set_transform(Vector2.ZERO)
+
+
+## A lamp torn loose by a quake: a stub of chain on the ceiling, the lamp on
+## its way down, then on its side on the floor with glass round it.
+func _draw_fallen(i: int, at: Vector2, picture: Texture2D, chain: Texture2D) -> void:
+	var fall := _falls[i]
+	var look := ObjectLook.of("quake")
+	var top_y := _ceiling * WorldData.CELL
+	if chain != null:
+		var width := float(chain.get_width()) / KitTextures.texel("lamp_chain")
+		KitTextures.draw_down(self, chain, Rect2(at.x - width / 2.0, top_y, width, minf(at.y - top_y, 40.0)))
+	var size := Vector2(picture.get_size()) / KitTextures.texel("lamp") if picture != null else Vector2(22, 30)
+	var shatter := float(fall["shatter"])
+	var centre := at + Vector2(0, _drop_px(i) + size.y * 0.1)
+	# It tips over as it lands.
+	var turn := 1.35 * shatter + 0.25 * float(fall["drop"])
+	if picture != null:
+		ObjectLook.draw_turned(self, picture, centre + Vector2(8.0 * shatter, 0), size, turn, Color(1, 1, 1))
+	if shatter <= 0.0:
+		return
+	var floor_y := float(fall["to_row"]) * WorldData.CELL
+	var glass := WorldData.color(_world, "glass").lightened(0.3)
+	var shards := int(ObjectLook.number(look, "lamp_shards", 7.0))
+	for k in shards:
+		var dir := -1.0 if k % 2 == 0 else 1.0
+		var reach := (12.0 + 9.0 * float(k)) * dir
+		var x := at.x + reach * shatter
+		var y := floor_y - 3.0 - 34.0 * 4.0 * shatter * (1.0 - shatter) * (0.6 + 0.1 * float(k % 4))
+		var s := 2.0 + float(k % 3)
+		draw_colored_polygon(PackedVector2Array([Vector2(x, y - s), Vector2(x + s, y + s * 0.6), Vector2(x - s, y + s * 0.4)]), glass)
 
 
 func _draw_glow() -> void:
@@ -132,6 +216,12 @@ func _draw_glow() -> void:
 	var light_color := Color.from_string(str(_lamp.get("color", "#ffb066")), Color.ORANGE)
 	for i in _lamps.size():
 		var at := WorldData.lamp_at(_lamps[i], _ceiling) + Vector2(0, 7)
+		if not _falls[i].is_empty():
+			at.y += _drop_px(i)
+		else:
+			# The bulb swings with its lamp.
+			var top_y := _ceiling * WorldData.CELL
+			at = Vector2(at.x, top_y) + Vector2(0, at.y - top_y).rotated(_swings[i])
 		var halo := light_color
 		halo.a = halo_alpha * _shine[i]
 		_glow.draw_texture_rect(disc, Rect2(at - Vector2(halo_px, halo_px), Vector2(halo_px, halo_px) * 2.0), false, halo)

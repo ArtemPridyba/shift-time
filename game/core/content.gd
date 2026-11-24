@@ -356,6 +356,10 @@ static func validate_levels(data: Variant, history_seconds: float, file := "leve
 			errors.append_array(_prelude_event_problems(entry["prelude_events"], float(entry["prelude_seconds"]), where))
 		if entry.has("world"):
 			errors.append_array(WorldData.validate_layout(entry["world"], where))
+		if entry.has("quakes"):
+			var world: Variant = entry.get("world", {})
+			var lamps: Variant = world.get("lamps", []) if world is Dictionary else []
+			errors.append_array(QuakePlan.problems(entry["quakes"], where, lamps.size() if lamps is Array else 0))
 	return errors
 
 
@@ -663,6 +667,19 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 			errors.append("time_hud.json: 'audio.%s' must be a path or an empty string" % key)
 		elif str(audio[key]) != "" and not ResourceLoader.exists(audio[key]):
 			errors.append("time_hud.json: 'audio.%s' points to a missing file '%s'" % [key, audio[key]])
+	var timer: Variant = data.get("world_timer")
+	if not timer is Dictionary:
+		errors.append("time_hud.json: missing section 'world_timer'")
+		return errors
+	if not timer.get("show") is bool:
+		errors.append("time_hud.json: 'world_timer.show' must be true or false")
+	for key: String in ["x_px", "y_px", "outline_px"]:
+		_check_range(errors, timer, "world_timer", key, 0.0, 2000.0)
+	_check_range(errors, timer, "world_timer", "font_px", 0.0, 200.0, true)
+	_check_range(errors, timer, "world_timer", "alpha", 0.0, 1.0, true)
+	for key: String in ["color", "outline"]:
+		if not timer.get(key) is String or not Color.html_is_valid(timer[key]):
+			errors.append("time_hud.json: 'world_timer.%s' must be a color like \"#d8d0c0\"" % key)
 	return errors
 
 
@@ -675,6 +692,12 @@ const LOOK_KIT_OBJECTS := {
 		"wheel_seconds", "out_seconds", "out_px", "slide_seconds", "rail_px", "light", "light_energy", "light_radius_px"],
 	"clock": ["diameter_px", "minute_turn_seconds", "start_minutes"],
 	"beacon": ["size_px", "color", "turn_seconds", "energy", "radius_px"],
+	"quake": ["shake_px", "shake_seconds", "shake_hz", "swing_degrees", "fall_seconds", "shatter_seconds",
+		"dust_count", "dust_seconds", "lump_px", "lamp_shards"],
+	"wire": ["width_px", "color", "end_color"],
+	"lever": ["base_px", "handle_px", "pivot_from_top", "angle_degrees"],
+	"button": ["base_px", "cap_px", "pressed_px"],
+	"crate": ["size_px"],
 }
 const LOOK_PIPE_NUMBERS: Array[String] = ["feed_width_px", "main_width_px", "wall_px", "flange_every_px", "flange_px", "dash_length_px", "dash_gap_px", "dash_speed_px"]
 const LOOK_MECH_COLORS: Array[String] = ["iron", "iron_light", "iron_shadow", "iron_dark", "outline", "valve", "valve_light", "rust", "yellow"]

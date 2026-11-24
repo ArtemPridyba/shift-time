@@ -100,6 +100,8 @@ func _draw() -> void:
 	if look == 1:
 		_draw_valve()
 		return
+	if _draw_kit():
+		return
 	# Draw the base.
 	draw_rect(Rect2(Vector2(-SIZE.x / 2.0, -SIZE.y * 0.3), Vector2(SIZE.x, SIZE.y * 0.3)), BODY_COLOR)
 	# Draw the handle angled left (off) or right (on).
@@ -120,3 +122,25 @@ func _draw_valve() -> void:
 		draw_line(hub, hub + spoke, METAL_COLOR, 3.0, true)
 	draw_circle(hub + Vector2.from_angle(_wheel_angle) * WHEEL_RADIUS, 5.0, METAL_COLOR.lightened(0.2))
 	draw_circle(hub, 5.0, ON_COLOR if on else BODY_COLOR)
+
+
+## The signal-yellow lever of the kit (D65, task Д4): the base stands on the
+## floor at the origin, the handle turns on a pivot near its top, left when
+## off and right when on. False without the pictures (the old drawing then).
+func _draw_kit() -> bool:
+	var base := ObjectLook.picture("lever_base")
+	var handle := ObjectLook.picture("lever_handle")
+	if base == null or handle == null:
+		return false
+	var look := ObjectLook.of("lever")
+	var base_h := ObjectLook.number(look, "base_px", 52.0)
+	var base_size := Vector2(base_h * float(base.get_width()) / float(base.get_height()), base_h)
+	var pivot := Vector2(0.0, -base_h + ObjectLook.number(look, "pivot_from_top", 6.0))
+	var length := ObjectLook.number(look, "handle_px", 46.0)
+	var handle_size := Vector2(length * float(handle.get_width()) / float(handle.get_height()), length)
+	var angle := deg_to_rad(ObjectLook.number(look, "angle_degrees", 32.0)) * (1.0 if on else -1.0)
+	# The handle behind the base's top: its ring end sits on the pivot.
+	var centre := pivot + Vector2(0.0, -length / 2.0 + handle_size.x / 2.0).rotated(angle)
+	ObjectLook.draw_turned(self, handle, centre, handle_size, angle)
+	draw_texture_rect(base, Rect2(Vector2(-base_size.x / 2.0, -base_h), base_size), false)
+	return true
