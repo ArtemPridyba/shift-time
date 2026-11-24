@@ -116,16 +116,16 @@
 			"crane_load": { "cycle": "once", "speed": 120, "delay_seconds": 0.8 }
 		},
 		"crane": {
-			"_about": "The runaway crane of level 09 (card docs/levels/09.md): the load is the platform crane_load; its hook strikes a lamp of world.lamps when it comes within hook_lead_px of it, and the lamp falls to the row to_row (below the room: into the pit). When the load slams into the stop at the end of the rail, the collapse (D135) begins: girders fall one by one from the stop towards the exit and land on stubs as a broken bridge, then after lamp_pause_seconds the lamps of collapse.lamps break one by one from the exit back towards the stop. Seconds of the world clock; fall and shatter seconds: kit_objects.quake in look.json.",
+			"_about": "The runaway crane of level 09 (card docs/levels/09.md): the load is the platform crane_load; its hook strikes a lamp of world.lamps when it comes within hook_lead_px of it, and the lamp falls to the row to_row (17: the bottom edge of the room, the floor of the pit; never below it, or the overview shows lamps falling out of the level). When the load slams into the stop at the end of the rail, the collapse (D135) begins: girders fall one by one from the stop towards the exit and land on stubs as a broken bridge, then after lamp_pause_seconds the lamps of collapse.lamps break one by one from the exit back towards the stop. Seconds of the world clock; fall and shatter seconds: kit_objects.quake in look.json.",
 			"load": "crane_load",
 			"hook_lead_px": 16,
 			"falls": [
-				{ "lamp": 0, "to_row": 18 },
-				{ "lamp": 1, "to_row": 18 }
+				{ "lamp": 0, "to_row": 17 },
+				{ "lamp": 1, "to_row": 17 }
 			],
 			"collapse": {
 				"lamps": [2, 3, 4, 5],
-				"to_row": 18,
+				"to_row": 17,
 				"girder_first_seconds": 0.3,
 				"girder_every_seconds": 0.45,
 				"girder_fall_seconds": 0.5,

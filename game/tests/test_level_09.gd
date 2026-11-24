@@ -224,6 +224,12 @@ func test_level_09_layout_ledges_and_pits() -> void:
 	var pillar := Vector2i(int(start.position.x / CELL) - 2, int(start.position.y / CELL) + 1)
 	check(blocks.get_cell_source_id(pillar) != -1 and blocks.get_cell_source_id(pillar - Vector2i(0, 1)) == -1,
 		"pillar A stands a cell left of the load's start, its top a cell lower")
+	# Lamps fall to the floor of the pit, never out of the room (the overview shows it).
+	var crane := room.get_node("Crane") as Crane
+	for fall: Dictionary in crane.plan.falls:
+		check(float(fall["to_row"]) <= float(used.end.y), "a struck lamp falls inside the room, row %.0f" % float(fall["to_row"]))
+	var collapse_plan := (room.get_node("Collapse") as Collapse).plan
+	check(collapse_plan.to_row <= float(used.end.y), "the collapse's lamps fall inside the room, row %.0f" % collapse_plan.to_row)
 	# Every girder lies on a stub, and without the girders the stubs are too far apart.
 	var collapse := room.get_node("Collapse") as Collapse
 	for k in collapse.girders.size():
