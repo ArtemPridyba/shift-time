@@ -23,7 +23,15 @@ var _sky_mesh: ArrayMesh
 func _ready() -> void:
 	z_index = -10
 	_world = WorldData.look()
-	_pieces = WorldData.layout(WorldData.entry(level_id)).get("back", [])
+	var layout := WorldData.layout(WorldData.entry(level_id))
+	if not WorldData.backdrop(layout).is_empty():
+		# The painted room (D131): the picture has the wall and everything on it.
+		var painted := WorldBackdrop.new()
+		painted.name = "Backdrop"
+		painted.level_id = level_id
+		add_child(painted)
+		return
+	_pieces = layout.get("back", [])
 	var blocks := get_node_or_null(blocks_path) as TileMapLayer
 	if blocks != null:
 		var used := blocks.get_used_rect()

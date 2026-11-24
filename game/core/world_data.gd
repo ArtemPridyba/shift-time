@@ -214,6 +214,45 @@ static func validate_layout(layout: Variant, where: String) -> PackedStringArray
 		errors.append("%s: world.darkness must be a color like \"#15151c\"" % where)
 	if layout.has("ceiling") and (not _is_number(layout["ceiling"]) or float(layout["ceiling"]) < 0.0):
 		errors.append("%s: world.ceiling must be a row, 0 or more" % where)
+	if layout.has("backdrop"):
+		errors.append_array(validate_backdrop(layout["backdrop"], where))
+	return errors
+
+
+## The painted room of a layout (`world.backdrop`, D131), or {} when the kit draws it.
+static func backdrop(layout: Dictionary) -> Dictionary:
+	var painted: Variant = layout.get("backdrop")
+	return painted if painted is Dictionary else {}
+
+
+static func validate_backdrop(painted: Variant, where: String) -> PackedStringArray:
+	var errors := PackedStringArray()
+	var at := "%s: world.backdrop" % where
+	if not painted is Dictionary:
+		errors.append("%s must be an object" % at)
+		return errors
+	for key: String in ["lit", "dark"]:
+		var path: Variant = painted.get(key)
+		if not path is String or not str(path).begins_with("res://") or not ResourceLoader.exists(str(path)):
+			errors.append("%s.%s must be the res:// path of a picture that exists" % [at, key])
+	if not _is_rect(painted.get("rect")):
+		errors.append("%s.rect must be [x, y, w, h] in cells, w and h above 0" % at)
+	var cone: Variant = painted.get("cone")
+	if not cone is Dictionary:
+		errors.append("%s.cone must be an object" % at)
+	else:
+		_number(errors, cone, at + ".cone", "top_px", 0.0, 1000.0)
+		_number(errors, cone, at + ".cone", "spread", 0.0, 5.0)
+		_number(errors, cone, at + ".cone", "length_px", 1.0, 5000.0)
+		_number(errors, cone, at + ".cone", "soft", 0.0, 1.0)
+		_number(errors, cone, at + ".cone", "above_px", 0.0, 1000.0)
+	var nodes: Variant = painted.get("painted", {})
+	if not nodes is Dictionary:
+		errors.append("%s.painted must be an object of node paths" % at)
+	else:
+		for path: Variant in nodes:
+			if not nodes[path] is Dictionary:
+				errors.append("%s.painted.%s must be an object" % [at, path])
 	return errors
 
 
