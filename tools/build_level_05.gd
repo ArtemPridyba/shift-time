@@ -1,25 +1,22 @@
 extends SceneTree
-## Builds level 05 `levels/level_05.tscn` «Crane» (card docs/levels/05.md, D139):
-## a room of 48x17 cells in the Night shop, sized to the heroine like level 01
-## (D112). A gallery of girders hangs from the crane's rail under the roof, each
-## with its lamp. She walks out on the floor at the left; at once the runaway
-## crane rides from the far right towards her and its ram knocks the girders off
-## one by one, their lamps falling with them: the two on the right land on stubs
-## in the pit as a low bridge to the exit, the two in the middle are lost to the
-## bottom of the pit, the last one lands on the floor by her. The crane slams
-## into its stop; it is dark.
+## Builds level 05 `levels/level_05.tscn` «Crane» (card docs/levels/05.md,
+## D144): a room of 66x22 cells in the Night shop, sized to the heroine like
+## level 01 (D112), played left to right in three quakes (`Collapse`).
 ##
-## Under Shift the crane rides back and the girder knocked last rises first: she
-## rides it up to the gallery, crosses the middle girders as they rise and
-## reaches the crane operator's post. There she pulls the stop lever while the
-## crane is between the post and the right girders: in the new history the crane
-## stands there, the right girders lie as the bridge, the rest hang lit. She lets
-## Shift go, drops onto the bridge and walks under the overhang to the exit.
+## Act 1: she walks out on the floor at the left. The hall shakes; three
+## platforms hanging over the pit fall one by one onto their stubs, each
+## followed by its lamp; the third breaks. She crosses the first two, stands on
+## the broken third and holds Shift: it mends and rises to the crane's ledge.
+## Act 2: on the ledge the crane hangs from a rail sloping down to the right.
+## Her step onto it shakes the hall again; it breaks loose and rides down the
+## rail over the pit while the lamps over it fall.
+## Act 3: at the end of the rail the third quake. The crane sags; the ceiling
+## ahead comes down in chunks, each with its lamp under it, and the world slows
+## down: she climbs the falling chunks to the exit ledge high on the right.
+## Shift lifts a chunk she stands on when she is late.
 ##
-## Left to right: the start floor (row 13), the pit (open to the bottom: a fall
-## is death), the post on the gallery (row 9) on its pillar, two stubs, the
-## overhang that walls the gallery off from the exit, the exit ledge (row 13).
-## Timing: `crane` and `objects` of the level's entry in data/levels.json.
+## The pit is open to the bottom: a fall is death. Timing: `collapse` of the
+## level's entry in data/levels.json.
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
 ##   godot --headless --path game --script $PWD/tools/build_level_05.gd
@@ -33,47 +30,53 @@ const SCENE_PATH := "res://levels/level_05.tscn"
 const LEVEL_ID := "level_05"
 
 const MAP := [
-	"################################################",
-	"################################################",
-	"################################################",
-	"################################################",
-	"################################################",
-	"################################################",
-	"#..............................................#",
-	"#..............................................#",
-	"#..............................................#",
-	"#............####..............................#",
-	"#..............#............####################",
-	"#..............#............####################",
-	"#S.............#...........................EE..#",
-	"#########......#........#..................EE..#",
-	"#########......#........#..#####################",
-	"#########......#........#..#####################",
-	"#########......#........#..#####################",
+	"##################################################################",
+	"##################################################################",
+	"##################################################################",
+	"##################################################################",
+	"#................................................................#",
+	"#................................................................#",
+	"#................................................................#",
+	"#............................................................EE..#",
+	"#............................................................EE..#",
+	"#.......................................................##########",
+	"#.......................................................##########",
+	"#..................######...............................##########",
+	"#..................######...............................##########",
+	"#....................#..................................##########",
+	"#....................#..................................##########",
+	"#....................#..................................##########",
+	"#S...................#..................................##########",
+	"#######.#...#....#...#..................................##########",
+	"#######.#...#....#...#..................................##########",
+	"#######.#...#....#...#..................................##########",
+	"#######.#...#....#...#..................................##########",
+	"#######.#...#....#...#..................................##########"
 ]
 
 ## The doorway the hero walks out of (decoration only), in cells.
-const ENTRANCE_CELLS := Rect2i(1, 10, 1, 2)
-## The crane's ram: where its top edge meets the grid at the start of history
-## (the middle in x, the top at the row), how far it rides, in cells. It hangs
-## from the hook over the gallery and carries nobody.
-const LOAD_CENTRE := Vector2(33.0, 7.0)
-const LOAD_TRAVEL := Vector2(-30.5, 0.0)
-const LOAD_WIDTH_CELLS := 1
-const LOAD_HEIGHT := 32.0
-## The girders of the gallery (cells: x where it hangs, width; x and top row
-## where it lies), from the left; each hangs on row 9. The bridge girder hangs
-## far to the right over the slab and comes down sideways (`CollapsePlan.path`).
-const GIRDER_HEIGHT := 0.5
-const GIRDERS: Array[Dictionary] = [
-	{"x": 5.0, "width": 4.0, "rest_x": 5.0, "rest_row": 12.5},
-	{"x": 9.0, "width": 4.0, "rest_x": 9.0, "rest_row": 16.5, "lost": true},
-	{"x": 17.0, "width": 4.0, "rest_x": 17.0, "rest_row": 16.5, "lost": true},
-	{"x": 27.5, "width": 4.0, "rest_x": 22.0, "rest_row": 12.5},
+const ENTRANCE_CELLS := Rect2i(1, 15, 1, 2)
+## The falling pieces in the order of `collapse.pieces` (cells: x and row where
+## it hangs, width, height; x and row where it lies). Act 1: three platforms
+## onto their stubs (the third breaks). Act 3: five chunks of the ceiling, lost
+## to the bottom of the pit.
+const PIECES: Array[Dictionary] = [
+	{"x": 7.0, "row": 12.0, "width": 3.0, "height": 0.5, "rest_row": 16.5},
+	{"x": 10.8, "row": 12.0, "width": 3.0, "height": 0.5, "rest_row": 16.5},
+	{"x": 15.2, "row": 11.0, "width": 3.8, "height": 0.5, "rest_row": 16.5},
+	{"x": 43.9, "row": 4.0, "width": 1.5, "height": 0.7, "rest_row": 23.0, "lost": true},
+	{"x": 46.3, "row": 4.0, "width": 1.5, "height": 0.7, "rest_row": 23.0, "lost": true},
+	{"x": 48.7, "row": 4.0, "width": 1.5, "height": 0.7, "rest_row": 23.0, "lost": true},
+	{"x": 51.1, "row": 4.0, "width": 1.5, "height": 0.7, "rest_row": 23.0, "lost": true},
+	{"x": 53.5, "row": 4.0, "width": 1.5, "height": 0.7, "rest_row": 23.0, "lost": true},
 ]
-const HANG_ROW := 9.0
-## The crane's stop lever on the operator's post (the cell it stands in).
-const LEVER_CELL := Vector2i(14, 8)
+## The crane's load where it waits by the ledge (cells: x, top row, width,
+## height), how far it rides down the rail, the rail above its top, and how
+## far it falls at the end.
+const CRANE := Rect2(25.0, 11.0, 3.0, 0.4)
+const CRANE_TRAVEL := Vector2(15.0, 3.0)
+const SLING_CELLS := 4.0
+const CRANE_FALL_CELLS := 12.0
 ## The beacon sits on the wall by the exit door's upper left corner (as in 01).
 const BEACON_FROM_DOOR := Vector2(-66.0, -118.0)
 
@@ -119,48 +122,27 @@ func _initialize() -> void:
 	entrance.position = Vector2(ENTRANCE_CELLS.position * CELL)
 	_own(root, entrance)
 
-	# The crane before its load: the slings are drawn behind the plank.
-	var crane := Crane.new()
-	crane.name = "Crane"
-	_own(root, crane)
-	var load_platform: MovingPlatform = (load("res://objects/platform.tscn") as PackedScene).instantiate()
-	load_platform.object_id = "crane_load"
-	load_platform.name = "CraneLoad"
-	load_platform.travel = LOAD_TRAVEL * CELL
-	load_platform.width = float(LOAD_WIDTH_CELLS * CELL)
-	load_platform.position = Vector2(LOAD_CENTRE.x * CELL, LOAD_CENTRE.y * CELL + LOAD_HEIGHT / 2.0)
-	# The stop lever holds it wherever it is (D139); it rams girders, not her.
-	load_platform.holdable = true
-	load_platform.brake = true
-	load_platform.solid = false
-	load_platform.collision_layer = 0
-	load_platform.collision_mask = 0
-	_own(root, load_platform)
-
-	# The gallery the crane's ram knocks down (D139).
+	# The collapse of three quakes (D144): pieces, the crane and its rail.
 	var collapse := Collapse.new()
 	collapse.name = "Collapse"
 	var hangs: Array[Rect2] = []
 	var rests: Array[Rect2] = []
 	var lost := PackedInt32Array()
-	for k in GIRDERS.size():
-		var g: Dictionary = GIRDERS[k]
-		var size := Vector2(float(g["width"]), GIRDER_HEIGHT) * CELL
-		hangs.append(Rect2(Vector2(float(g["x"]), HANG_ROW) * CELL, size))
-		rests.append(Rect2(Vector2(float(g["rest_x"]), float(g["rest_row"])) * CELL, size))
-		if bool(g.get("lost", false)):
+	for k in PIECES.size():
+		var p: Dictionary = PIECES[k]
+		var size := Vector2(float(p["width"]), float(p["height"])) * CELL
+		hangs.append(Rect2(Vector2(float(p["x"]), float(p["row"])) * CELL, size))
+		rests.append(Rect2(Vector2(float(p["x"]), float(p["rest_row"])) * CELL, size))
+		if bool(p.get("lost", false)):
 			lost.append(k)
-	collapse.girders = hangs
+	collapse.pieces = hangs
 	collapse.rests = rests
 	collapse.lost = lost
+	collapse.crane_rect = Rect2(CRANE.position * CELL, CRANE.size * CELL)
+	collapse.crane_travel = CRANE_TRAVEL * CELL
+	collapse.sling_px = SLING_CELLS * CELL
+	collapse.crane_fall_px = CRANE_FALL_CELLS * CELL
 	_own(root, collapse)
-
-	var lever: Lever = (load("res://objects/lever.tscn") as PackedScene).instantiate()
-	lever.object_id = "crane_stop"
-	lever.name = "CraneStop"
-	lever.target_id = "crane_load"
-	lever.position = Vector2((LEVER_CELL.x + 0.5) * CELL, (LEVER_CELL.y + 1) * CELL)
-	_own(root, lever)
 
 	var ground := WorldGround.new()
 	ground.name = "WorldGround"

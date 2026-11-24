@@ -264,11 +264,12 @@
       "stop_px": 18
     },
     "collapse": {
-      "_about": "The gallery of level 05 (D139): girders hang on chains (chain colour) from the crane's rail; torn stubs stub_px long stay on the rail once the ram knocks them off; an I-beam has flanges flange_px thick and a rust stain. The crane's slam into its stop shakes the camera shake_px for shake_seconds.",
+      "_about": "The collapse of level 05 (D144): the platforms of act 1 hang on chains (chain colour) from the roof; torn stubs stub_px long stay once they fall; an I-beam has flanges flange_px thick and a rust stain (also the rebar of the chunks). The chunks of the ceiling in act 3 are concrete of colour chunk. Each of the three quakes shakes the camera shake_px for shake_seconds.",
       "stub_px": 18,
       "flange_px": 6,
       "chain": "#3a4048",
       "rust": "#7a3a22",
+      "chunk": "#5a554f",
       "shake_seconds": 1.2,
       "shake_px": 8
     }
