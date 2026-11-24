@@ -128,7 +128,7 @@
       "_about": "The winch of lamp 3 (D131): its lever (in the lower hall) powers the object winch, which winds the lamp lift_px up into the roof in lift_seconds of the world clock. Wound fully up, the hook passes under it; hanging lower, the hook tears it and its power cable, and the exit door stays shut.",
       "object": "winch",
       "lamp": 2,
-      "lift_px": 84,
+      "lift_px": 70,
       "lift_seconds": 1.2
     }
 		},

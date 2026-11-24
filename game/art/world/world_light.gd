@@ -228,7 +228,7 @@ func _draw_glow() -> void:
 	for i in _lamps.size():
 		var at := WorldData.lamp_at(_lamps[i], _ceiling) + Vector2(0, 7)
 		if not _falls[i].is_empty():
-			at.y += _drop_px(i)
+			at.y += _drop_px(i) - float(_falls[i].get("lift", 0.0))
 		else:
 			# The bulb swings with its lamp.
 			var top_y := _ceiling * WorldData.CELL
