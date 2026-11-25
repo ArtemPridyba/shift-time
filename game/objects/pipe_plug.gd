@@ -1,6 +1,6 @@
 class_name PipePlug
 extends CharacterBody2D
-## The plug of the pipe in level 02 (D168): an item the heroine carries from
+## The plug of the pipe in level 02 (D169): an item the heroine carries from
 ## the future into the past. It sits loose in the hole of a `BurstPipe`; the
 ## pressure knocks it out and it falls to the floor (the pipe calls `eject`).
 ## E picks it up; E near the hole puts it back, firmly; E elsewhere puts it

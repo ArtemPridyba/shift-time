@@ -75,7 +75,7 @@ const TUNNEL_FLOOR_ROW := 14
 const GATE_IN_COLUMN := 45
 const GATE_OUT_COLUMN := 62
 const GATE_ROWS := Vector2i(10, 12)
-## The room of the pipe (D168), between the pools and the tunnel: the floor
+## The room of the pipe (D169), between the pools and the tunnel: the floor
 ## (columns 26-31, row 12), the pit (columns 32-35) down to row 15 with its
 ## door in column 36 (rows 13-14), the corridor beyond (columns 37-38, rows
 ## 12-14, high enough to jump onto the first step) and
@@ -142,7 +142,7 @@ func _initialize() -> void:
 	_add_float(root, pool_2, POOL_2_FLOAT_COLUMN)
 	_add_water(root, "tunnel", TUNNEL_COLUMNS, TUNNEL_TOP_ROW, TUNNEL_FLOOR_ROW, Water.LEVEL_MAX, -1, 1)
 
-	# The room of the pipe (D168): the pipe before the pit, the plug and the
+	# The room of the pipe (D169): the pipe before the pit, the plug and the
 	# door, so at the head it tells them this tick's flow and power.
 	var pipe := BurstPipe.new()
 	pipe.name = "Pipe"
