@@ -97,6 +97,31 @@
       "burst_every": 2.6,
       "burst_area": [6, 6]
     },
+    "smoke": {
+      "shape": "dot",
+      "blend": "mix",
+      "rate": 9,
+      "lifetime": 3.2,
+      "lifetime_jitter": 0.3,
+      "area": [-10, -4, 20, 8],
+      "velocity": [8, -38],
+      "velocity_jitter": [12, 10],
+      "gravity": [0, -8],
+      "wobble_px": [6, 16],
+      "wobble_hz": [0.2, 0.5],
+      "size": [7, 16],
+      "spin": 0,
+      "stretch": 0,
+      "color": "#6a645e",
+      "color_end": "#3a3734",
+      "alpha": 0.55,
+      "fade_in": 0.12,
+      "fade_out": 0.5,
+      "on_floor": "none",
+      "burst_count": 0,
+      "burst_every": 0,
+      "burst_area": [0, 0]
+    },
     "shards": {
       "shape": "shard",
       "blend": "mix",
@@ -256,6 +281,12 @@
       "width_px": 3,
       "color": "#1d1a18",
       "end_color": "#b8733c"
+    },
+    "fault": {
+      "_about": "A pump that fails (FaultFx, level 02): its lamps stutter in steps of 1/blink_hz seconds, on in about blink_on_share of them, else down to blink_dark of their light.",
+      "blink_hz": 9,
+      "blink_on_share": 0.55,
+      "blink_dark": 0.12
     },
     "lever": {
       "_about": "Signal-yellow lever from the kit (D65): the base picture base_px high on the floor, the handle handle_px long turning angle_degrees either way on a pivot pivot_from_top of the base below its top.",

@@ -189,9 +189,28 @@ func player_interact(player_pos: Vector2) -> void:
 	for change: Variant in changes:
 		var ch := change as Dictionary
 		var id := str(ch.get("id", ""))
+		if bool(ch.get("rewrite_all", false)):
+			_set_without_branch(id, ch.get("state", {}) as Dictionary)
+			continue
 		apply_change(id, ch.get("state", {}) as Dictionary)
 		if bool(ch.get("rewrite_past", false)):
 			world.rewrite_past(temporal_objects(), id)
+
+
+## A change that is no interference (`rewrite_all`, D175): `partial` is merged
+## over the object's present state, and that state is written into all its
+## frames, past and future; the room's history is not cut.
+func _set_without_branch(id: String, partial: Dictionary) -> void:
+	for obj: Variant in temporal_objects():
+		if obj is Object and (obj as Object).has_method("capture_state") and str((obj as Object).get("object_id")) == id:
+			var state: Dictionary = ((obj as Object).call("capture_state") as Dictionary).duplicate(true)
+			state.merge(partial.duplicate(true), true)
+			(obj as Object).call("restore_state", state)
+			world.rewrite_all(temporal_objects(), id)
+			# What depends on the item follows it along the recorded future.
+			if (obj as Object).has_method("after_rewrite"):
+				(obj as Object).call("after_rewrite", world.timeline)
+			return
 
 
 ## A player's change to one object: `partial` is merged over the object's

@@ -1,7 +1,8 @@
 class_name ButtonSparks
 extends Node2D
 ## Decoration over a button that has not been pressed yet: a few sparks jump up
-## and fall back, so the player notices it (level 02). It records nothing and
+## and fall back, so the player notices it (level 02). The breakdown behind a
+## pressed button is `FaultFx`. It records nothing and
 ## changes nothing. Where each spark is comes from the world tick alone (group
 ## `world_clock`, `RoomTime` tells it), so under Shift the sparks play the other
 ## way, and they stop once the button is pressed.
@@ -15,11 +16,6 @@ const SPREAD_PX := 26.0
 
 ## The button these sparks sit on, found by path from the room.
 @export var button_path: NodePath
-## A tank with a failing pump (`Water.turn_after_ticks`), found by path from the
-## room: once its flow has turned, the pressed button sparks again, as if
-## something broke behind it (level 02, D150). Empty: no such tank.
-@export var fault_water_path: NodePath
-
 var _world_tick := 0
 var _ticks := 60.0
 
@@ -50,10 +46,7 @@ static func _phase(index: int, tick: int, ticks_per_second: float) -> float:
 
 func is_lit() -> bool:
 	var button := get_node_or_null(button_path) as PushButton
-	if button == null or not button.pressed:
-		return true
-	var tank := get_node_or_null(fault_water_path) as Water if not fault_water_path.is_empty() else null
-	return tank != null and tank.turned()
+	return button == null or not button.pressed
 
 
 func _draw() -> void:

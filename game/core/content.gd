@@ -786,6 +786,7 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 ## A number between `low` and `high` (`low` itself is allowed unless `above_low`).
 const LOOK_PIPE_COLORS: Array[String] = ["shell", "shell_light", "empty", "water", "dash"]
 const LOOK_KIT_OBJECTS := {
+	"fault": ["blink_hz", "blink_on_share", "blink_dark"],
 	"shutter": ["blade_region", "painted_blade_region", "stripe_region", "housing_frame_px", "brick_tint", "wheel_px", "wheel_turns", "gear_px"],
 	"picture_light": ["dark", "lit_color", "lit_gain", "haze_color", "haze", "soft_px", "yellow_keep"],
 	"platform": ["cap_px", "rack_px", "chain_px", "gear_px", "track_above_px", "track_below_px", "chain_below_px",
