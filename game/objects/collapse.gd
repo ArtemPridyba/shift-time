@@ -29,12 +29,12 @@ extends Node2D
 ## ticks since her step onto the crane, -1 before it, "calm": the ride tick of
 ## her step onto the exit ledge, which ends the slow part of act 3 (D162), -1
 ## before it, "brake": the ride tick on which the crane was put on its brake
-## (the pedal, D171), -1 before it }; the counters stop once everything of their acts is down, so
+## (the pedal, D176), -1 before it }; the counters stop once everything of their acts is down, so
 ## the room may stand still (D56). Both steps are the player's actions: left
 ## of the head they branch the room (`RoomTime.apply_change`), like a time
 ## plate's (group `plate`). Only steps in normal time count. Under Shift everything goes back up,
 ## after Shift is released the recorded collapse plays again (rule «A»).
-## The pedal (D171): when she jumps into the riding crane from a piece while
+## The pedal (D176): when she jumps into the riding crane from a piece while
 ## Shift is held, the crane is hers: Shift carries it back up its rail with the
 ## rest of the world, and the tick she lets go of Shift it goes onto its brake
 ## and stays there while the world runs on (an action of hers, so it branches
@@ -214,7 +214,7 @@ func on_time_direction_changed(_direction: int) -> void:
 
 
 ## Called by RoomTime after every tick (group `plate`): her feet on the crane
-## in normal time set it going, once; the pedal (D171) puts it on its brake.
+## in normal time set it going, once; the pedal (D176) puts it on its brake.
 func sense(room: Object, direction: int, player_rect: Rect2) -> void:
 	_feet_y = player_rect.end.y if player_rect.has_area() else INF
 	_show_bodies()

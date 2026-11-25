@@ -12,7 +12,7 @@ extends RefCounted
 ## step, -1 before it): the second quake, the crane breaks loose and rides down
 ## its sloping rail; the lamps over the rail fall as it passes under them.
 ## Act 3, from the crane's arrival at the end of the rail (or earlier, from the
-## point `blast_way` of its ride, D171: then the crane rides on through act 3's
+## point `blast_way` of its ride, D176: then the crane rides on through act 3's
 ## slowed world and reaches the end later): the third quake, the crane sags
 ## and falls once it is at the end, the ceiling comes down in chunks, lamps fall among
 ## them still shining, an explosion flares up in the background (`blast`), and
@@ -85,7 +85,7 @@ var blast_way := 1.0
 ## the end of its rail, both with no brake and no calm (set by `aim`).
 var act3_at := 1
 var _arrive := 1
-## The pedal (D171): the ride tick on which the crane was put on its brake, -1
+## The pedal (D176): the ride tick on which the crane was put on its brake, -1
 ## before: from there it stays where it was, whatever the world does. `Collapse`
 ## sets it from its recorded state, like `calm`.
 var brake := -1

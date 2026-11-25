@@ -114,7 +114,7 @@ func test_collapse_plan_crane_rides_strikes_lamps_in_order_then_act_3() -> void:
 	check(plan.shake(0, plan.arrival()) == 1.0, "the arrival shakes it again")
 
 
-## A plan whose act 3 begins halfway down a level rail (D171): one tick per
+## A plan whose act 3 begins halfway down a level rail (D176): one tick per
 ## second, so the seconds are ticks.
 func _mid_ride_plan() -> CollapsePlan:
 	var plan := CollapsePlan.from_data({"crane": {"delay_seconds": 2, "speed": 10, "blast_way": 0.5,

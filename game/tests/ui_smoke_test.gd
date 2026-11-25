@@ -1,6 +1,6 @@
 extends SceneTree
-## UI smoke test: the game starts from its main scene, the level list, which
-## builds one button per entry of levels.json; the first level then runs for a
+## UI smoke test: the game starts from its main scene, the main menu, with
+## Start and Levels; the level list builds one button per entry of levels.json; the first level then runs for a
 ## moment and shows a camera on the player without script errors.
 ##
 ##   godot --headless --path game --script res://tests/ui_smoke_test.gd
@@ -32,9 +32,24 @@ func _run() -> void:
 		root.add_child(main)
 		for i in 5:
 			await process_frame
-		_check_level_list(main)
+		_check_main_menu(main)
 		main.queue_free()
 		await process_frame
+	var list: Node = (load("res://ui/level_select.tscn") as PackedScene).instantiate()
+	root.add_child(list)
+	for i in 5:
+		await process_frame
+	_check_level_list(list)
+	list.queue_free()
+	await process_frame
+	var final: Node = (load("res://ui/final_screen.tscn") as PackedScene).instantiate()
+	root.add_child(final)
+	for i in 5:
+		await process_frame
+	var back := final.get_node_or_null("Center/Box/MainMenu") as Button
+	_check(back != null and back.has_focus(), "the final screen must have a focused Main menu button")
+	final.queue_free()
+	await process_frame
 
 	var levels := Content.levels()
 	_check(not levels.is_empty(), "levels.json lists no levels")
@@ -61,6 +76,16 @@ func _run() -> void:
 		print("FAIL SCRIPT ERROR ", message)
 	print("UI smoke test: %d failed" % _failed)
 	quit(1 if _failed > 0 else 0)
+
+
+## The main menu: the title, Start with the focus, Levels.
+func _check_main_menu(main: Node) -> void:
+	_check(main.get_node_or_null("Center/Box/Title") is Label, "no title on the main menu")
+	var start := main.get_node_or_null("Center/Box/Start") as Button
+	_check(start != null, "no Start button on the main menu")
+	if start != null:
+		_check(start.has_focus(), "Start must have the focus at the start")
+	_check(main.get_node_or_null("Center/Box/Levels") is Button, "no Levels button on the main menu")
 
 
 ## The list shows one focusable button per level, titled from levels.json.

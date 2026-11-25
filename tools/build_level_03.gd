@@ -13,8 +13,11 @@ extends SceneTree
 ##
 ## The way: under Shift, at frame 0, take the burning torch and pull the alarm
 ## (a branch: the rain runs from the start and the first zone goes out); cross
-## the wet bridge and thrust the torch into the barricade. Until part 2 widens
-## the level to 60 cells, the exit waits right behind the barricade.
+## the wet bridge and thrust the torch into the barricade. Its rope burns with
+## it and the ramp falls across the gap behind the wall. Down the ramp lies the
+## reverse flamethrower: in normal time it sucks the fire of the spilled oil
+## in, under Shift it lights the pile of crates that closes the way to the
+## exit door.
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
 ##   godot --headless --path game --script $PWD/tools/build_level_03.gd
@@ -29,23 +32,23 @@ const TILESET_RES := "res://levels/blockout/blockout_tileset.tres"
 const SCENE_PATH := "res://levels/level_03.tscn"
 
 const MAP := [
-	"##############################",
-	"##############################",
-	"##############################",
-	"##############################",
-	"#..........................###",
-	"#..........................###",
-	"#..........................###",
-	"#..........................###",
-	"#...........................E#",
-	"#S..........................E#",
-	"#######..................#####",
-	"#######..................#####",
-	"#######..................#####",
-	"#######..................#####",
-	"#######..................#####",
-	"#######..................#####",
-	"#######..................#####",
+	"############################################################",
+	"############################################################",
+	"############################################################",
+	"############################################################",
+	"#..........................#..........................###..#",
+	"#..........................#..........................###..#",
+	"#..........................#..........................###..#",
+	"#..........................#..........................###..#",
+	"#.....................................................###..#",
+	"#S.........................................................#",
+	"#######..................#########........................E#",
+	"#######..................#########........................E#",
+	"#######..................#########....######################",
+	"#######..................#########....######################",
+	"#######..................#########....######################",
+	"#######..................#########....######################",
+	"#######..................#########....######################",
 ]
 
 ## The doorway the hero walks out of (decoration only), in cells.
@@ -69,6 +72,28 @@ const TORCH_CELL := Vector2i(5, 8)
 const PIPE_Y := 4 * 64 + 14
 const PIPE_LEFT := 4 * 64
 const PIPE_RIGHT := 25 * 64
+const LEVEL_ID := "level_03"
+## Part 2. The ramp's hinge on the edge of the lower floor (column 38, top on
+## row 12); lying, its tip rests on the corner of the ledge (column 34, row 10).
+const HINGE_CELL := Vector2i(38, 12)
+const LEDGE_CORNER_CELL := Vector2i(34, 10)
+## The tip lies this far inside the ledge's corner: the board's top meets the
+## ledge a few pixels low, so its end face never sticks up as a wall.
+const TIP_IN_LEDGE := Vector2(-4.0, 2.0)
+## The rope: tied to the top of the barricade, over a pulley under the roof.
+const ROPE_ANCHOR := Vector2(28 * 64, 8 * 64 + 16)
+const PULLEY := Vector2(37 * 64 + 40, 4 * 64 + 22)
+## The reverse flamethrower lies at the foot of the ramp.
+const THROWER_COLUMN := 40
+## Burning oil over columns 42-51 on the lower floor.
+const OIL_COLUMNS := Vector2i(42, 52)
+const OIL_HEIGHT := 16.0
+const LOWER_FLOOR_ROW := 12
+## The pile of crates under the wall (columns 54-56, rows 9-11). Column 52-53
+## between the oil and the crates is wider than the hero and both flames.
+const CRATES_CELLS := Rect2i(54, 9, 3, 3)
+## The beacon over the exit door, from the door's foot (as in level 02).
+const BEACON_FROM_DOOR := Vector2(-66.0, -118.0)
 
 
 func _initialize() -> void:
@@ -87,7 +112,7 @@ func _initialize() -> void:
 	var exit_cells := Rect2i()
 	for y in MAP.size():
 		var row: String = MAP[y]
-		assert(row.length() == 30, "row %d is %d cells" % [y, row.length()])
+		assert(row.length() == 60, "row %d is %d cells" % [y, row.length()])
 		for x in row.length():
 			var cell := Vector2i(x, y)
 			match row[x]:
@@ -97,6 +122,14 @@ func _initialize() -> void:
 					spawn.position = Vector2((x + 0.5) * CELL, (y + 1) * CELL)
 				"E":
 					exit_cells = Rect2i(cell, Vector2i.ONE) if exit_cells.size == Vector2i.ZERO else exit_cells.expand(cell + Vector2i.ONE)
+
+	# The Night shop world as in level 01: the blockout tiles stay the
+	# collision and are hidden; the look is data, `world` in levels.json.
+	blocks.visible = false
+	var back := WorldBack.new()
+	back.name = "WorldBack"
+	back.level_id = LEVEL_ID
+	_own(root, back)
 
 	var entrance := Node2D.new()
 	entrance.set_script(load("res://objects/entrance_frame.gd"))
@@ -152,10 +185,31 @@ func _initialize() -> void:
 	torch.floor_offset_px = floor_y - torch.position.y
 	_own(root, torch)
 
+	_part_2(root)
+
+	var ground := WorldGround.new()
+	ground.name = "WorldGround"
+	ground.level_id = LEVEL_ID
+	_own(root, ground)
+	var light := WorldLight.new()
+	light.name = "WorldLight"
+	light.level_id = LEVEL_ID
+	_own(root, light)
+
 	var exit: ExitZone = (load("res://objects/exit_zone.tscn") as PackedScene).instantiate()
 	exit.size = Vector2(exit_cells.size * CELL)
 	exit.position = (Vector2(exit_cells.position) + Vector2(exit_cells.size) / 2.0) * CELL
 	_own(root, exit)
+	var exit_door := ExitDoor.new()
+	exit_door.name = "ExitDoor"
+	exit_door.position = Vector2(0.0, exit.size.y / 2.0)
+	exit.add_child(exit_door)
+	exit_door.owner = root
+	var beacon := Beacon.new()
+	beacon.name = "Beacon"
+	beacon.position = exit_door.position + BEACON_FROM_DOOR
+	exit.add_child(beacon)
+	beacon.owner = root
 
 	var player: Node2D = (load("res://objects/player.tscn") as PackedScene).instantiate()
 	_own(root, player)
@@ -170,6 +224,41 @@ func _initialize() -> void:
 	root.free()
 	print("wrote ", SCENE_PATH)
 	quit()
+
+
+## Part 2 (the second screen): the ramp on its rope, the flamethrower, the
+## burning oil and the pile of crates.
+func _part_2(root: Node) -> void:
+	var hinge := Vector2(HINGE_CELL * CELL)
+	var corner := Vector2(LEDGE_CORNER_CELL * CELL) + TIP_IN_LEDGE
+	var ramp := Ramp.new()
+	ramp.name = "Ramp"
+	ramp.object_id = "ramp"
+	ramp.watch_id = "barricade"
+	ramp.position = hinge
+	ramp.length_px = hinge.distance_to(corner)
+	ramp.rest_deg = rad_to_deg((corner - hinge).angle())
+	ramp.rope_anchor = ROPE_ANCHOR
+	ramp.pulley = PULLEY
+	_own(root, ramp)
+
+	var floor_y := float(LOWER_FLOOR_ROW * CELL)
+	var thrower: ReverseFlamethrower = (load("res://objects/reverse_flamethrower.tscn") as PackedScene).instantiate()
+	thrower.name = "Flamethrower"
+	thrower.object_id = "flamethrower"
+	thrower.facing = 1
+	thrower.position = Vector2((THROWER_COLUMN + 0.5) * CELL, floor_y - ReverseFlamethrower.SIZE.y / 2.0)
+	_own(root, thrower)
+
+	var oil := _wood("oil", Rect2(OIL_COLUMNS.x * CELL, floor_y - OIL_HEIGHT, (OIL_COLUMNS.y - OIL_COLUMNS.x) * CELL, OIL_HEIGHT))
+	oil.name = "Oil"
+	oil.oil = true
+	oil.start_phase = WoodBurn.Phase.BURNING
+	_own(root, oil)
+
+	var crates := _wood("crates", Rect2(Vector2(CRATES_CELLS.position * CELL), Vector2(CRATES_CELLS.size * CELL)))
+	crates.name = "Crates"
+	_own(root, crates)
 
 
 ## A whole wood zone over `rect` (pixels).
