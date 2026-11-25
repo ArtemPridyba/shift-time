@@ -14,6 +14,9 @@ const TIME_HUD_PATH := "res://data/time_hud.json"
 const ART_PATH := "res://data/art.json"
 const LOOK_PATH := "res://data/look.json"
 const CAMERA_PATH := "res://data/camera.json"
+const MENU_PATH := "res://data/menu.json"
+## Texts of the menu buttons (`menu.json`, `buttons`).
+const MENU_BUTTONS: Array[String] = ["start", "continue", "levels", "quit", "back", "resume", "restart", "main_menu", "passed"]
 ## Numbers of `camera.json` (D83), each above 0.
 const CAMERA_KEYS := ["zoom", "zoom_max", "zoom_step", "zoom_speed", "lead_px", "lead_speed", "follow_speed", "overview_start_seconds", "overview_blend_seconds", "feet_screen_y", "ride_lead_px", "ride_zoom"]
 ## Colour roles every palette in `art.json` must give, each as a ramp from dark to light.
@@ -92,6 +95,7 @@ const FIRE_LOOK_KEYS: Array[String] = [
 const SPRINKLER_KEYS: Array[String] = ["spin_up_seconds", "nozzle_spacing_px", "drop_speed_px", "drops_per_nozzle"]
 const STEAM_KEYS: Array[String] = ["seconds", "puffs", "rise_px", "radius_px"]
 ## The torch of level 03 (D155): an item that carries fire from the past.
+const RAMP_KEYS: Array[String] = ["fall_seconds", "thickness_px"]
 const TORCH_KEYS: Array[String] = ["interact_radius_px", "reach_px", "follow_px", "gravity", "max_fall_speed"]
 const FLAMETHROWER_KEYS: Array[String] = ["interact_radius_px", "reach_px", "jet_px", "follow_px", "gravity", "max_fall_speed"]
 ## Every window in which the player must act is at least this long (design rules).
@@ -209,6 +213,11 @@ static func level_for_scene(scene_path: String) -> Dictionary:
 
 
 ## The levels of the level list.
+static func menu() -> Dictionary:
+	var data: Variant = load_json(MENU_PATH)
+	return data if data is Dictionary else {}
+
+
 static func levels() -> Array:
 	var data: Variant = load_json(LEVELS_PATH)
 	return data if data is Array else []
@@ -241,6 +250,56 @@ static func validate() -> PackedStringArray:
 	errors.append_array(validate_look(load_json(LOOK_PATH)))
 	errors.append_array(HeroineData.validate(load_json(HeroineData.PATH)))
 	errors.append_array(validate_camera(load_json(CAMERA_PATH)))
+	errors.append_array(validate_menu(load_json(MENU_PATH)))
+	return errors
+
+
+## The menu, transitions, pause and final screen (`menu.json`, tasks 4.2, 4.3).
+static func validate_menu(data: Variant) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not data is Dictionary:
+		errors.append("menu.json: expected an object")
+		return errors
+	var menu_data := data as Dictionary
+	for key in ["title", "pause_title"]:
+		if not menu_data.get(key) is String or str(menu_data[key]).is_empty():
+			errors.append("menu.json: '%s' must be a non-empty text" % key)
+	var picture: Variant = menu_data.get("background")
+	if not picture is String or not ResourceLoader.exists(str(picture)):
+		errors.append("menu.json: 'background' must point to a picture of the game, got '%s'" % [picture])
+	var dim: Variant = menu_data.get("dim")
+	if not _is_number(dim) or float(dim) < 0.0 or float(dim) > 1.0:
+		errors.append("menu.json: 'dim' must be a number from 0 to 1")
+	for key in ["fade_seconds", "title_card_seconds"]:
+		var value: Variant = menu_data.get(key)
+		if not _is_number(value) or float(value) <= 0.0 or float(value) > 5.0:
+			errors.append("menu.json: '%s' must be a number above 0 and at most 5" % key)
+	for key in ["unlock_in_order", "pause_on_focus_loss"]:
+		if not menu_data.get(key) is bool:
+			errors.append("menu.json: '%s' must be true or false" % key)
+	var buttons: Variant = menu_data.get("buttons")
+	if not buttons is Dictionary:
+		errors.append("menu.json: missing section 'buttons'")
+	else:
+		for key in MENU_BUTTONS:
+			var text: Variant = (buttons as Dictionary).get(key)
+			if not text is String or str(text).is_empty():
+				errors.append("menu.json: 'buttons.%s' must be a non-empty text" % key)
+	var final: Variant = menu_data.get("final")
+	if not final is Dictionary:
+		errors.append("menu.json: missing section 'final'")
+	else:
+		var heading: Variant = (final as Dictionary).get("heading")
+		if not heading is String or str(heading).is_empty():
+			errors.append("menu.json: 'final.heading' must be a non-empty text")
+		var lines: Variant = (final as Dictionary).get("lines")
+		if not lines is Array:
+			errors.append("menu.json: 'final.lines' must be a list of texts")
+		else:
+			for line: Variant in lines:
+				if not line is String:
+					errors.append("menu.json: 'final.lines' must hold only texts")
+					break
 	return errors
 
 
@@ -496,7 +555,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	# 10000 is Water.LEVEL_MAX (core/ does not refer to objects/).
 	if 10000.0 / (float(data["water"]["full_seconds"]) * ticks) > max_step:
 		errors.append("objects.json: 'water.full_seconds' is too short: the level would jump more than max_state_step per tick")
-	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["pipe_plug", PIPE_PLUG_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS], ["rail_switch", RAIL_SWITCH_KEYS], ["minecart", MINECART_KEYS]]:
+	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["pipe_plug", PIPE_PLUG_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["ramp", RAMP_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS], ["rail_switch", RAIL_SWITCH_KEYS], ["minecart", MINECART_KEYS]]:
 		var isec := interact_section as Array
 		var isec_name: String = isec[0]
 		var ientry: Variant = data.get(isec_name)
@@ -537,6 +596,10 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 				errors.append("objects.json: 'flamethrower.%s' moves more than max_state_step per tick" % key)
 		if float(thrower["max_fall_speed"]) / real_ticks > max_step:
 			errors.append("objects.json: 'flamethrower.max_fall_speed' moves more than max_state_step per tick")
+		# The ramp's tip (about 4.5 cells out) swings fastest at the end of the
+		# fall, twice its average step (the fall is quadratic).
+		if 2.0 * 288.0 * deg_to_rad(64.0) / (float(data["ramp"]["fall_seconds"]) * ticks) > max_step:
+			errors.append("objects.json: 'ramp.fall_seconds' is too short: the ramp's tip would jump more than max_state_step per tick")
 		var torch: Dictionary = data["torch"]
 		if float(torch["follow_px"]) > max_step or float(torch["max_fall_speed"]) / real_ticks > max_step:
 			errors.append("objects.json: 'torch.follow_px' and 'torch.max_fall_speed' must move at most max_state_step per tick")
