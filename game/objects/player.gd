@@ -25,6 +25,9 @@ var _bubbles: CPUParticles2D
 ## fades in and walks right on his own, the keys are ignored.
 var _intro_left := 0
 var _intro_total := 0
+## The cart she rides (level 04, D168), or null. Riding, she sits on its
+## platform and can only hold Shift; a jump gets her off where the cart allows.
+var _carrier: Node2D = null
 
 @onready var _shape: CollisionShape2D = $CollisionShape2D
 @onready var _camera: PlayerCamera = $Camera2D
@@ -58,8 +61,22 @@ func _physics_process(delta: float) -> void:
 		jump = false
 		_intro_left -= 1
 		modulate.a = minf(1.0, 2.0 * (1.0 - float(_intro_left) / float(_intro_total)))
+	var on_floor := is_on_floor()
+	if _carrier != null:
+		if not is_instance_valid(_carrier):
+			_carrier = null
+		elif jump and bool(_carrier.call("can_get_off")):
+			_carrier.call("get_off")
+			_carrier = null
+			# She jumps from the platform she stood on.
+			on_floor = true
+		else:
+			global_position = _carrier.call("seat_position")
+			velocity = Vector2.ZERO
+			_rig.step(Vector2.ZERO, true, delta, {})
+			return
 	var water := water_contact()
-	velocity = _motion.step(velocity, axis, jump, is_on_floor(), delta, water)
+	velocity = _motion.step(velocity, axis, jump, on_floor, delta, water)
 	move_and_slide()
 	_rig.set_exit(float(_intro_left) / float(_intro_total) if _intro_left > 0 else 0.0)
 	# Her gait reads her own speed: a platform carrying her is not her walk (D120).
@@ -110,6 +127,30 @@ func _footing() -> Dictionary:
 			"slope": origin.y + stairs.surface_y(at.x - origin.x) - at.y,
 		}
 	return {}
+
+
+## The cart takes her: she rides it until she jumps off (`Minecart`).
+func board(carrier: Node2D) -> void:
+	_carrier = carrier
+	velocity = Vector2.ZERO
+	global_position = carrier.call("seat_position")
+
+
+## The room was reset under her: she no longer rides.
+func leave_carrier() -> void:
+	_carrier = null
+
+
+## True while she rides a cart.
+func is_riding() -> bool:
+	return _carrier != null
+
+
+## What the camera needs while she rides (`Minecart.ride_view`); empty on foot.
+func ride_view() -> Dictionary:
+	if _carrier == null or not is_instance_valid(_carrier):
+		return {}
+	return _carrier.call("ride_view")
 
 
 func set_camera_limits(rect: Rect2i) -> void:
@@ -194,6 +235,9 @@ func respawn(at: Vector2) -> void:
 	global_position = at
 	velocity = Vector2.ZERO
 	_intro_left = 0
+	if _carrier != null and is_instance_valid(_carrier):
+		_carrier.call("get_off")
+	_carrier = null
 	modulate.a = 1.0
 	_rig.set_exit(0.0)
 	_motion.reset()
