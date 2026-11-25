@@ -71,6 +71,8 @@ const TIME_PLATE_KEYS: Array[String] = ["contact_px"]
 ## Where a shutter of a level starts (level 04).
 const SHUTTER_STARTS: Array[String] = ["open", "closed"]
 const LEVER_KEYS: Array[String] = ["interact_radius_px"]
+## The plug of level 02's pipe (D164): an item, like the flamethrower; all above 0.
+const PIPE_PLUG_KEYS: Array[String] = ["interact_radius_px", "insert_radius_px", "gravity", "max_fall_speed", "friction_px", "follow_px"]
 const LAMP_KEYS: Array[String] = ["break_seconds", "fall_seconds", "shatter_seconds", "fall_distance_px", "flash_seconds", "flash_radius_px", "light_radius_px"]
 const DARKNESS_KEYS: Array[String] = ["ambient", "player_outline_alpha"]
 ## Fire (task 2.7): wood zones, the steam of a doused fire, the reverse flamethrower.
@@ -458,8 +460,8 @@ static func _object_settings_problems(settings: Variant, where: String) -> Packe
 				errors.append("%s: 'objects.%s.lifts_player' must be true or false" % [where, id])
 			elif str(key) == "outlet_inset_px" and (not _is_number(value) or float(value) < 0.0):
 				errors.append("%s: 'objects.%s.outlet_inset_px' must be a number, 0 or more" % [where, id])
-			elif str(key) == "open_level" and (not _is_number(value) or float(value) < 0.0 or float(value) > 10000.0):
-				errors.append("%s: 'objects.%s.open_level' must be a number from 0 to 10000" % [where, id])
+			elif str(key).ends_with("_level") and (not _is_number(value) or float(value) < 0.0 or float(value) > 10000.0):
+				errors.append("%s: 'objects.%s.%s' must be a number from 0 to 10000" % [where, id, key])
 			elif str(key) == "start" and not value in SHUTTER_STARTS:
 				errors.append("%s: 'objects.%s.start' must be one of %s" % [where, id, SHUTTER_STARTS])
 			elif str(key) == "cycle" and not value in LEVEL_DOOR_CYCLES:
@@ -542,7 +544,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	# 10000 is Water.LEVEL_MAX (core/ does not refer to objects/).
 	if 10000.0 / (float(data["water"]["full_seconds"]) * ticks) > max_step:
 		errors.append("objects.json: 'water.full_seconds' is too short: the level would jump more than max_state_step per tick")
-	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS]]:
+	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["pipe_plug", PIPE_PLUG_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS]]:
 		var isec := interact_section as Array
 		var isec_name: String = isec[0]
 		var ientry: Variant = data.get(isec_name)
