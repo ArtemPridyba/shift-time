@@ -1,0 +1,231 @@
+class_name Minecart
+extends Node2D
+## The minecart of level 04 (card docs/levels/04.md, D168): out of time, like
+## the heroine. It is never recorded and Shift never turns it back: while Shift
+## is held it rolls on at the same speed while the world around it rewinds.
+## The ride itself is `CartRide`; this node draws the cart, reads the switches
+## it reaches, carries the heroine and lets the plates feel its wheels.
+##
+## The body is at the front (cargo), the operator's platform at the back (the
+## heroine) with the same time device as her gauntlet, in the same time colour:
+## the colour of time means "out of time", and only she and her cart have it
+## (an exception to D60, D168).
+##
+## The heroine boards by landing on the platform of the parked cart (the
+## platform is a floor only then); she gets off with a jump, at the ramp or at
+## the station. Riding, she can only hold Shift.
+##
+## Numbers: `minecart` in data/objects.json.
+
+const BODY_COLOR := Color("#6b5a48")
+const BODY_EDGE := Color("#2e2620")
+const PLATFORM_COLOR := Color("#d9b400")
+const WHEEL_COLOR := Color("#2b2e33")
+const DEVICE_COLOR := Color("#7FE8FF")
+const CHAIN_COLOR := Color("#5a5f66")
+const STOPPER_COLOR := Color("#b8352a")
+
+@export var object_id := "minecart"
+## The rails (`Rails`), a sibling.
+@export var rails_path: NodePath
+## The segment whose start is the park at the top of the ramp.
+@export var park_segment := "ramp"
+
+var ride: CartRide
+
+var _params := {}
+var _rider: Node2D = null
+var _was_touching := false
+var _deck: AnimatableBody2D
+var _deck_shape: CollisionShape2D
+var _hoist_rail_y := 0.0
+var _clock := 0.0
+
+
+func _init() -> void:
+	# After RoomTime (-50), before the player (0): she sits where the cart is
+	# this tick, and the switches it meets have already moved.
+	process_physics_priority = -40
+	z_index = -1
+	_params = Content.objects().get("minecart", {})
+
+
+func _ready() -> void:
+	add_to_group("minecart")
+	var rails := get_node_or_null(rails_path) as Rails
+	var track := rails.track() if rails != null else RailTrack.from_data([])
+	_hoist_rail_y = rails.hoist_rail_y if rails != null else 0.0
+	ride = CartRide.new(track, _params, park_segment, rails.hoist_y if rails != null else 0.0)
+	_make_deck()
+	_apply()
+
+
+## Back at the park with nobody on it: the room was reset.
+func reset_ride() -> void:
+	if _rider != null and is_instance_valid(_rider) and _rider.has_method("leave_carrier"):
+		_rider.call("leave_carrier")
+	_rider = null
+	_was_touching = false
+	ride.park()
+	_apply()
+
+
+func _physics_process(delta: float) -> void:
+	_clock += delta
+	ride.step(delta, _leads_main)
+	_apply()
+	_check_boarding()
+	queue_redraw()
+
+
+## True while the heroine rides it.
+func has_rider() -> bool:
+	return _rider != null
+
+
+## Where her feet go, in global pixels: the middle of the platform.
+func seat_position() -> Vector2:
+	return to_global(Vector2(_number("seat_px"), -_number("platform_px")))
+
+
+func can_get_off() -> bool:
+	return ride.can_get_off()
+
+
+## She jumped off.
+func get_off() -> void:
+	_rider = null
+	# She leaves from the platform: it boards her again only after a new landing.
+	_was_touching = true
+
+
+## What the camera needs while she rides: which way to look ahead.
+func ride_view() -> Dictionary:
+	return {"direction": ride.motion()}
+
+
+## The wheels on the rails, in the parent's coordinates, for time plates under
+## them (a plate's top lies on the rail); empty while hoisted.
+func wheel_rect() -> Rect2:
+	if not ride.on_rails():
+		return Rect2()
+	var half := _number("length_px") * 0.4
+	return Rect2(position + Vector2(-half, -12.0), Vector2(2.0 * half, 12.0))
+
+
+## The platform's top, the floor she lands on, in the parent's coordinates.
+func platform_rect() -> Rect2:
+	var top := position + Vector2(_number("seat_px"), -_number("platform_px"))
+	var half := _number("platform_width_px") / 2.0
+	return Rect2(top - Vector2(half, 0.0), Vector2(2.0 * half, 8.0))
+
+
+func _leads_main(switch_id: String) -> bool:
+	var room := get_parent()
+	for node in get_tree().get_nodes_in_group("rail_switch"):
+		if room != null and room.is_ancestor_of(node) and str(node.get("object_id")) == switch_id:
+			return bool(node.call("leads_main"))
+	return true
+
+
+func _apply() -> void:
+	var at := ride.position()
+	var shake := ride.shake_px()
+	if shake > 0.0:
+		at += Vector2(sin(_clock * 71.0), cos(_clock * 53.0)) * shake
+	position = at
+	# Local +x points to the back of the cart.
+	rotation = (-ride.facing()).angle()
+	var parked := ride.mode == CartRide.Mode.PARKED and _rider == null
+	if _deck_shape != null:
+		_deck_shape.set_deferred("disabled", not parked)
+
+
+## She lands on the platform of the parked cart: she rides, the stopper drops.
+func _check_boarding() -> void:
+	var player := _find_player()
+	if player == null:
+		return
+	var touching := false
+	if ride.mode == CartRide.Mode.PARKED and _rider == null:
+		var rect: Rect2 = player.call("body_rect")
+		var deck := platform_rect()
+		touching = absf(rect.end.y - deck.position.y) <= _number("board_px") \
+				and rect.end.x > deck.position.x and rect.position.x < deck.end.x
+		if touching and not _was_touching and player.has_method("board"):
+			_rider = player
+			player.call("board", self)
+			ride.board()
+	_was_touching = touching
+
+
+func _find_player() -> Node2D:
+	var room := get_parent()
+	for node in get_tree().get_nodes_in_group("player"):
+		if room != null and room.is_ancestor_of(node) and node.has_method("body_rect"):
+			return node as Node2D
+	return null
+
+
+## The platform is a floor only while the cart stands parked with nobody on it:
+## she lands on it to board.
+func _make_deck() -> void:
+	_deck = AnimatableBody2D.new()
+	_deck.name = "Deck"
+	_deck.sync_to_physics = false
+	_deck.collision_layer = 1
+	_deck.collision_mask = 0
+	_deck_shape = CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(_number("platform_width_px"), 8.0)
+	_deck_shape.shape = rect
+	_deck_shape.one_way_collision = true
+	_deck_shape.position = Vector2(_number("seat_px"), -_number("platform_px") + 4.0)
+	_deck.add_child(_deck_shape)
+	add_child(_deck)
+
+
+func _draw() -> void:
+	var length := _number("length_px")
+	var front := -length / 2.0
+	var back := length / 2.0
+	var platform_w := _number("platform_width_px")
+	var split := back - platform_w
+	var body_h := _number("body_px")
+	var platform_h := _number("platform_px")
+	# The chain of the hoist while it carries the cart.
+	if ride.mode == CartRide.Mode.HOISTED:
+		var top := to_local(Vector2(global_position.x, _hoist_rail_y if _hoist_rail_y < global_position.y - body_h else 0.0))
+		draw_line(Vector2(front + 30.0, -body_h), top, CHAIN_COLOR, 3.0)
+		draw_line(Vector2(back - 20.0, -platform_h - 80.0), top, CHAIN_COLOR, 3.0)
+		draw_circle(top, 8.0, CHAIN_COLOR)
+	# The body: a trapezoid tub, wider at the top.
+	var tub := PackedVector2Array([
+		Vector2(front, -body_h), Vector2(split, -body_h),
+		Vector2(split - 8.0, -14.0), Vector2(front + 8.0, -14.0)])
+	draw_colored_polygon(tub, BODY_COLOR)
+	draw_polyline(tub + PackedVector2Array([tub[0]]), BODY_EDGE, 3.0)
+	# The operator's platform with its rail and the time device on a post.
+	draw_rect(Rect2(Vector2(split, -platform_h), Vector2(platform_w, platform_h - 14.0)), PLATFORM_COLOR)
+	draw_line(Vector2(back - 4.0, -platform_h), Vector2(back - 4.0, -platform_h - 56.0), BODY_EDGE, 4.0)
+	var pulse := 0.6 + 0.4 * sin(_clock * 6.0)
+	var device := Rect2(Vector2(back - 16.0, -platform_h - 72.0), Vector2(22.0, 16.0))
+	draw_rect(device, DEVICE_COLOR * Color(1, 1, 1, pulse))
+	# The arrow on the device always points forward: the cart's own time runs on.
+	var mid := device.get_center()
+	draw_colored_polygon(PackedVector2Array([mid + Vector2(-7, 0), mid + Vector2(3, -6), mid + Vector2(3, 6)]), BODY_EDGE)
+	# Wheels, turning with the ride.
+	for x: float in [front + 30.0, back - 30.0]:
+		var hub := Vector2(x, -12.0)
+		draw_circle(hub, 12.0, WHEEL_COLOR)
+		var spoke := Vector2.RIGHT.rotated(-ride.distance / 12.0) * 10.0
+		draw_line(hub - spoke, hub + spoke, PLATFORM_COLOR, 2.0)
+	# The stopper at the park, dropping when she boards.
+	if ride.is_held():
+		var drop := ride.stopper_fraction() * 26.0
+		draw_rect(Rect2(Vector2(front - 14.0, -26.0 + drop), Vector2(10.0, 26.0 - drop)), STOPPER_COLOR)
+
+
+func _number(key: String) -> float:
+	var value: Variant = _params.get(key, 0.0)
+	return float(value) if value is float or value is int else 0.0

@@ -77,16 +77,24 @@ func _physics_process(_delta: float) -> void:
 	_tell_world_clock()
 
 
-## Time plates (group `plate`, level 04) feel the player's step after the
-## world moved, by the direction of this tick, and change their shutters
-## through `apply_change`.
+## Time plates (group `plate`, level 04) feel the player's step and the
+## wheels of a minecart (group `minecart`, D168) after the world moved, by the
+## direction of this tick, and change their shutters through `apply_change`.
 func _tell_plates(direction: int) -> void:
 	var room := get_parent()
 	if room == null:
 		return
 	var rect := _player_rect()
+	var wheels: Array = []
+	for cart in get_tree().get_nodes_in_group("minecart"):
+		if room.is_ancestor_of(cart) and cart.has_method("wheel_rect"):
+			wheels.append(cart.call("wheel_rect"))
 	for node in get_tree().get_nodes_in_group("plate"):
-		if room.is_ancestor_of(node) and node.has_method("sense"):
+		if not room.is_ancestor_of(node) or not node.has_method("sense"):
+			continue
+		if node is TimePlate:
+			node.call("sense", self, direction, rect, wheels)
+		else:
 			node.call("sense", self, direction, rect)
 
 
@@ -210,6 +218,10 @@ func reset() -> void:
 	for node in get_tree().get_nodes_in_group("plate"):
 		if room != null and room.is_ancestor_of(node) and node.has_method("forget_step"):
 			node.call("forget_step")
+	# The minecart is out of time (D168): a reset parks it, nothing rewinds it.
+	for node in get_tree().get_nodes_in_group("minecart"):
+		if room != null and room.is_ancestor_of(node) and node.has_method("reset_ride"):
+			node.call("reset_ride")
 	var objects := temporal_objects()
 	_recorder.restore(_initial, objects)
 	world.start(objects)

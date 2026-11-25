@@ -36,6 +36,28 @@
   "time_plate": {
     "contact_px": 6
   },
+  "rail_switch": {
+    "_about": "The rail switch of level 04 (D168): a time plate on the walkway throws it like a shutter. move_seconds: a full throw of the blade, world seconds (like shutter.move_seconds).",
+    "move_seconds": 0.6
+  },
+  "minecart": {
+    "_about": "The minecart of level 04 (card docs/levels/04.md, D168), out of time: real seconds, never the world clock. speed_px: its speed on the rails, px a second (the ride from the park to the station takes about 12 s, inside the 20 s of history). accel_px: how fast it speeds up from the park, px/s². brake_px: how hard it brakes into the station, px/s²; creep_px: its last crawl to the buffer, px/s. launch_seconds: from her landing on the platform until the stopper is down and it rolls. bump_seconds: at a dead end it hits the buffer, bounces back bounce_px and shakes shake_px fading over this time; then the hoist takes it, at hoist_speed_px, back to the park with her. Its shape: length_px long, the body body_px high at the front, the operator's platform platform_px high and platform_width_px wide at the back; her feet stand seat_px behind its middle. board_px: how close to the platform her feet must come for a landing.",
+    "speed_px": 300,
+    "accel_px": 400,
+    "brake_px": 500,
+    "creep_px": 40,
+    "launch_seconds": 0.4,
+    "bump_seconds": 1.0,
+    "bounce_px": 40,
+    "shake_px": 5,
+    "hoist_speed_px": 420,
+    "length_px": 184,
+    "body_px": 64,
+    "platform_px": 28,
+    "platform_width_px": 64,
+    "seat_px": 60,
+    "board_px": 6
+  },
   "water": {
     "full_seconds": 12,
     "float_draft_px": 8
