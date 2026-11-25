@@ -182,7 +182,8 @@
 				{ "x": 38.0, "drop": 1.0, "radius_px": 300 },
 				{ "x": 46.65, "drop": 1.0, "radius_px": 300 },
 				{ "x": 49.45, "drop": 1.0, "radius_px": 300 },
-				{ "x": 60.0, "drop": 1.4, "radius_px": 320 }
+				{ "x": 60.0, "drop": 1.4, "radius_px": 320 },
+				{ "x": 55.0, "drop": 1.0, "radius_px": 460 }
 			],
 			"ground": {
 				"concrete": [
