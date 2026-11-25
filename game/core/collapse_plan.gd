@@ -25,7 +25,10 @@ extends RefCounted
 ##       "fall_seconds", "kind": "drop" (falls faster and faster), "sink"
 ##       (slides down at an even speed) or "tumble" (a small chunk thrown
 ##       sideways: it drifts sideways at an even speed, falls faster and
-##       faster and turns "spin" times on its way down, D149),
+##       faster and turns "spin" times on its way down, D149) or "follow"
+##       (hangs on a chain over pulleys against the piece "follow": as that
+##       one falls, this one rises from where it hangs to where it "lies",
+##       D162; it needs no "second" or "fall_seconds"),
 ##       "breaks": bool (cracks on landing),
 ##       "crumble_seconds": how long it lies before it crumbles into the
 ##       pit (absent: never)}, ...] — one per piece of the scene, in order;
@@ -37,22 +40,25 @@ extends RefCounted
 ##       "lamp_to_row", "sag_seconds", "sag_px", "tilt_degrees",
 ##       "fall_second" after act 3's quake, "fall_seconds"};
 ##   "slow": {"from_seconds" after act 3's quake, "ease_seconds", "tempo",
-##       "hold_seconds"}: the world's tempo eases down to `tempo`, holds, eases
-##       back (`slow_ticks`); these seconds count ticks, not the heroine's
-##       slowed clock; "heroine_tempo": how fast she moves at the slowest};
+##       "hold_seconds"}: the world's tempo eases down to `tempo`, holds until
+##       she steps onto the exit ledge (`calm`, D162) but no longer than
+##       hold_seconds, eases back (`slow_ticks`); these seconds count ticks,
+##       not the heroine's slowed clock; "heroine_tempo": how fast she moves
+##       at the slowest};
 ##   "blast": {"at": [x, row] in cells, "seconds" it burns on act 3's clock,
 ##       "radius_px", "energy", "color"} — the explosion of act 3, look only }.
 ## Seconds are of the world clock (D96). Lamp fall and shatter seconds:
 ## `kit_objects.quake` in look.json; the shake: `kit_objects.collapse`.
 
-const KINDS: Array[String] = ["drop", "sink", "tumble"]
+const KINDS: Array[String] = ["drop", "sink", "tumble", "follow"]
 ## Share of a sinking piece's way spent speeding up from rest.
 const SINK_EASE := 0.08
 
 var quake_tick := 1
 ## Per piece: {"act", "at" (ticks after the act's quake), "fall" (ticks),
 ## "kind", "breaks", "crumble" (ticks lying before it crumbles, 0: never),
-## "spin" (turns on its way down, only "tumble")}.
+## "spin" (turns on its way down, only "tumble"), "follow" (the piece it
+## hangs against over pulleys, only "follow"; else -1)}.
 var pieces: Array[Dictionary] = []
 ## Lamps falling on their own: {"lamp", "act", "at", "to_row", "fall", "lit"}.
 var lamps: Array[Dictionary] = []
@@ -76,6 +82,10 @@ var slow_ease := 1
 var slow_hold := 0
 var tempo := 1.0
 var heroine_tempo := 1.0
+## The ride tick on which she stepped onto the exit ledge, -1 before: the slow
+## part of act 3 eases back from there (D162). `Collapse` sets it from its
+## recorded state before it asks this plan anything.
+var calm := -1
 ## The explosion of act 3 (look only): where, how long, how big and bright.
 var blast_at := Vector2.ZERO
 var blast_ticks := 1
@@ -101,7 +111,7 @@ static func from_data(data: Variant, ticks_per_second: float, quake: Dictionary,
 		plan.pieces.append({"act": int(p.get("act", 1)), "at": ticks.call(p.get("second", 0.0)),
 			"fall": maxi(ticks.call(p.get("fall_seconds", 1.0)), 1), "kind": str(p.get("kind", "drop")),
 			"breaks": bool(p.get("breaks", false)), "crumble": ticks.call(p.get("crumble_seconds", 0.0)),
-			"spin": float(p.get("spin", 0.0))})
+			"spin": float(p.get("spin", 0.0)), "follow": int(p.get("follow", -1))})
 	plan.lamp_fall_ticks = maxi(ticks.call(quake.get("fall_seconds", 0.8)), 1)
 	for one: Variant in d.get("lamps", []):
 		var l: Dictionary = one if one is Dictionary else {}
@@ -202,7 +212,7 @@ func act3(ride: int) -> float:
 func slow_ticks(real: float) -> float:
 	var a := float(slow_from)
 	var e := float(slow_ease)
-	var h := float(slow_hold)
+	var h := _hold()
 	var k := tempo
 	var tau := minf(real, a)
 	if real > a:
@@ -218,6 +228,21 @@ func slow_ticks(real: float) -> float:
 	return tau
 
 
+## Real ticks the world holds at its slowest: until she stepped onto the exit
+## ledge (`calm`), at most `slow_hold`.
+func _hold() -> float:
+	if calm < 0:
+		return float(slow_hold)
+	return clampf(float(calm - arrival() - slow_from - slow_ease), 0.0, float(slow_hold))
+
+
+## True while her step onto the exit ledge can still end the slow part: from
+## the world's slowing down until it would end by itself.
+func can_calm(ride: int) -> bool:
+	var r := ride - arrival()
+	return calm < 0 and r >= slow_from and r < slow_from + slow_ease + slow_hold
+
+
 ## How slow the world runs now, for the look: 0 normal … 1 at the slowest.
 func slowness(ride: int) -> float:
 	if ride < arrival() or tempo >= 1.0:
@@ -225,7 +250,7 @@ func slowness(ride: int) -> float:
 	var r := float(ride - arrival())
 	var a := float(slow_from)
 	var e := float(slow_ease)
-	var h := float(slow_hold)
+	var h := _hold()
 	if r < a or r > a + 2.0 * e + h:
 		return 0.0
 	if r < a + e:
@@ -263,6 +288,8 @@ func blast_light(ride: int) -> float:
 ## Ticks since piece `k` broke off, on its act's clock; < 0 while it hangs.
 func since(k: int, clock: int, ride: int) -> float:
 	var p := pieces[k]
+	if int(p["follow"]) >= 0:
+		return since(int(p["follow"]), clock, ride)
 	if int(p["act"]) == 1:
 		return float(clock - quake_tick - int(p["at"]))
 	var t := act3(ride)
@@ -271,6 +298,8 @@ func since(k: int, clock: int, ride: int) -> float:
 
 ## How far piece `k` has come down: 0 hanging … 1 lying.
 func drop(k: int, clock: int, ride: int) -> float:
+	if int(pieces[k]["follow"]) >= 0:
+		return drop(int(pieces[k]["follow"]), clock, ride)
 	var s := since(k, clock, ride)
 	if s < 0.0:
 		return 0.0
@@ -280,6 +309,8 @@ func drop(k: int, clock: int, ride: int) -> float:
 ## How far down its way piece `k` is: 0 … 1 (a dropping piece falls faster and
 ## faster, a sinking one slides at an even speed once it has started).
 func way(k: int, clock: int, ride: int) -> float:
+	if int(pieces[k]["follow"]) >= 0:
+		return way(int(pieces[k]["follow"]), clock, ride)
 	var x := drop(k, clock, ride)
 	if str(pieces[k]["kind"]) == "sink":
 		return _eased(x, SINK_EASE)
@@ -428,7 +459,16 @@ static func problems(data: Variant, where: String, lamp_count: int) -> PackedStr
 			var p: Dictionary = one if one is Dictionary else {}
 			if not (p.get("act") is float or p.get("act") is int) or not int(p.get("act")) in [1, 3]:
 				errors.append("%s: each of 'collapse.pieces' needs 'act' 1 or 3" % where)
-			if not not_negative.call(p.get("second")) or not positive.call(p.get("fall_seconds")):
+			if str(p.get("kind", "drop")) == "follow":
+				var f: Variant = p.get("follow")
+				var all: Array = list
+				var ok: bool = (f is float or f is int) and int(f) >= 0 and int(f) < all.size() and all[int(f)] != one
+				if ok:
+					var partner: Variant = all[int(f)]
+					ok = partner is Dictionary and str((partner as Dictionary).get("kind", "drop")) != "follow"
+				if not ok:
+					errors.append("%s: a 'follow' piece needs 'follow': another piece of 'collapse.pieces' that is no 'follow' itself" % where)
+			elif not not_negative.call(p.get("second")) or not positive.call(p.get("fall_seconds")):
 				errors.append("%s: each of 'collapse.pieces' needs 'second' from 0 and 'fall_seconds' above 0" % where)
 			if not str(p.get("kind", "drop")) in KINDS:
 				errors.append("%s: 'collapse.pieces' kind must be one of %s" % [where, KINDS])

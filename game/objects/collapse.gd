@@ -26,11 +26,12 @@ extends Node2D
 ## her: the world waits instead.
 ##
 ## A recorded object. State: { "clock": ticks since the room began, "ride":
-## ticks since her step onto the crane, -1 before it }; both stop counting once
-## everything of their acts is down, so the room may stand still (D56). The
-## step is the player's action: left of the head it branches the room
-## (`RoomTime.apply_change`), like a time plate's (group `plate`). Only a step
-## in normal time sets the crane going. Under Shift everything goes back up,
+## ticks since her step onto the crane, -1 before it, "calm": the ride tick of
+## her step onto the exit ledge, which ends the slow part of act 3 (D162), -1
+## before it }; the counters stop once everything of their acts is down, so
+## the room may stand still (D56). Both steps are the player's actions: left
+## of the head they branch the room (`RoomTime.apply_change`), like a time
+## plate's (group `plate`). Only steps in normal time count. Under Shift everything goes back up,
 ## after Shift is released the recorded collapse plays again (rule «A»).
 ## Numbers: `collapse` of the level's entry in data/levels.json; the look:
 ## `kit_objects.collapse` and `kit_objects.crane` of data/look.json.
@@ -50,11 +51,14 @@ extends Node2D
 @export var crane_travel := Vector2.ZERO
 ## How far it falls into the pit at the end.
 @export var crane_fall_px := 0.0
+## The floor of the exit ledge: her step onto it ends the slow part (D162).
+@export var calm_rect := Rect2()
 ## From the load's top up to the trolley on the rail.
 @export var sling_px := 200.0
 
 var clock := 0
 var ride := -1
+var calm := -1
 ## Set by tests or read once from the level entry.
 var plan: CollapsePlan
 var _look := {}
@@ -122,6 +126,7 @@ func _exit_tree() -> void:
 ## playing its act tick by tick (a fast piece moves fast only while the world
 ## runs at full tempo).
 func _fastest() -> PackedFloat32Array:
+	plan.calm = -1
 	var margins := PackedFloat32Array()
 	for k in mini(pieces.size(), plan.pieces.size()):
 		var most := 0.0
@@ -172,12 +177,14 @@ func _plan() -> CollapsePlan:
 
 
 func capture_state() -> Dictionary:
-	return {"clock": clock, "ride": ride}
+	return {"clock": clock, "ride": ride, "calm": calm}
 
 
 func restore_state(state: Dictionary) -> void:
 	clock = int(state["clock"])
 	ride = int(state["ride"])
+	calm = int(state.get("calm", -1))
+	plan.calm = calm
 	_show()
 
 
@@ -199,6 +206,8 @@ func sense(room: Object, direction: int, player_rect: Rect2) -> void:
 	_show_bodies()
 	if direction > 0 and ride < 0 and stands_on_crane(player_rect):
 		room.call("apply_change", object_id, {"ride": 0})
+	elif direction > 0 and plan.can_calm(ride) and stands_on_ledge(player_rect):
+		room.call("apply_change", object_id, {"calm": ride})
 
 
 func forget_step() -> void:
@@ -217,6 +226,20 @@ func stands_on_crane(player_rect: Rect2) -> bool:
 		and middle > load_rect.position.x and middle < load_rect.end.x
 
 
+## True when the player's feet stand on the exit ledge (`calm_rect`).
+func stands_on_ledge(player_rect: Rect2) -> bool:
+	if not player_rect.has_area() or not calm_rect.has_area():
+		return false
+	var middle := player_rect.get_center().x
+	return absf(player_rect.end.y - calm_rect.position.y) <= _contact_px \
+		and middle > calm_rect.position.x and middle < calm_rect.end.x
+
+
+## True while the slow part of act 3 runs.
+func slow_now() -> bool:
+	return plan.slowness(ride) > 0.0
+
+
 ## True when a piece or the crane in `state` would overlap the player's body
 ## above the feet: standing on it is riding, anything deeper would crush her.
 func blocks_player_at(state: Dictionary, player_rect: Rect2) -> bool:
@@ -224,6 +247,13 @@ func blocks_player_at(state: Dictionary, player_rect: Rect2) -> bool:
 		return false
 	var c := int(state["clock"])
 	var r := int(state["ride"])
+	plan.calm = int(state.get("calm", -1))
+	var blocked := _blocks(c, r, player_rect)
+	plan.calm = calm
+	return blocked
+
+
+func _blocks(c: int, r: int, player_rect: Rect2) -> bool:
 	for k in pieces.size():
 		var margin := _margins[k] if k < _margins.size() else _carry_margin
 		if _holds(k, c, r) and _rect(k, c, r).intersects(_above_feet(player_rect, margin)):
@@ -353,11 +383,75 @@ func _show_bodies() -> void:
 func _draw() -> void:
 	_draw_rail()
 	for k in pieces.size():
-		if k < plan.pieces.size() and int(plan.pieces[k]["act"]) == 3:
-			_draw_chunk(k)
-		else:
+		if k >= plan.pieces.size() or int(plan.pieces[k]["act"]) != 3:
 			_draw_platform(k)
+		elif int(plan.pieces[k]["follow"]) >= 0:
+			_draw_counterweight(k, int(plan.pieces[k]["follow"]))
+		elif not _pulls(k):
+			_draw_hangers(k)
+			_draw_chunk(k)
 	_draw_crane()
+
+
+## True when another piece hangs against piece `k` over pulleys (it is drawn
+## with that one).
+func _pulls(k: int) -> bool:
+	for p in plan.pieces:
+		if int(p["follow"]) == k:
+			return true
+	return false
+
+
+## A chunk of act 3 hung low under the roof hangs on two chains until it
+## falls.
+func _draw_hangers(k: int) -> void:
+	var r := piece_rect(k)
+	if not piece_hangs(k) or r.position.y < _ceiling_y + WorldData.CELL:
+		return
+	var chain := ObjectLook.color(_look, "chain", Color("#3a4048"))
+	for side: float in [0.2, 0.8]:
+		var x := r.position.x + r.size.x * side
+		draw_line(Vector2(x, _ceiling_y), Vector2(x, r.position.y + 4.0), chain, 3.0, true)
+
+
+## The counterweight of D162: the platform `k` she rides, signal yellow (D65),
+## hangs on a chain that runs up over a pulley, along the roof and over a
+## second pulley down to the slab `heavy`. As the slab falls the platform
+## rises; the pulleys turn with the recorded way, so under Shift they turn
+## back.
+func _draw_counterweight(k: int, heavy: int) -> void:
+	var iron := ObjectLook.color(ObjectLook.mech(), "iron_dark", Color("#2a2622"))
+	var light := ObjectLook.color(ObjectLook.mech(), "iron_light", Color("#6c6c72"))
+	var yellow := ObjectLook.color(ObjectLook.mech(), "yellow", Color("#d4a21e"))
+	var chain := ObjectLook.color(_look, "chain", Color("#3a4048"))
+	var lift := piece_rect(k)
+	var slab := piece_rect(heavy)
+	var wheel := ObjectLook.number(_look, "pulley_px", 22.0)
+	var top := _ceiling_y + wheel + 6.0
+	var over_lift := Vector2(lift.get_center().x, top)
+	var over_slab := Vector2(slab.get_center().x, top)
+	# The chain: from the platform up over its pulley, along the roof, over
+	# the other pulley and down to the slab.
+	var side := signf(over_slab.x - over_lift.x)
+	draw_line(Vector2(over_lift.x + side * wheel, top), Vector2(over_lift.x + side * wheel, lift.position.y), chain, 3.0, true)
+	draw_line(Vector2(over_lift.x, top - wheel), Vector2(over_slab.x, top - wheel), chain, 3.0, true)
+	draw_line(Vector2(over_slab.x - side * wheel, top), Vector2(over_slab.x - side * wheel, slab.position.y), chain, 3.0, true)
+	var turn := plan.way(heavy, clock, ride) * absf(lift.position.y - pieces[k].position.y + 1.0) / wheel
+	for at in [over_lift, over_slab]:
+		draw_line(Vector2(at.x, _ceiling_y), at, iron, 6.0)
+		draw_circle(at, wheel, iron)
+		draw_circle(at, wheel - 5.0, light.darkened(0.2))
+		for spoke in 3:
+			var dir := Vector2.from_angle(turn * side + float(spoke) * TAU / 3.0)
+			draw_line(at - dir * (wheel - 6.0), at + dir * (wheel - 6.0), iron, 3.0)
+		draw_circle(at, 4.0, iron)
+	# The platform: a steel deck with a yellow top and stripes.
+	draw_rect(lift, iron)
+	draw_rect(Rect2(lift.position, Vector2(lift.size.x, 6.0)), yellow)
+	for i in int(lift.size.x / 24.0):
+		var x := lift.position.x + 6.0 + 24.0 * float(i)
+		draw_line(Vector2(x, lift.position.y + 8.0), Vector2(x + 10.0, lift.end.y - 2.0), yellow.darkened(0.3), 4.0)
+	_draw_chunk(heavy)
 
 
 ## The sloping rail the crane rides down, under the roof.

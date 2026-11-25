@@ -11,13 +11,22 @@ extends RefCounted
 const LEVEL_PATH := "res://levels/level_05.tscn"
 const CELL := 64.0
 ## Pieces of the level: platforms 0..2 (act 1, the third breaks), then the
-## chunks of act 3 (D149): a stair of three, two tumbling between them, and
-## the lip of the exit ledge.
+## pieces of act 3 (D149, D162): the first chunk by the rail, the hanging
+## wall, the low chunk under it, the tumbling chunk, two steps, the heavy
+## slab and the platform it hangs against over pulleys.
 const BROKEN := 2
 const FIRST_CHUNK := 3
-const STAIR: Array[int] = [3, 5, 7]
-const TUMBLERS: Array[int] = [4, 6]
-const LIP := 8
+const FIRST := 3
+const WALL := 4
+const LOW := 5
+const TUMBLER := 6
+const STEP_B := 7
+const STEP_C := 8
+const SLAB := 9
+const LIFT := 10
+const ROUTE: Array[int] = [FIRST, LOW, STEP_B, STEP_C]
+## The heroine's height (D112).
+const HEIGHT := 92.0
 ## The heroine's jump (D112): about her height up, about 2.3 cells across;
 ## with a margin for a human hand.
 const JUMP_UP := 1.4 * CELL
@@ -124,6 +133,12 @@ func test_collapse_data_is_checked() -> void:
 	(broken["pieces"][4] as Dictionary)["kind"] = "roll"
 	check(not CollapsePlan.problems(broken, "x", lamps.size()).is_empty(), "an unknown kind of fall is reported")
 	broken = good.duplicate(true)
+	(broken["pieces"][LIFT] as Dictionary)["follow"] = LIFT
+	check(not CollapsePlan.problems(broken, "x", lamps.size()).is_empty(), "a platform hung against itself is reported")
+	broken = good.duplicate(true)
+	(broken["pieces"][LIFT] as Dictionary).erase("follow")
+	check(not CollapsePlan.problems(broken, "x", lamps.size()).is_empty(), "a platform hung against nothing is reported")
+	broken = good.duplicate(true)
 	(broken["slow"] as Dictionary)["tempo"] = 0
 	check(not CollapsePlan.problems(broken, "x", lamps.size()).is_empty(), "a tempo of 0 is reported")
 	broken = good.duplicate(true)
@@ -207,49 +222,60 @@ func test_level_05_the_crane_goes_only_when_she_stands_on_it_in_normal_time() ->
 	await _free(room)
 
 
-func test_level_05_the_chunks_make_a_falling_stair_that_ends_below_the_exit() -> void:
+func test_level_05_act_3_goes_down_under_a_wall_then_up_to_the_counterweight() -> void:
 	var room := await _load()
 	var collapse := room.get_node("Collapse") as Collapse
 	var plan := collapse.plan
 	var ledge := _exit_floor(room)
 	var start := plan.arrival() + plan.slow_from + plan.slow_ease
 	var onto_first := 0
-	var stair_ok := true
-	var ledge_out := true
-	for r in range(start, start + plan.slow_hold):
+	var ok := {"wall": true, "down": true, "under": true, "steps": true, "ledge_out": true, "onto_lift": true}
+	# The first ten seconds of the slow part, before her step onto the ledge.
+	for r in range(start, start + 10 * TICKS_PER_SECOND):
 		collapse.restore_state({"clock": plan.clock_end, "ride": r})
 		var crane := collapse.crane_load_rect()
-		var first := collapse.piece_rect(STAIR[0])
+		var first := collapse.piece_rect(FIRST)
 		if crane.position.y - first.position.y <= JUMP_UP and first.position.x - crane.end.x <= JUMP_ACROSS:
 			onto_first += 1
-		for i in STAIR.size() - 1:
-			var a := collapse.piece_rect(STAIR[i])
-			var b := collapse.piece_rect(STAIR[i + 1])
-			if a.position.y - b.position.y > JUMP_UP or b.position.x - a.end.x > JUMP_ACROSS or b.position.y >= a.position.y:
-				stair_ok = false
-		var last := collapse.piece_rect(STAIR[-1])
-		if last.position.y - ledge.y <= OUT_UP or ledge.x - last.end.x <= OUT_ACROSS:
-			ledge_out = false
-	check(stair_ok, "while the world is slow each chunk of the stair is a step up from the one before")
+		var wall := collapse.piece_rect(WALL)
+		var low := collapse.piece_rect(LOW)
+		# The wall stands in her way past the first chunk's end, too high to
+		# jump over; she drops past its edge.
+		if wall.end.y <= first.position.y - HEIGHT - JUMP_UP or first.position.y - wall.position.y <= OUT_UP:
+			ok["wall"] = false
+		if wall.position.x - first.end.x < 0.9 * CELL:
+			ok["down"] = false
+		# Below, the low chunk reaches under the wall with room for her.
+		if low.position.y - first.position.y < CELL or low.position.y - wall.end.y < HEIGHT + 8.0 \
+				or low.position.x > wall.position.x or low.end.x < wall.end.x:
+			ok["under"] = false
+		for i in [[LOW, STEP_B], [STEP_B, STEP_C]]:
+			var a := collapse.piece_rect(i[0])
+			var b := collapse.piece_rect(i[1])
+			if a.position.y - b.position.y > JUMP_UP or b.position.y >= a.position.y or b.position.x - a.end.x > JUMP_ACROSS:
+				ok["steps"] = false
+		var c := collapse.piece_rect(STEP_C)
+		if c.position.y - ledge.y <= OUT_UP:
+			ok["ledge_out"] = false
+		var lift := collapse.piece_rect(LIFT)
+		if collapse.piece_hangs(LIFT) and (c.position.y - lift.position.y > JUMP_UP or lift.position.x - c.end.x > 0.5 * CELL):
+			ok["onto_lift"] = false
 	check(onto_first >= 3 * TICKS_PER_SECOND, "she can jump from the crane onto the first chunk for 3 s at least, %d ticks" % onto_first)
-	check(ledge_out, "the stair ends below the exit ledge, out of her reach")
-	var kinds := {}
-	var breaks: Array[int] = []
-	for k in STAIR:
-		kinds[str(plan.pieces[k]["kind"])] = true
-		breaks.append(int(plan.pieces[k]["at"]))
-	var sorted := breaks.duplicate()
-	sorted.sort()
-	check(sorted != breaks, "the chunks break off out of order, %s" % [breaks])
+	check(ok["wall"], "the wall hangs in her way past the first chunk, too high to jump over")
+	check(ok["down"], "between the first chunk and the wall there is room to drop down")
+	check(ok["under"], "the low chunk lies well below the first and reaches under the wall with room for her")
+	check(ok["steps"], "from the low chunk two chunks are a step up each")
+	check(ok["ledge_out"], "the last of them stays below the exit ledge, out of her reach")
+	check(ok["onto_lift"], "while the platform still hangs low she steps onto it from the last chunk")
 	var sizes := {}
-	for k in range(FIRST_CHUNK, collapse.pieces.size()):
+	for k in ROUTE:
 		sizes[collapse.pieces[k].size] = true
-	check(sizes.size() == collapse.pieces.size() - FIRST_CHUNK, "each chunk is its own size")
+	check(sizes.size() == ROUTE.size(), "each chunk of her way is its own size")
 	collapse.restore_state({"clock": plan.clock_end, "ride": start})
 	check(collapse.slowness() == 1.0, "the world is at its slowest then")
 	check(plan.heroine_tempo < 1.0 and plan.heroine_tempo > plan.tempo, "she slows down too, less than the world")
 	check(is_equal_approx(Engine.time_scale, plan.heroine_tempo), "her clock runs at her slow tempo, %.2f" % Engine.time_scale)
-	check(collapse.piece_holds(STAIR[0]), "a falling chunk holds her")
+	check(collapse.piece_holds(FIRST), "a falling chunk holds her")
 	var act_3 := plan.lamps.filter(func(l: Dictionary) -> bool: return int(l["act"]) == 3)
 	check(act_3.size() == 2, "two lamps fall among the chunks")
 	var world_lamps: Array = (Content.level_for_scene(LEVEL_PATH)["world"] as Dictionary)["lamps"]
@@ -258,12 +284,12 @@ func test_level_05_the_chunks_make_a_falling_stair_that_ends_below_the_exit() ->
 		check(float(fall["light"]) == 1.0 and float(fall["drop"]) > 0.0 and float(fall["drop"]) < 1.0,
 			"lamp %d is on its way down among the chunks, still shining" % int(one["lamp"]))
 		var x := float((world_lamps[int(one["lamp"])] as Dictionary)["x"]) * CELL
-		var between := false
-		for i in STAIR.size() - 1:
-			between = between or (x > collapse.pieces[STAIR[i]].end.x - 8.0 and x < collapse.pieces[STAIR[i + 1]].position.x + 8.0)
-		check(between, "lamp %d falls between two chunks of the stair" % int(one["lamp"]))
+		var clear := true
+		for k in ROUTE + [WALL, LIFT]:
+			clear = clear and (x < collapse.pieces[k].position.x - 8.0 or x > collapse.pieces[k].end.x + 8.0)
+		check(clear, "lamp %d falls through a gap, past every chunk of her way" % int(one["lamp"]))
 	collapse.restore_state({"clock": plan.clock_end, "ride": plan.ride_end})
-	for k in range(FIRST_CHUNK, collapse.pieces.size()):
+	for k in collapse.lost:
 		check(not collapse.piece_holds(k), "at the bottom of the pit chunk %d holds nobody" % k)
 	for one: Dictionary in act_3:
 		check(float(collapse.lamp_fall(int(one["lamp"]))["light"]) == 0.0, "lamp %d is broken at the bottom" % int(one["lamp"]))
@@ -274,62 +300,60 @@ func test_level_05_the_chunks_make_a_falling_stair_that_ends_below_the_exit() ->
 	check(Engine.time_scale == 1.0, "leaving the level puts her clock back to normal")
 
 
-func test_level_05_tumbling_chunks_cross_her_jumps_and_shift_sends_them_back() -> void:
+func test_level_05_a_tumbling_chunk_crosses_her_jump_and_shift_sends_it_back() -> void:
 	var room := await _load()
 	var collapse := room.get_node("Collapse") as Collapse
 	var plan := collapse.plan
 	var start := plan.arrival() + plan.slow_from + plan.slow_ease
-	for i in TUMBLERS.size():
-		var k := TUMBLERS[i]
-		check(str(plan.pieces[k]["kind"]) == "tumble", "chunk %d tumbles" % k)
-		var blocked := 0
-		var above_before := false
-		var turned := false
-		var solid := true
-		var drift := false
-		for r in range(plan.arrival(), start + plan.slow_hold):
-			collapse.restore_state({"clock": plan.clock_end, "ride": r})
-			var a := collapse.piece_rect(STAIR[i])
-			var b := collapse.piece_rect(STAIR[i + 1])
-			# Where her body flies on the jump from one step to the next.
-			var top := minf(a.position.y, b.position.y) - JUMP_UP - 1.2 * CELL
-			var jump := Rect2(a.end.x, top, b.position.x - a.end.x, a.position.y - top)
-			var t := collapse.piece_rect(k)
-			if t.intersects(jump):
-				if r >= start:
-					blocked += 1
-					turned = turned or absf(plan.turn(k, plan.clock_end, r)) > 0.5
-					solid = solid and collapse.piece_holds(k)
-					drift = drift or not is_equal_approx(t.position.x, collapse.pieces[k].position.x)
-			elif blocked == 0 and t.end.y <= jump.position.y and not collapse.piece_hangs(k):
-				above_before = true
-		check(blocked >= 2 * TICKS_PER_SECOND, "chunk %d tumbles across the jump %d→%d for 2 s at least, %d ticks" % [k, STAIR[i], STAIR[i + 1], blocked])
-		check(above_before, "before that it falls above the jump, so Shift sends it back out of her way")
-		check(turned and drift, "it turns over and drifts sideways on its way")
-		check(solid, "it is solid: she bumps into it (D149, variant а)")
+	check(str(plan.pieces[TUMBLER]["kind"]) == "tumble", "the small chunk tumbles")
+	var blocked := 0
+	var above_before := false
+	var turned := false
+	var solid := true
+	var drift := false
+	for r in range(plan.arrival(), start + 15 * TICKS_PER_SECOND):
+		collapse.restore_state({"clock": plan.clock_end, "ride": r})
+		var a := collapse.piece_rect(LOW)
+		var b := collapse.piece_rect(STEP_B)
+		# Where her body flies on the jump from the low chunk up to the next.
+		var top := minf(a.position.y, b.position.y) - JUMP_UP - 1.2 * CELL
+		var jump := Rect2(a.end.x, top, b.position.x - a.end.x, a.position.y - top)
+		var t := collapse.piece_rect(TUMBLER)
+		if t.intersects(jump):
+			if r >= start:
+				blocked += 1
+				turned = turned or absf(plan.turn(TUMBLER, plan.clock_end, r)) > 0.5
+				solid = solid and collapse.piece_holds(TUMBLER)
+				drift = drift or not is_equal_approx(t.position.x, collapse.pieces[TUMBLER].position.x)
+		elif blocked == 0 and t.end.y <= jump.position.y and not collapse.piece_hangs(TUMBLER):
+			above_before = true
+	check(blocked >= 3 * TICKS_PER_SECOND, "it tumbles across her jump up from the low chunk for 3 s at least, %d ticks" % blocked)
+	check(above_before, "before that it falls above the jump, so Shift sends it back out of her way")
+	check(turned and drift, "it turns over and drifts sideways on its way")
+	check(solid, "it is solid (D149, variant а), though only above her feet")
 	await _free(room)
 
 
 func test_level_05_a_tumbling_chunk_in_the_gap_knocks_her_out_of_the_jump() -> void:
-	# From the edge of the first step she jumps for the second twice: once
-	# while the tumbling chunk crosses the gap, once while it is still above.
-	var landed_blocked := await _jump_from_first_step(150)
-	var landed_clear := await _jump_from_first_step(20)
+	# From the edge of the low chunk she jumps for the next twice: once while
+	# the tumbling chunk crosses the gap, once while it is still above.
+	var landed_blocked := await _jump_up_from_low_chunk(5 * TICKS_PER_SECOND)
+	var landed_clear := await _jump_up_from_low_chunk(TICKS_PER_SECOND / 2)
 	check(not landed_blocked, "with the chunk in the gap she hits it and falls short")
 	check(landed_clear, "with the chunk above the gap she lands on the next step")
 
 
 ## Puts the collapse `after` ticks into the slowest part of act 3 and her on
-## the right edge of the first step, jumps right and tells whether she landed
-## on the second step.
-func _jump_from_first_step(after: int) -> bool:
+## the right edge of the low chunk, jumps right and tells whether she landed
+## on the next step.
+func _jump_up_from_low_chunk(after: int) -> bool:
 	var room := await _load()
 	var collapse := room.get_node("Collapse") as Collapse
 	var player: Player = room.get_node("Player")
 	var plan := collapse.plan
 	var ride := plan.arrival() + plan.slow_from + plan.slow_ease + after
 	collapse.restore_state({"clock": plan.clock_end, "ride": ride})
-	var step := collapse.piece_rect(STAIR[0])
+	var step := collapse.piece_rect(LOW)
 	player.respawn(Vector2(step.end.x - 28.0, step.position.y))
 	await _ticks(4)
 	Input.action_press("move_right")
@@ -339,48 +363,64 @@ func _jump_from_first_step(after: int) -> bool:
 	await _ticks(40)
 	Input.action_release("move_right")
 	await _ticks(8)
-	var next := collapse.piece_rect(STAIR[1])
+	var next := collapse.piece_rect(STEP_B)
 	var feet := player.global_position
 	var landed := player.is_on_floor() and feet.x > next.position.x - 22.0 and absf(feet.y - next.position.y) < 8.0
 	await _free(room)
 	return landed
 
 
-func test_level_05_the_lip_drops_fast_and_under_shift_lifts_her_to_the_exit() -> void:
+func test_level_05_the_falling_slab_pulls_the_platform_up_to_the_exit() -> void:
 	var room := await _load()
 	var collapse := room.get_node("Collapse") as Collapse
 	var plan := collapse.plan
 	var ledge := _exit_floor(room)
-	var lip := collapse.pieces[LIP]
-	check(is_equal_approx(lip.end.x, ledge.x) and is_equal_approx(lip.position.y, ledge.y), "the lip hangs flush with the exit ledge")
+	check(int(plan.pieces[LIFT]["follow"]) == SLAB, "the platform hangs against the heavy slab over pulleys")
 	var start := plan.arrival() + plan.slow_from + plan.slow_ease
 	collapse.restore_state({"clock": plan.clock_end, "ride": start})
-	check(collapse.piece_hangs(LIP), "when the world slows down the lip is still there")
-	var fastest_lip := 0.0
-	var fastest_other := 0.0
-	var reach := 0
-	var gone_at := -1
-	for r in range(start, start + plan.slow_hold):
+	var low := collapse.piece_rect(LIFT)
+	check(collapse.piece_hangs(LIFT) and collapse.piece_hangs(SLAB), "when the world slows down the slab still hangs and the platform is low")
+	var risen_at := -1
+	var follows := true
+	var before := collapse.piece_rect(LIFT).position.y
+	for r in range(start, start + 10 * TICKS_PER_SECOND):
 		collapse.restore_state({"clock": plan.clock_end, "ride": r})
-		var last := collapse.piece_rect(STAIR[-1])
-		var at := collapse.piece_rect(LIP)
-		if at.position.y >= last.position.y - JUMP_UP and at.position.y <= last.position.y + 3.0 * CELL:
-			reach += 1
-		if gone_at < 0 and not collapse.piece_holds(LIP):
-			gone_at = r
-		collapse.restore_state({"clock": plan.clock_end, "ride": r + 1})
-		fastest_lip = maxf(fastest_lip, collapse.piece_rect(LIP).position.y - at.position.y)
-		for k in range(FIRST_CHUNK, LIP):
-			var now := collapse.piece_rect(k).position.y
-			collapse.restore_state({"clock": plan.clock_end, "ride": r})
-			fastest_other = maxf(fastest_other, now - collapse.piece_rect(k).position.y)
-			collapse.restore_state({"clock": plan.clock_end, "ride": r + 1})
-	check(gone_at > start, "it breaks off and is gone into the pit while the world is still slow")
-	check(fastest_lip > 2.0 * fastest_other, "it drops faster than any other chunk, %.1f vs %.1f px a tick" % [fastest_lip, fastest_other])
-	check(lip.position.x - collapse.pieces[STAIR[-1]].end.x <= JUMP_ACROSS, "from the last chunk of the stair she jumps across onto it")
-	# Shift moves it back up and releasing it lets it drop again, so she
-	# brings it to herself: the window is hers to hold.
-	check(reach >= int(1.5 * TICKS_PER_SECOND), "on its way it passes the last chunk within her jump for 1.5 s, %d ticks" % reach)
+		var y := collapse.piece_rect(LIFT).position.y
+		follows = follows and y <= before + 0.01
+		before = y
+		if risen_at < 0 and collapse.piece_lies(LIFT):
+			risen_at = r
+	check(risen_at > start, "in the slow part the slab falls and pulls the platform all the way up, %d ticks in" % (risen_at - start))
+	check(follows, "the platform only ever rises as the slab falls")
+	var high := collapse.piece_rect(LIFT)
+	check(is_equal_approx(high.position.y, ledge.y) and high.end.x <= ledge.x and ledge.x - high.end.x < 0.3 * CELL,
+		"up there it is flush with the exit ledge, right by it")
+	var c := collapse.piece_rect(STEP_C)
+	check(c.position.y - high.position.y > OUT_UP, "then it is out of her reach from the last chunk")
+	check(high.position.y - low.position.y < -3.0 * CELL, "it rose more than three cells")
+	check(collapse.piece_holds(LIFT) and collapse.piece_holds(SLAB), "the platform and the slab hold her, even down")
+	check(collapse.slowness() == 1.0, "and the world is still slow")
+	await _free(room)
+
+
+func test_level_05_her_step_onto_the_exit_ledge_ends_the_slow_part() -> void:
+	var room := await _load()
+	var collapse := room.get_node("Collapse") as Collapse
+	var player: Player = room.get_node("Player")
+	var plan := collapse.plan
+	var ledge := _exit_floor(room)
+	# Before the slow part a step onto the ledge changes nothing.
+	collapse.restore_state({"clock": plan.clock_end, "ride": plan.arrival()})
+	check(not plan.can_calm(plan.arrival()), "before the world slows down there is nothing to end")
+	var start := plan.arrival() + plan.slow_from + plan.slow_ease
+	collapse.restore_state({"clock": plan.clock_end, "ride": start + 3 * TICKS_PER_SECOND})
+	check(collapse.slow_now(), "three seconds into the slow part the world is slow")
+	player.respawn(Vector2(ledge.x + 2.0 * CELL, ledge.y))
+	await _ticks(10)
+	check(collapse.calm >= 0, "her step onto the exit ledge is recorded, at ride %d" % collapse.calm)
+	await _ticks(plan.slow_ease + 10)
+	check(not collapse.slow_now(), "and the world runs at its own tempo again")
+	check(Engine.time_scale == 1.0, "so does she")
 	await _free(room)
 
 
