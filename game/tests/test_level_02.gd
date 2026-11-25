@@ -171,6 +171,12 @@ func test_level_02_the_tunnel_floods_again_and_only_then_opens() -> void:
 	var button: PushButton = room.get_node("Button2")
 	var sparks: ButtonSparks = room.get_node("Button2/Sparks")
 	await _ticks(30)
+	# The far gate is the lever's (D161): switched on here as the jet would.
+	var lever: Lever = room.get_node("LeverJet")
+	for change: Dictionary in lever.get_interaction_change(time.temporal_objects()):
+		time.player_action(str(change["id"]), change["state"])
+	await _ticks(120)
+	check(gate_out.open == Door.OPEN_MAX, "the lever opens the far gate")
 	check(sparks.is_lit(), "the button sparks before the press, as a hint")
 	time.player_interact(button.global_position)
 	await _ticks(5)
@@ -235,6 +241,105 @@ func test_water_with_a_failing_pump_turns_and_restores() -> void:
 	check(not plain.capture_state().has("run") and not plain.turned(), "a tank without the setting keeps its old state")
 	tank.free()
 	plain.free()
+
+
+# --- the jet (D161) -------------------------------------------------------------
+
+## Button 1, the drain, then Shift with the heroine up on the start floor: the
+## jet flies out of the sluice across the empty pool and hits the lever behind
+## the bars; the lever stays on after the replay and opens the far gate, and
+## both lamps turn green.
+func test_level_02_the_jet_hits_the_lever_when_nothing_is_in_its_way() -> void:
+	var room := await _load(LEVEL_PATH)
+	var time: RoomTime = room.get_node("RoomTime")
+	var jet: ReverseJet = room.get_node("Jet")
+	var lever: Lever = room.get_node("LeverJet")
+	var gate_out: Door = room.get_node("GateOut")
+	var lamp: LeverLamp = room.get_node("GateLamp")
+	await _ticks(40)
+	time.player_interact(room.get_node("Button1").global_position)
+	var forward_jet := false
+	for i in 200:
+		await _ticks(1)
+		forward_jet = forward_jet or jet.reach > 0.0
+	check(not forward_jet, "forward the pool drains quietly: no jet")
+	check(not lamp.is_on(), "the lamps are red before the hit")
+	Input.action_press("rewind")
+	var reached := false
+	for i in 90:
+		await _ticks(1)
+		reached = reached or (jet.reach >= jet.length_px and not jet.blocked)
+	Input.action_release("rewind")
+	check(reached, "under Shift the jet flies the whole way to the bars")
+	await _ticks(240)
+	check(lever.on, "the jet switched the lever on, and it stays on forward")
+	check(gate_out.open == Door.OPEN_MAX, "the lever opened the far gate: %d" % gate_out.open)
+	check(lamp.is_on(), "the lamp over the gate is green")
+	await _free(room)
+
+
+## On the float, the heroine stands in the jet's way: it splashes on her and
+## pushes her a little, and the lever stays off.
+func test_level_02_the_heroine_on_the_float_blocks_the_jet() -> void:
+	var room := await _load(LEVEL_PATH)
+	var time: RoomTime = room.get_node("RoomTime")
+	var jet: ReverseJet = room.get_node("Jet")
+	var lever: Lever = room.get_node("LeverJet")
+	var player: Player = room.get_node("Player")
+	var pool_1: Water = room.get_node("Pool1")
+	await _ticks(40)
+	time.player_interact(room.get_node("Button1").global_position)
+	await _ticks(200)
+	var float_top := _float_rect(pool_1, pool_1.level)
+	player.respawn(Vector2(float_top.get_center().x + 16.0, float_top.position.y))
+	await _ticks(20)
+	var x_before := player.global_position.x
+	Input.action_press("rewind")
+	var was_blocked := false
+	for i in 90:
+		await _ticks(1)
+		was_blocked = was_blocked or jet.blocked
+	Input.action_release("rewind")
+	check(was_blocked, "the jet stops on the heroine")
+	check(not lever.on, "with the heroine in the way the lever stays off")
+	check(player.global_position.x < x_before - 4.0, "the jet pushes her a little: %.1f -> %.1f" % [x_before, player.global_position.x])
+	check(player.global_position.x > float_top.position.x, "but not off the float")
+	await _free(room)
+
+
+## The jet runs only under Shift, while the world moves back through a drain
+## and the surface is below the mouth.
+func test_reverse_jet_runs_only_back_through_a_drain() -> void:
+	check(ReverseJet.runs(-1, true, -1, 700.0, 672.0), "Shift, moving, a drain played back, the surface below: runs")
+	check(not ReverseJet.runs(1, true, -1, 700.0, 672.0), "forward: no jet")
+	check(not ReverseJet.runs(-1, false, -1, 700.0, 672.0), "the world standing at its start: no jet")
+	check(not ReverseJet.runs(-1, true, 1, 700.0, 672.0), "a fill played back is a drain, not a jet")
+	check(not ReverseJet.runs(-1, true, -1, 600.0, 672.0), "the mouth under water: no jet")
+
+
+## The lever stands behind the bars, out of the heroine's reach from the start
+## floor and from the floor of pool 1.
+func test_level_02_the_lever_is_out_of_reach() -> void:
+	var room := await _load(LEVEL_PATH)
+	var lever: Lever = room.get_node("LeverJet")
+	var radius := float(lever.interaction_candidate()["radius"])
+	var half := 22.0
+	var nearest_pool := Vector2(5 * CELL + half, LOW_ROW * CELL)
+	var nearest_floor := Vector2(lever.global_position.x, LINE_ROW * CELL)
+	check(lever.global_position.distance_to(nearest_pool) > radius, "from pool 1's floor the lever is out of reach")
+	check(lever.global_position.distance_to(nearest_floor) > radius, "from the start floor the lever is out of reach")
+	var blocks: TileMapLayer = room.get_node("Blocks")
+	check(blocks.get_cell_source_id(Vector2i(4, 11)) != -1, "the niche is solid behind the bars: she cannot walk in")
+	await _free(room)
+
+
+func test_reverse_jet_numbers_are_checked_in_objects_data() -> void:
+	var data: Dictionary = Content.objects().duplicate(true)
+	check(Content.validate_objects(data, Content.time()).is_empty(), "objects.json passes")
+	for key: String in ["speed_px", "push_px_per_second", "thickness_px"]:
+		var bad := data.duplicate(true)
+		(bad["reverse_jet"] as Dictionary)[key] = 0
+		check(not Content.validate_objects(bad, Content.time()).is_empty(), "reverse_jet.%s = 0 must be refused" % key)
 
 
 # --- objects -------------------------------------------------------------------
