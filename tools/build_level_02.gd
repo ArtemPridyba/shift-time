@@ -26,23 +26,23 @@ const SCENE_PATH := "res://levels/level_02.tscn"
 const LEVEL_ID := "level_02"
 
 const MAP := [
-	"#######################################################",
-	"#######################################################",
-	"#.....................................................#",
-	"#.....................................................#",
-	"#.....................................................#",
-	"#.....................................................#",
-	"#.....................................................#",
-	"#.....................................................#",
-	"#S....................................................#",
-	"#####.........##..............####################....#",
-	"#####.........##.................##############....EE.#",
-	"#####.........##.................##############....EE.#",
-	"################..........#####..................######",
-	"################..........######................#######",
-	"################..........#############################",
-	"#######################################################",
-	"#######################################################",
+	"####################################################################",
+	"####################################################################",
+	"#...................................###............................#",
+	"#...................................###............................#",
+	"#...................................###............................#",
+	"#...................................###............................#",
+	"#...................................###............................#",
+	"#...................................###............................#",
+	"#S..................................###............................#",
+	"#####.........##....................###......##################....#",
+	"#####.........##....................###.........############....EE.#",
+	"#####.........##....................###.........############....EE.#",
+	"################..........######....#....#####................######",
+	"################..........######........#######..............#######",
+	"################..........######.......#############################",
+	"####################################################################",
+	"####################################################################",
 ]
 
 ## The doorway the heroine walks out of (decoration), two cells as in level 01.
@@ -65,16 +65,30 @@ const POOL_2_FLOAT_COLUMN := 24.0
 const SLUICE_CELL := Vector2i(14, 11)
 ## The buttons: on the start floor and on the right floor before the tunnel.
 const BUTTON_1_CELL := Vector2i(3, 9)
-const BUTTON_2_CELL := Vector2i(28, 12)
+const BUTTON_2_CELL := Vector2i(43, 12)
 ## The tunnel: water from the brim (row 12, the floor at the gates) down to the
 ## floor under the rock (row 14), from the first step to the last.
-const TUNNEL_COLUMNS := Vector2i(31, 49)
+const TUNNEL_COLUMNS := Vector2i(46, 62)
 const TUNNEL_TOP_ROW := 12
 const TUNNEL_FLOOR_ROW := 14
 ## The gates stand in the mouths on the floor (rows 10-11) and sink into it.
-const GATE_IN_COLUMN := 30
-const GATE_OUT_COLUMN := 49
+const GATE_IN_COLUMN := 45
+const GATE_OUT_COLUMN := 62
 const GATE_ROWS := Vector2i(10, 12)
+## The room of the pipe (D161), between the pools and the tunnel: the floor
+## (columns 26-31, row 12), the pit (columns 32-35) down to row 15 with its
+## door in column 36 (rows 13-14), the corridor beyond (columns 37-38, rows
+## 12-14, high enough to jump onto the first step) and
+## steps up to the floor of button 2. Columns 36-38 are a wall up to the
+## roof: the only way on is the door at the bottom of the pit.
+const PIT_COLUMNS := Vector2i(32, 36)
+const PIT_TOP_ROW := 12
+const PIT_FLOOR_ROW := 15
+const PIT_DOOR_CELLS := Rect2i(36, 13, 1, 2)
+## The pipe, in cells: up out of pool 2 by its right wall, along the back wall
+## of the room, to the hole over the pit; the gauge on the way.
+const PIPE_POINTS := [Vector2(25.55, 14.6), Vector2(25.55, 10.3), Vector2(32.3, 10.3), Vector2(32.3, 10.9)]
+const GAUGE_CELL := Vector2(28.4, 10.3)
 const BEACON_FROM_DOOR := Vector2(-66.0, -118.0)
 
 
@@ -127,6 +141,38 @@ func _initialize() -> void:
 	var pool_2 := _add_water(root, "pool_2", POOL_2_COLUMNS, POOL_2_TOP_ROW, POOL_2_FLOOR_ROW, 0, 1, -1)
 	_add_float(root, pool_2, POOL_2_FLOAT_COLUMN)
 	_add_water(root, "tunnel", TUNNEL_COLUMNS, TUNNEL_TOP_ROW, TUNNEL_FLOOR_ROW, Water.LEVEL_MAX, -1, 1)
+
+	# The room of the pipe (D161): the pipe before the pit, the plug and the
+	# door, so at the head it tells them this tick's flow and power.
+	var pipe := BurstPipe.new()
+	pipe.name = "Pipe"
+	pipe.object_id = "pipe"
+	var line := PackedVector2Array()
+	for at: Vector2 in PIPE_POINTS:
+		line.append(at * CELL)
+	pipe.points = line
+	pipe.gauge = GAUGE_CELL * CELL
+	pipe.pool_path = NodePath("../Pool2")
+	pipe.pit_path = NodePath("../Pit")
+	pipe.plug_path = NodePath("../Plug")
+	pipe.door_path = NodePath("../PitDoor")
+	_own(root, pipe)
+	var pit := _add_water(root, "pit", PIT_COLUMNS, PIT_TOP_ROW, PIT_FLOOR_ROW, 0, 1, -1)
+	pit.name = "Pit"
+	var plug: PipePlug = (load("res://objects/pipe_plug.tscn") as PackedScene).instantiate()
+	plug.name = "Plug"
+	plug.object_id = "plug"
+	plug.pipe_path = NodePath("../Pipe")
+	plug.position = PIPE_POINTS[PIPE_POINTS.size() - 1] * CELL
+	_own(root, plug)
+	var pit_door: Door = (load("res://objects/door.tscn") as PackedScene).instantiate()
+	pit_door.name = "PitDoor"
+	pit_door.object_id = "pit_door"
+	pit_door.linked_id = "pipe"
+	pit_door.height = float(PIT_DOOR_CELLS.size.y * CELL)
+	pit_door.travel = float(PIT_DOOR_CELLS.size.y * CELL)
+	pit_door.position = (Vector2(PIT_DOOR_CELLS.position) + Vector2(PIT_DOOR_CELLS.size) / 2.0) * CELL
+	_own(root, pit_door)
 
 	var gate_in: WaterGate = (load("res://objects/water_gate.tscn") as PackedScene).instantiate()
 	gate_in.name = "GateIn"
