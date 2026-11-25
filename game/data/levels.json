@@ -127,12 +127,10 @@
 	{
 		"id": "level_03",
 		"scene": "res://levels/level_03.tscn",
-		"prelude_seconds": 1.9,
+		"prelude_seconds": 5.0,
 		"intro_seconds": 0.6,
 		"objects": {
-			"bridge": { "burn_seconds": 3 },
-			"barricade": { "burn_seconds": 3.5 },
-			"fire_system": { "start_seconds": 1.6 }
+			"barricade": { "burn_seconds": 3.5 }
 		},
 		"title": "03 Interference"
 	},
