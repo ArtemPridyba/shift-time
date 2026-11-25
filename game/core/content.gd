@@ -87,6 +87,7 @@ const FIRE_LOOK_KEYS: Array[String] = [
 const SPRINKLER_KEYS: Array[String] = ["spin_up_seconds", "nozzle_spacing_px", "drop_speed_px", "drops_per_nozzle"]
 const STEAM_KEYS: Array[String] = ["seconds", "puffs", "rise_px", "radius_px"]
 ## The torch of level 03 (D155): an item that carries fire from the past.
+const RAMP_KEYS: Array[String] = ["fall_seconds", "thickness_px"]
 const TORCH_KEYS: Array[String] = ["interact_radius_px", "reach_px", "follow_px", "gravity", "max_fall_speed"]
 const FLAMETHROWER_KEYS: Array[String] = ["interact_radius_px", "reach_px", "jet_px", "follow_px", "gravity", "max_fall_speed"]
 ## Every window in which the player must act is at least this long (design rules).
@@ -544,7 +545,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	# 10000 is Water.LEVEL_MAX (core/ does not refer to objects/).
 	if 10000.0 / (float(data["water"]["full_seconds"]) * ticks) > max_step:
 		errors.append("objects.json: 'water.full_seconds' is too short: the level would jump more than max_state_step per tick")
-	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["pipe_plug", PIPE_PLUG_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS]]:
+	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["pipe_plug", PIPE_PLUG_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["ramp", RAMP_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS]]:
 		var isec := interact_section as Array
 		var isec_name: String = isec[0]
 		var ientry: Variant = data.get(isec_name)
@@ -578,6 +579,10 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 				errors.append("objects.json: 'flamethrower.%s' moves more than max_state_step per tick" % key)
 		if float(thrower["max_fall_speed"]) / real_ticks > max_step:
 			errors.append("objects.json: 'flamethrower.max_fall_speed' moves more than max_state_step per tick")
+		# The ramp's tip (about 4.5 cells out) swings fastest at the end of the
+		# fall, twice its average step (the fall is quadratic).
+		if 2.0 * 288.0 * deg_to_rad(64.0) / (float(data["ramp"]["fall_seconds"]) * ticks) > max_step:
+			errors.append("objects.json: 'ramp.fall_seconds' is too short: the ramp's tip would jump more than max_state_step per tick")
 		var torch: Dictionary = data["torch"]
 		if float(torch["follow_px"]) > max_step or float(torch["max_fall_speed"]) / real_ticks > max_step:
 			errors.append("objects.json: 'torch.follow_px' and 'torch.max_fall_speed' must move at most max_state_step per tick")
