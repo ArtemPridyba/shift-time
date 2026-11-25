@@ -38,7 +38,9 @@ const PIECE_TEXTURES: Array[String] = ["window", "column", "truss", "crane", "cr
 	"lump", "lamp", "lamp_chain", "stairs",
 	# Objects of a level (task Д4, ObjectLook).
 	"shutter_slab", "shutter_wheel", "shutter_gear_small", "exit_frame", "exit_leaf", "exit_wheel",
-	"exit_rail", "exit_stairs", "beacon", "platform", "platform_rack", "platform_chain", "clock",
+	"exit_rail", "exit_stairs", "beacon", "platform", "platform_rack", "platform_chain",
+	"platform_deck_a", "platform_deck_b", "platform_trolley", "platform_lift_frame", "platform_wheel",
+	"platform_gear", "clock",
 	"clock_hand_hour", "clock_hand_minute", "lever_base", "lever_handle", "button_base", "button_cap", "crate"]
 
 const COLORS: Array[String] = ["brick", "mortar", "masonry", "iron", "iron_edge", "concrete",

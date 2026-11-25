@@ -671,6 +671,35 @@ func test_level_01_platforms_ride_on_their_tracks() -> void:
 	await _free(room)
 
 
+## D165: in the painted room the platforms are the N-14 machines; the
+## trolley's wheels and the lift frame's gears turn by the recorded travel.
+func test_level_01_platforms_are_machines_whose_wheels_turn_with_the_travel() -> void:
+	var room := await _load()
+	var one: MovingPlatform = room.get_node("Platform1")
+	var two: MovingPlatform = room.get_node("Platform2")
+	check(one.is_machine() and two.is_machine(), "both platforms of the painted room are N-14 machines")
+	for piece: String in ["platform_deck_a", "platform_deck_b", "platform_trolley", "platform_lift_frame",
+			"platform_wheel", "platform_gear"]:
+		check(ObjectLook.picture(piece) != null, "the N-14 picture %s loads" % piece)
+	var look := ObjectLook.of("platform")
+	var deck_h := float(ObjectLook.picture("platform_deck_a").get_height()) / ObjectLook.texel("platform_deck_a")
+	var top := ObjectLook.number(look, "deck_top_px", 0.0)
+	check(top > 0.0 and top < deck_h / 4.0, "the deck's picture starts a little above the line she stands on, its top face round it")
+	await _ticks(2 * 60)
+	var d := ObjectLook.number(look, "wheel_px", 0.0)
+	check(one.mech_travel() > 0.0 and is_equal_approx(one.machine_angle(), one.mech_travel() / (d / 2.0)),
+			"the trolley's wheels roll by the recorded travel")
+	var g := ObjectLook.number(look, "frame_gear_px", 0.0)
+	check(two.mech_travel() > 0.0 and is_equal_approx(two.machine_angle(), two.mech_travel() / (g / 2.0)),
+			"the lift frame's gears turn by the recorded travel")
+	var before := one.machine_angle()
+	Input.action_press("rewind")
+	await _ticks(30)
+	Input.action_release("rewind")
+	check(one.machine_angle() < before, "under Shift the wheels turn back: %s < %s" % [one.machine_angle(), before])
+	await _free(room)
+
+
 func test_level_01_exit_door_opens_on_the_ledge_and_then_lets_her_out() -> void:
 	var room := await _load()
 	var zone: ExitZone = room.get_node("Exit")
@@ -720,7 +749,8 @@ func test_kit_objects_data_is_checked() -> void:
 	broken["clock"]["minute_turn_seconds"] = 0
 	broken["beacon"]["color"] = "red-ish"
 	broken["exit_door"].erase("wheel_turns")
-	check(Content.validate_kit_objects(broken).size() == 4, "a broken region, a zero, a bad colour and a missing key are caught: %s" % [Content.validate_kit_objects(broken)])
+	broken["platform"]["frame_at"] = [-28.75]
+	check(Content.validate_kit_objects(broken).size() == 5, "a broken region, a zero, a bad colour, a missing key and a place that is not [x, y] are caught: %s" % [Content.validate_kit_objects(broken)])
 
 
 func test_quake_plan_finds_quakes_and_repeats() -> void:
@@ -869,6 +899,9 @@ func test_level_01_objects_take_the_pictures_light() -> void:
 	var painted := room.get_node("WorldBack/Backdrop") as WorldBackdrop
 	var light := painted.object_material
 	check(light != null and (light.shader.code.contains("unshaded")), "the objects' light is unshaded: the room's darkness does not dim them twice")
+	check(light.shader.code.contains("tint = COLOR"), "the objects' light takes the draw's colour in vertex(): COLOR in fragment() holds the texture already, the picture would be squared")
+	check(float(light.get_shader_parameter("yellow_keep")) == ObjectLook.number(ObjectLook.of("picture_light"), "yellow_keep", -1.0),
+			"the signal yellow keeps its hue by the number of look.json")
 	for path: String in ["Door", "Platform1", "Platform2", "Exit/ExitDoor"]:
 		check((room.get_node(path) as CanvasItem).material == light, "%s takes the picture's light" % path)
 	check(light.get_shader_parameter("lamp_count") == painted.picture.material.get_shader_parameter("lamp_count")

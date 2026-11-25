@@ -59,8 +59,16 @@
   },
   "wood": {
     "burn_seconds": 3,
+    "spread_seconds": 1,
     "flame_px": 40,
     "flame_side_px": 12
+  },
+  "torch": {
+    "interact_radius_px": 80,
+    "reach_px": 40,
+    "follow_px": 24,
+    "gravity": 2200,
+    "max_fall_speed": 1200
   },
   "sprinkler": {
     "spin_up_seconds": 0.6,

@@ -73,7 +73,7 @@ const PIPE_PLUG_KEYS: Array[String] = ["interact_radius_px", "insert_radius_px",
 const LAMP_KEYS: Array[String] = ["break_seconds", "fall_seconds", "shatter_seconds", "fall_distance_px", "flash_seconds", "flash_radius_px", "light_radius_px"]
 const DARKNESS_KEYS: Array[String] = ["ambient", "player_outline_alpha"]
 ## Fire (task 2.7): wood zones, the steam of a doused fire, the reverse flamethrower.
-const WOOD_KEYS: Array[String] = ["burn_seconds", "flame_px", "flame_side_px"]
+const WOOD_KEYS: Array[String] = ["burn_seconds", "spread_seconds", "flame_px", "flame_side_px"]
 ## The look of fire (decoration, task 2.7А): all numbers above 0.
 const FIRE_LOOK_KEYS: Array[String] = [
 	"ignite_seconds", "fade_seconds", "flame_rise_px", "sparks", "spark_rise_px", "spark_seconds",
@@ -83,6 +83,8 @@ const FIRE_LOOK_KEYS: Array[String] = [
 ## The sprinkler pipe of level 03 (D104): rain that puts burning wood out.
 const SPRINKLER_KEYS: Array[String] = ["spin_up_seconds", "nozzle_spacing_px", "drop_speed_px", "drops_per_nozzle"]
 const STEAM_KEYS: Array[String] = ["seconds", "puffs", "rise_px", "radius_px"]
+## The torch of level 03 (D155): an item that carries fire from the past.
+const TORCH_KEYS: Array[String] = ["interact_radius_px", "reach_px", "follow_px", "gravity", "max_fall_speed"]
 const FLAMETHROWER_KEYS: Array[String] = ["interact_radius_px", "reach_px", "jet_px", "follow_px", "gravity", "max_fall_speed"]
 ## Every window in which the player must act is at least this long (design rules).
 const MIN_WINDOW_SECONDS := 3.0
@@ -484,7 +486,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	# 10000 is Water.LEVEL_MAX (core/ does not refer to objects/).
 	if 10000.0 / (float(data["water"]["full_seconds"]) * ticks) > max_step:
 		errors.append("objects.json: 'water.full_seconds' is too short: the level would jump more than max_state_step per tick")
-	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["pipe_plug", PIPE_PLUG_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS]]:
+	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["pipe_plug", PIPE_PLUG_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS]]:
 		var isec := interact_section as Array
 		var isec_name: String = isec[0]
 		var ientry: Variant = data.get(isec_name)
@@ -518,6 +520,9 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 				errors.append("objects.json: 'flamethrower.%s' moves more than max_state_step per tick" % key)
 		if float(thrower["max_fall_speed"]) / real_ticks > max_step:
 			errors.append("objects.json: 'flamethrower.max_fall_speed' moves more than max_state_step per tick")
+		var torch: Dictionary = data["torch"]
+		if float(torch["follow_px"]) > max_step or float(torch["max_fall_speed"]) / real_ticks > max_step:
+			errors.append("objects.json: 'torch.follow_px' and 'torch.max_fall_speed' must move at most max_state_step per tick")
 		var dark: Variant = data.get("darkness")
 		if not dark is Dictionary:
 			errors.append("objects.json: missing object 'darkness'")
@@ -702,8 +707,10 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 const LOOK_PIPE_COLORS: Array[String] = ["shell", "shell_light", "empty", "water", "dash"]
 const LOOK_KIT_OBJECTS := {
 	"shutter": ["blade_region", "painted_blade_region", "stripe_region", "housing_frame_px", "brick_tint", "wheel_px", "wheel_turns", "gear_px"],
-	"picture_light": ["dark", "lit_color", "lit_gain", "haze_color", "haze", "soft_px"],
-	"platform": ["cap_px", "rack_px", "chain_px", "gear_px", "track_above_px", "track_below_px", "chain_below_px"],
+	"picture_light": ["dark", "lit_color", "lit_gain", "haze_color", "haze", "soft_px", "yellow_keep"],
+	"platform": ["cap_px", "rack_px", "chain_px", "gear_px", "track_above_px", "track_below_px", "chain_below_px",
+		"deck_top_px", "trolley_at", "wheel_px", "wheel_left_at", "wheel_right_at", "frame_at", "frame_gear_px",
+		"frame_gear_top_at", "frame_gear_bottom_at"],
 	"exit_door": ["height_px", "open_distance_px", "floor_tolerance_px", "wheel_px", "wheel_turns",
 		"wheel_seconds", "out_seconds", "out_px", "slide_seconds", "rail_px", "light", "light_energy", "light_radius_px"],
 	"clock": ["diameter_px", "minute_turn_seconds", "start_minutes"],
@@ -763,7 +770,8 @@ static func validate_look(data: Variant) -> PackedStringArray:
 
 ## The objects of a level dressed from the kit (task Д4): every object of
 ## LOOK_KIT_OBJECTS with its keys; `*_region` are [x, y, w, h] of a picture,
-## strings are colours, other numbers are above 0 (`start_minutes` from 0).
+## `*_at` are [x, y] (any sign), strings are colours, other numbers are
+## above 0 (`start_minutes`, `soft_px`, `haze`, `yellow_keep` from 0).
 static func validate_kit_objects(objects: Variant) -> PackedStringArray:
 	var errors := PackedStringArray()
 	if not objects is Dictionary:
@@ -782,7 +790,13 @@ static func validate_kit_objects(objects: Variant) -> PackedStringArray:
 			var value: Variant = one[key]
 			if key.begins_with("_"):
 				continue
-			if key.ends_with("_region"):
+			if key.ends_with("_at"):
+				var at_ok: bool = value is Array and value.size() == 2
+				for n: Variant in (value if value is Array else []):
+					at_ok = at_ok and _is_number(n)
+				if not at_ok:
+					errors.append("%s: '%s' must be [x, y], two numbers" % [where, key])
+			elif key.ends_with("_region"):
 				var ok: bool = value is Array and value.size() == 4
 				for n: Variant in (value if value is Array else []):
 					ok = ok and _is_number(n) and float(n) >= 0.0
@@ -791,7 +805,7 @@ static func validate_kit_objects(objects: Variant) -> PackedStringArray:
 			elif value is String:
 				if not Color.html_is_valid(value):
 					errors.append("%s: '%s' must be a color like \"#9fd0ff\"" % [where, key])
-			elif not _is_number(value) or float(value) < 0.0 or (float(value) == 0.0 and not key in ["start_minutes", "soft_px", "haze"]):
+			elif not _is_number(value) or float(value) < 0.0 or (float(value) == 0.0 and not key in ["start_minutes", "soft_px", "haze", "yellow_keep"]):
 				errors.append("%s: '%s' must be a number above 0" % [where, key])
 	return errors
 

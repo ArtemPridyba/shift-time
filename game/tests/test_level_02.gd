@@ -7,7 +7,7 @@ extends RefCounted
 ## floods the tunnel again, and only then the near gate opens, so the tunnel is
 ## crossed only with Shift. The solutions (with Shift, without it, swimming the
 ## flooded tunnel, running in during the drain) are in `tests/solutions/` and
-## run by test_solutions.gd. Between the pools and the tunnel (D164): the
+## run by test_solutions.gd. Between the pools and the tunnel (D168): the
 ## pipe from pool 2 bursts when the pool fills, its plug flies out and the
 ## pit floods; the heroine carries the plug back to before the burst under
 ## Shift and puts it in, and the pressure opens the door at the bottom of the
@@ -241,7 +241,7 @@ func test_water_with_a_failing_pump_turns_and_restores() -> void:
 	plain.free()
 
 
-# --- the pipe and its plug (D164) ------------------------------------------------
+# --- the pipe and its plug (D168) ------------------------------------------------
 
 ## Pool 2 fills: the pipe shakes, its gauge climbs, the plug flies out onto the
 ## floor and the pit floods; the door stays shut.
