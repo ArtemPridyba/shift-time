@@ -12,6 +12,7 @@
   "button": {
     "interact_radius_px": 80
   },
+  "pipe_plug": { "interact_radius_px": 80, "insert_radius_px": 130, "gravity": 2200, "max_fall_speed": 1200, "friction_px": 1600, "follow_px": 24 },
   "lever": {
     "interact_radius_px": 80
   },
