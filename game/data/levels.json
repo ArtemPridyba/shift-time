@@ -184,8 +184,8 @@
 		"objects": {
 			"shutter_a": { "start": "open" },
 			"shutter_b": { "start": "closed" },
-			"hatch_c": { "start": "open" },
-			"wall_c": { "start": "open" }
+			"switch_1": { "start": "up" },
+			"switch_2": { "start": "down" }
 		},
 		"title": "04 Plates"
 	},

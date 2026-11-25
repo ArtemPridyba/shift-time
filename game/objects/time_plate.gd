@@ -5,6 +5,8 @@ extends Node2D
 ## normal time, it closes its shutters; stepped on with Shift held, it sends
 ## the closing into the past: once time runs forward, they open.
 ##
+## The wheels of a minecart press it the same way (level 04, D168).
+##
 ## Only the step counts: standing on the plate and pressing Shift does nothing,
 ## the plate works again after the player steps off. A step left of the head
 ## of history is interference (`RoomTime.apply_change` branches the room); at
@@ -26,7 +28,8 @@ const FLAG_COLOR := Color("#e8e2d0")
 const POST_COLOR := Color("#3c4148")
 
 @export var object_id := "plate"
-## The shutters this plate drives.
+## The shutters or rail switches this plate drives: any recorded object with a
+## `target` of 0 (open, up) or 1000 (closed, down).
 @export var target_ids := PackedStringArray()
 ## Width of the plate in pixels; its top is at the node's position.
 @export var width := 192.0
@@ -92,11 +95,15 @@ func step_changes(direction: int) -> Array:
 	return changes
 
 
-## Called by RoomTime after every tick with the player's rect. A new step
-## applies the plate's changes through `room.apply_change`; the room is an
-## argument, never kept.
-func sense(room: Object, direction: int, player_rect: Rect2) -> void:
+## Called by RoomTime after every tick with the player's rect and the rects of
+## minecart wheels (D168). A new step (nothing pressed it last tick) applies
+## the plate's changes through `room.apply_change`; the room is an argument,
+## never kept.
+func sense(room: Object, direction: int, player_rect: Rect2, wheels: Array = []) -> void:
 	var now := touches(player_rect)
+	for wheel: Variant in wheels:
+		if wheel is Rect2 and touches(wheel):
+			now = true
 	if now and not _touching:
 		for change: Variant in step_changes(direction):
 			var c := change as Dictionary

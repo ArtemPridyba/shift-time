@@ -28,11 +28,17 @@ extends Node2D
 ## A recorded object. State: { "clock": ticks since the room began, "ride":
 ## ticks since her step onto the crane, -1 before it, "calm": the ride tick of
 ## her step onto the exit ledge, which ends the slow part of act 3 (D162), -1
-## before it }; the counters stop once everything of their acts is down, so
+## before it, "brake": the ride tick on which the crane was put on its brake
+## (the pedal, D176), -1 before it }; the counters stop once everything of their acts is down, so
 ## the room may stand still (D56). Both steps are the player's actions: left
 ## of the head they branch the room (`RoomTime.apply_change`), like a time
 ## plate's (group `plate`). Only steps in normal time count. Under Shift everything goes back up,
 ## after Shift is released the recorded collapse plays again (rule «A»).
+## The pedal (D176): when she jumps into the riding crane from a piece while
+## Shift is held, the crane is hers: Shift carries it back up its rail with the
+## rest of the world, and the tick she lets go of Shift it goes onto its brake
+## and stays there while the world runs on (an action of hers, so it branches
+## the room). A step from the crane's own floor or from a ledge does not count.
 ## Numbers: `collapse` of the level's entry in data/levels.json; the look:
 ## `kit_objects.collapse` and `kit_objects.crane` of data/look.json.
 ##
@@ -59,6 +65,7 @@ extends Node2D
 var clock := 0
 var ride := -1
 var calm := -1
+var brake := -1
 ## Set by tests or read once from the level entry.
 var plan: CollapsePlan
 var _look := {}
@@ -81,6 +88,11 @@ var _tumbling: Array[bool] = []
 var _feet_y := INF
 var _crane_margin := 8.0
 var _contact_px := 6.0
+## Live, never recorded: she stood on a piece since she last stood on the
+## crane; and she jumped into the crane from one under Shift (the pedal is
+## hers until she stands on a piece again).
+var _from_piece := false
+var _armed := false
 
 
 func _ready() -> void:
@@ -134,7 +146,7 @@ func _fastest() -> PackedFloat32Array:
 			for c in plan.clock_end:
 				most = maxf(most, _rect(k, c + 1, -1).position.distance_to(_rect(k, c, -1).position))
 		else:
-			for r in range(plan.arrival(), plan.ride_end):
+			for r in range(plan.act3_at, plan.ride_end):
 				most = maxf(most, _rect(k, plan.clock_end, r + 1).position.distance_to(_rect(k, plan.clock_end, r).position))
 		margins.append(_carry_margin + ceilf(most))
 	return margins
@@ -177,7 +189,7 @@ func _plan() -> CollapsePlan:
 
 
 func capture_state() -> Dictionary:
-	return {"clock": clock, "ride": ride, "calm": calm}
+	return {"clock": clock, "ride": ride, "calm": calm, "brake": brake}
 
 
 func restore_state(state: Dictionary) -> void:
@@ -185,6 +197,8 @@ func restore_state(state: Dictionary) -> void:
 	ride = int(state["ride"])
 	calm = int(state.get("calm", -1))
 	plan.calm = calm
+	brake = int(state.get("brake", -1))
+	plan.brake = brake
 	_show()
 
 
@@ -200,18 +214,50 @@ func on_time_direction_changed(_direction: int) -> void:
 
 
 ## Called by RoomTime after every tick (group `plate`): her feet on the crane
-## in normal time set it going, once.
+## in normal time set it going, once; the pedal (D176) puts it on its brake.
 func sense(room: Object, direction: int, player_rect: Rect2) -> void:
 	_feet_y = player_rect.end.y if player_rect.has_area() else INF
 	_show_bodies()
-	if direction > 0 and ride < 0 and stands_on_crane(player_rect):
+	var on_crane := stands_on_crane(player_rect)
+	if stands_on_piece(player_rect):
+		_from_piece = true
+		_armed = false
+	elif on_crane:
+		if _from_piece and direction < 0 and ride >= plan.ride_delay:
+			_armed = true
+		_from_piece = false
+	if direction > 0 and ride < 0 and on_crane:
 		room.call("apply_change", object_id, {"ride": 0})
+	elif direction > 0 and _armed and on_crane and plan.can_brake(ride):
+		room.call("apply_change", object_id, {"brake": ride})
 	elif direction > 0 and plan.can_calm(ride) and stands_on_ledge(player_rect):
 		room.call("apply_change", object_id, {"calm": ride})
 
 
 func forget_step() -> void:
-	pass
+	_from_piece = false
+	_armed = false
+
+
+## True while the pedal is hers: she jumped into the riding crane from a piece
+## under Shift and has stood on no piece since.
+func pedal_armed() -> bool:
+	return _armed
+
+
+## True when the player's feet stand on a piece that holds her (not a tumbling
+## chunk): her middle over it.
+func stands_on_piece(player_rect: Rect2) -> bool:
+	if not player_rect.has_area():
+		return false
+	var middle := player_rect.get_center().x
+	for k in pieces.size():
+		if k < _tumbling.size() and _tumbling[k] or not piece_holds(k):
+			continue
+		var r := piece_rect(k)
+		if absf(player_rect.end.y - r.position.y) <= _contact_px and middle > r.position.x and middle < r.end.x:
+			return true
+	return false
 
 
 ## True when the player's feet (a rect in the parent's coordinates) stand on
@@ -248,8 +294,10 @@ func blocks_player_at(state: Dictionary, player_rect: Rect2) -> bool:
 	var c := int(state["clock"])
 	var r := int(state["ride"])
 	plan.calm = int(state.get("calm", -1))
+	plan.brake = int(state.get("brake", -1))
 	var blocked := _blocks(c, r, player_rect)
 	plan.calm = calm
+	plan.brake = brake
 	return blocked
 
 
