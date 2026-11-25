@@ -11,15 +11,6 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_select")
 
-[node name="Background" type="ColorRect" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.09, 0.1, 0.12, 1)
-
 [node name="Center" type="CenterContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
@@ -35,7 +26,7 @@ theme_override_constants/separation = 28
 [node name="Title" type="Label" parent="Center/Box"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 72
-text = "Shift Time"
+text = "Levels"
 horizontal_alignment = 1
 
 [node name="List" type="VBoxContainer" parent="Center/Box"]
@@ -45,5 +36,5 @@ theme_override_constants/separation = 14
 [node name="Hint" type="Label" parent="Center/Box"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-text = "Up / Down and Enter, or click. Backspace in a level returns here."
+text = "Up / Down and Enter, or click. Esc in a level pauses the game."
 horizontal_alignment = 1

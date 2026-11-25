@@ -29,6 +29,22 @@ func test_data_files_are_valid() -> void:
 		check(false, problem)
 
 
+func test_menu_data_check_catches_broken_data() -> void:
+	var good := Content.menu()
+	check(Content.validate_menu(good).is_empty(), "menu.json must be valid: %s" % [Content.validate_menu(good)])
+	check(not Content.validate_menu("text").is_empty(), "non-object menu.json must be reported")
+	for key in ["title", "background", "dim", "fade_seconds", "title_card_seconds", "unlock_in_order", "buttons", "final"]:
+		var broken := good.duplicate(true)
+		broken.erase(key)
+		check(not Content.validate_menu(broken).is_empty(), "missing '%s' in menu.json must be reported" % key)
+	var bad_dim := good.duplicate(true)
+	bad_dim["dim"] = 2
+	check(not Content.validate_menu(bad_dim).is_empty(), "dim above 1 must be reported")
+	var bad_button := good.duplicate(true)
+	(bad_button["buttons"] as Dictionary).erase("start")
+	check(not Content.validate_menu(bad_button).is_empty(), "a missing button text must be reported")
+
+
 func test_data_check_catches_broken_data() -> void:
 	check(Content.validate_player({}).size() == Content.PLAYER_KEYS.size(), "empty player.json must report every key")
 	var broken_player := Content.player()
