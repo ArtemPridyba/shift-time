@@ -7,13 +7,15 @@ extends CharacterBody2D
 ## flange puts it on, firmly; E elsewhere puts it down (an interaction point
 ## that is nearer wins over the drop).
 ##
-## Taking it or putting it down is no interference (D171): nothing else in the
-## room depends on where it lies, so the room's history is not cut; the
-## valve's own frames, past and future, are rewritten to its new state
-## (`rewrite_all`), so under Shift it never jumps and the world keeps the
-## button presses of its future. Putting it on the flange while Shift has taken
-## the world to before the gush is interference: a new branch in which the pipe
-## holds. In the hands and on the flange it ignores the frames.
+## Taking it, putting it down or putting it on the flange is no interference
+## (D171): the room's history is not cut, so the world keeps the button
+## presses of its future, even when the valve goes on at frame 0. The valve's
+## own frames, past and future, are rewritten to its new state (`rewrite_all`),
+## so under Shift it never jumps; only the pit and the door depend on it, and
+## the pipe re-derives their recorded future from the cursor on
+## (`after_rewrite`, `BurstPipe.rerecord`). Put on before the gush, the
+## replayed future holds; put on after it, the water stays in the pit. In the
+## hands and on the flange it ignores the frames.
 ##
 ## Its body is recorded like everything but the player: lying, it falls at the
 ## head and follows its recorded past under Shift.
@@ -135,13 +137,21 @@ func get_interaction_change(_objects: Array) -> Array:
 		return [{"id": object_id, "rewrite_all": true,
 			"state": {"held": true, "seated": false, "firm": false, "vel": Vector2.ZERO, "act": true}}]
 	if near_hole():
-		return [{"id": object_id, "state": {"held": false, "seated": true, "firm": true,
+		return [{"id": object_id, "rewrite_all": true, "state": {"held": false, "seated": true, "firm": true,
 			"position": hole_position(), "vel": Vector2.ZERO, "act": true}}]
 	# Put down at her feet, so it does not fall: its rewritten frames are where it lies.
 	var player := _player()
 	var at := Vector2(position.x, player.position.y) if player != null else position
 	return [{"id": object_id, "rewrite_all": true,
 		"state": {"held": false, "seated": false, "firm": false, "position": at, "vel": Vector2.ZERO, "act": true}}]
+
+
+## After E changed the valve without cutting the history (`RoomTime`): the
+## pit and the door follow it along the recorded future.
+func after_rewrite(timeline: Timeline) -> void:
+	var pipe := _pipe()
+	if pipe != null:
+		pipe.rerecord(timeline)
 
 
 ## True when the heroine holding the plug stands close enough to the hole.

@@ -216,6 +216,17 @@ func rewrite_all(object_id: String, state: Dictionary) -> void:
 		frame[object_id] = state.duplicate(true)
 
 
+## Writes `state` as the state of `object_id` in kept frame `number` only.
+## Used when what depends on an item is re-derived along the recorded future
+## without cutting the room's history (the pit and the door under the valve of
+## level 02, D171). Returns false outside the kept frames.
+func write_at(number: int, object_id: String, state: Dictionary) -> bool:
+	if number < _first or number > _head:
+		return false
+	(_slots[number % _capacity] as Dictionary)[object_id] = state.duplicate(true)
+	return true
+
+
 ## Writes `state` as the state of `object_id` in every kept frame left of the
 ## cursor. Used when the live player lets an item go: the item has no past of
 ## its own before that moment (docs/architecture.md, section 2.5).

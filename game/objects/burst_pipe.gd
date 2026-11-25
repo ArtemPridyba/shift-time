@@ -8,9 +8,10 @@ extends Node2D
 ## `leak_level` the water gushes out of the flange and fills the pit under it.
 ## The door at the bottom of the pit is the pipe's own: the pressure of a full
 ## pool opens it, but only while the valve is on and the pit is dry. So the
-## heroine takes the handwheel from the empty pool under Shift (taking it is no
-## interference) and puts it on the flange before the gush, again under Shift:
-## a new branch of history in which the pipe holds.
+## heroine takes the handwheel from the empty pool under Shift and puts it on
+## the flange before the gush, again under Shift; neither cuts the room's
+## history (D171): the world replays its future, and the pit and the door
+## follow the valve (`rerecord`), so the pipe holds and the door opens.
 ##
 ## The pipe records nothing of its own; the shaking, the needle, the drips and
 ## the gush are drawn from recorded levels and the world tick, so they play
@@ -81,6 +82,36 @@ func simulate_tick(_tick: int) -> void:
 	var door := _node(door_path) as Door
 	if door != null:
 		door.powered = plug.seated and pool.level >= door_level and (pit == null or pit.level <= dry_level)
+
+
+## The valve changed while the cursor is left of the head (D171): the pit and
+## the door are simulated again over the recorded future, from the frame
+## after the cursor to the head, with the pool's recorded levels and the valve
+## as it is now; their new states are written into those frames. The rest of
+## the room's history stays, so the world replays its own future (the press of
+## button 1 included) with the valve on or off. At the head there is nothing to
+## do.
+func rerecord(timeline: Timeline) -> void:
+	var pool := _node(pool_path) as Water
+	var plug := _node(plug_path) as PipePlug
+	var pit := _node(pit_path) as Water
+	var door := _node(door_path) as Door
+	if pool == null or plug == null or pit == null or door == null or timeline.is_empty() or timeline.at_head():
+		return
+	var pit_now := pit.capture_state()
+	var door_now := door.capture_state()
+	for number in range(timeline.cursor() + 1, timeline.head() + 1):
+		var frame := timeline.frame_at(number)
+		var pool_state: Dictionary = frame.get(pool.object_id, {})
+		var level := int(pool_state.get("level", pool.level))
+		pit.powered = not plug.seated and level >= leak_level
+		pit.simulate_tick(number)
+		door.powered = plug.seated and level >= door_level and pit.level <= dry_level
+		door.simulate_tick(number)
+		timeline.write_at(number, pit.object_id, pit.capture_state())
+		timeline.write_at(number, door.object_id, door.capture_state())
+	pit.restore_state(pit_now)
+	door.restore_state(door_now)
 
 
 ## True while water gushes out of the open flange: no valve and the pool high.

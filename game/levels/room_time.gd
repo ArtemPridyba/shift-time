@@ -199,6 +199,9 @@ func _set_without_branch(id: String, partial: Dictionary) -> void:
 			state.merge(partial.duplicate(true), true)
 			(obj as Object).call("restore_state", state)
 			world.rewrite_all(temporal_objects(), id)
+			# What depends on the item follows it along the recorded future.
+			if (obj as Object).has_method("after_rewrite"):
+				(obj as Object).call("after_rewrite", world.timeline)
 			return
 
 

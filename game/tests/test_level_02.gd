@@ -331,6 +331,41 @@ func test_level_02_the_valve_carried_into_the_past_holds() -> void:
 	await _free(room)
 
 
+## Artem's playtest (25.11): Shift held all the way to frame 0, before the
+## press of button 1, and the valve put on there. That cuts nothing (D171):
+## the world replays the press, pool 2 fills, the pipe holds, the door opens.
+func test_level_02_the_valve_put_on_at_frame_0_keeps_the_press() -> void:
+	var room := await _load(LEVEL_PATH)
+	var time: RoomTime = room.get_node("RoomTime")
+	var pipe: BurstPipe = room.get_node("Pipe")
+	var valve: PipePlug = room.get_node("Plug")
+	var pool_2: Water = room.get_node("Pool2")
+	var pit: Water = room.get_node("Pit")
+	var door: Door = room.get_node("PitDoor")
+	var player: Player = room.get_node("Player")
+	await _take_valve_and_flood(room)
+	player.respawn(_by_the_hole())
+	await _ticks(40)
+	Input.action_press("rewind")
+	for i in 900:
+		await _ticks(1)
+		if time.cursor() == 0:
+			break
+	check(time.cursor() == 0 and pool_2.level == 0, "Shift reaches the first frame, before the press")
+	time.player_interact(player.global_position)
+	check(valve.seated and valve.firm, "E by the flange puts the valve on at frame 0")
+	await _ticks(20)
+	Input.action_release("rewind")
+	var leaked := false
+	for i in 500:
+		await _ticks(1)
+		leaked = leaked or pipe.leaking() or pit.level > 300
+	check(pool_2.level == Water.LEVEL_MAX, "the press is replayed: pool 2 fills: %d" % pool_2.level)
+	check(not leaked, "no water gushes into the pit")
+	check(door.open == Door.OPEN_MAX, "the pressure opens the door: %d" % door.open)
+	await _free(room)
+
+
 ## Put on after the gush, without Shift: the leak stops but the pit stays
 ## full and the door shut; E takes the valve off again to try once more.
 func test_level_02_the_valve_put_on_late_leaves_the_pit_full() -> void:
