@@ -191,7 +191,7 @@ func test_level_02_the_tunnel_floods_again_and_only_then_opens() -> void:
 		lowest = mini(lowest, tunnel.level)
 		if tunnel.turned() and turned_at < 0:
 			turned_at = i
-			check(sparks.is_lit(), "when the pump fails the button sparks again")
+			check((room.get_node("Button2Fault") as FaultFx).active(), "when the pump fails the breakdown shows at the button")
 		if turned_at >= 0 and tunnel.level == Water.LEVEL_MAX and flooded_at < 0:
 			flooded_at = i
 		if gate_in.open > 0 and opened_in_at < 0:
@@ -446,6 +446,67 @@ func _take_valve_and_flood(room: Node) -> void:
 ## Where she stands to reach the hole: the edge of the floor over the pit.
 func _by_the_hole() -> Vector2:
 	return Vector2(31.55 * CELL, LOW_ROW * CELL)
+
+
+# --- the breakdown of the pump (25.11 notes) ------------------------------------
+
+## Button 2 starts the pump in the room over the tunnel: its fan turns; when
+## the pump fails, real sparks (the preset of the torn wire) and smoke come
+## out at the button, the panel and the motor, the lamps over them stutter and
+## the fan stops; under Shift all of it goes back before the failure.
+func test_level_02_the_pump_breaks_down_with_sparks_smoke_and_lamps() -> void:
+	var room := await _load(LEVEL_PATH)
+	var time: RoomTime = room.get_node("RoomTime")
+	var tunnel: Water = room.get_node("Tunnel")
+	var pumps: PumpRoom = room.get_node("PumpRoom")
+	var button_fault: FaultFx = room.get_node("Button2Fault")
+	var panel_fault: FaultFx = room.get_node("PanelFault")
+	var motor_fault: FaultFx = room.get_node("MotorFault")
+	check(button_fault.spark_particles.preset == "sparks" and button_fault.smoke_particles.preset == "smoke", "the button's breakdown uses the sparks and smoke presets")
+	check(panel_fault.spark_particles != null and motor_fault.smoke_particles != null, "the panel sparks, the motor smokes")
+	await _ticks(20)
+	check(not button_fault.spark_particles.visible and not motor_fault.smoke_particles.visible, "before the press nothing sparks or smokes")
+	time.player_interact(room.get_node("Button2").global_position)
+	await _ticks(60)
+	check(pumps.running() and pumps.fan_angle() > 0.0, "the pump runs, its fan turns")
+	check(button_fault.lamp_factor(5) == 1.0, "the lamp burns steadily while the pump runs")
+	for i in 600:
+		await _ticks(1)
+		if tunnel.fault_seconds() > 1.0:
+			break
+	check(tunnel.turned() and not pumps.running() and pumps.failed(), "the pump has failed")
+	var angle := pumps.fan_angle()
+	await _ticks(30)
+	check(is_equal_approx(pumps.fan_angle(), angle), "the fan stands after the failure")
+	check(button_fault.spark_particles.visible and button_fault.spark_particles.alive_count() > 0 \
+		or button_fault.smoke_particles.alive_count() > 0, "sparks or smoke come out at the button")
+	check(motor_fault.smoke_particles.visible and motor_fault.smoke_particles.alive_count() > 0, "the motor smokes")
+	var dark := 0
+	for k in 40:
+		if FaultFx.blink(float(k) / 20.0, ObjectLook.of("fault"), 5) < 1.0:
+			dark += 1
+	check(dark > 5 and dark < 35, "the lamp stutters: dark in %d of 40 steps" % dark)
+	check(button_fault.lamp_factor(0) == 1.0, "lamps away from the breakdown keep burning")
+	Input.action_press("rewind")
+	for i in 600:
+		await _ticks(1)
+		if not tunnel.turned():
+			break
+	Input.action_release("rewind")
+	check(not tunnel.turned() and not motor_fault.smoke_particles.visible and button_fault.lamp_factor(5) == 1.0, "under Shift the breakdown goes back")
+	await _free(room)
+
+
+## Smoke of a breakdown starts empty: at the first moment there is none, a
+## second later some, and the same second always looks the same.
+func test_smoke_of_a_breakdown_starts_empty() -> void:
+	var field := ParticleField.from_preset(Content.look_particles()["smoke"], 5)
+	field.starts_empty = true
+	check(field.sample(0.0).size() <= ParticleField.STRIDE, "no smoke at the moment of the failure")
+	check(field.sample(1.0).size() > 4 * ParticleField.STRIDE, "a second later it smokes")
+	check(field.sample(1.0) == field.sample(1.0), "smoke is a function of the seconds")
+	field.starts_empty = false
+	check(field.sample(0.0).size() > 4 * ParticleField.STRIDE, "a stream that has always run is full at 0")
 
 
 # --- objects -------------------------------------------------------------------

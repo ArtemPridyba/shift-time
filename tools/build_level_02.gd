@@ -101,6 +101,18 @@ const FLIGHTS := [
 	[Rect2i(61, 12, 3, 2), false],
 ]
 const BEACON_FROM_DOOR := Vector2(-66.0, -118.0)
+## The pump room on the slab over the tunnel (row 9, 25.11 notes): the motor's
+## middle, the panel's top-left corner on the back wall, the cable from it down
+## to button 2 and the discharge pipe from the pump up and into the right wall.
+const SLAB_ROW := 9
+const MOTOR_COLUMN := 52.0
+const PANEL_CELL := Vector2(46.4, 6.0)
+const CABLE_POINTS := [Vector2(46.6, 7.45), Vector2(46.6, 8.45), Vector2(44.9, 8.45), Vector2(44.9, 11.75), Vector2(43.95, 11.75)]
+const DISCHARGE_POINTS := [Vector2(53.85, 3.3), Vector2(69.0, 3.3)]
+## The lamps that stutter when the pump fails (indices of `lamps` in the
+## level's world): over button 2 and over the pump room.
+const BUTTON_2_LAMP := 5
+const PUMP_LAMP := 6
 
 
 func _initialize() -> void:
@@ -198,6 +210,16 @@ func _initialize() -> void:
 	gate_out.linked_id = "button_2"
 	_place_gate(root, gate_out, GATE_OUT_COLUMN)
 
+	var pumps := PumpRoom.new()
+	pumps.name = "PumpRoom"
+	pumps.tunnel_path = NodePath("../Tunnel")
+	pumps.floor_y = float(SLAB_ROW * CELL)
+	pumps.motor_x = MOTOR_COLUMN * CELL
+	pumps.panel_at = PANEL_CELL * CELL
+	pumps.cable = _px(CABLE_POINTS)
+	pumps.discharge = _px(DISCHARGE_POINTS)
+	_own(root, pumps)
+
 	for i in FLIGHTS.size():
 		var flight := Stairs.new()
 		flight.name = "Stairs" if i == 0 else "Stairs%d" % (i + 1)
@@ -223,7 +245,14 @@ func _initialize() -> void:
 	var button_1 := _add_button(root, "Button1", "button_1", BUTTON_1_CELL, ["sluice", "pool_1", "pool_2"])
 	_add_sparks(root, button_1, NodePath())
 	var button_2 := _add_button(root, "Button2", "button_2", BUTTON_2_CELL, ["tunnel", "gate_out"])
-	_add_sparks(root, button_2, NodePath("../../Tunnel"))
+	_add_sparks(root, button_2, NodePath())
+	# The pump fails: sparks and smoke at the button, sparks at the panel,
+	# smoke from the motor, the lamps over them stutter (25.11 notes).
+	var slab_y := float(SLAB_ROW * CELL)
+	_add_fault(root, "Button2Fault", button_2.position + Vector2(0, -6), true, true, PackedInt32Array([BUTTON_2_LAMP]), 26.0, 41)
+	var panel := PANEL_CELL * CELL + Vector2(32, 46)
+	_add_fault(root, "PanelFault", panel, true, false, PackedInt32Array([PUMP_LAMP]), slab_y - panel.y, 43)
+	_add_fault(root, "MotorFault", Vector2(MOTOR_COLUMN * CELL - 10.0, slab_y - 80.0), false, true, PackedInt32Array(), 80.0, 47)
 
 	var light := WorldLight.new()
 	light.name = "WorldLight"
@@ -309,13 +338,33 @@ func _add_button(root: Node, node_name: String, id: String, cell: Vector2i, targ
 	return button
 
 
-func _add_sparks(root: Node, button: PushButton, fault_path: NodePath) -> void:
+func _add_sparks(root: Node, button: PushButton, _unused: NodePath) -> void:
 	var sparks := ButtonSparks.new()
 	sparks.name = "Sparks"
 	sparks.button_path = NodePath("..")
-	sparks.fault_water_path = fault_path
 	button.add_child(sparks)
 	sparks.owner = root
+
+
+## A breakdown of the tunnel's pump at `at` (room px): sparks, smoke, lamps.
+func _add_fault(root: Node, node_name: String, at: Vector2, sparks: bool, smoke: bool, lamps: PackedInt32Array, floor_below: float, noise_seed: int) -> void:
+	var fault := FaultFx.new()
+	fault.name = node_name
+	fault.water_path = NodePath("../Tunnel")
+	fault.position = at
+	fault.sparks = sparks
+	fault.smoke = smoke
+	fault.lamps = lamps
+	fault.floor_y = floor_below
+	fault.noise_seed = noise_seed
+	_own(root, fault)
+
+
+func _px(cells: Array) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	for at: Vector2 in cells:
+		points.append(at * CELL)
+	return points
 
 
 func _own(root: Node, child: Node) -> void:

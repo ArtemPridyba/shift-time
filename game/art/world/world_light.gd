@@ -127,6 +127,7 @@ func show_at(seconds: float) -> void:
 			var flash := 0.9 * (1.0 - shatter) * (1.0 - shatter) if shatter > 0.0 else 0.0
 			e *= maxf(float(fall["light"]), flash)
 			lights[i].position = _bases[i] + Vector2(0, _drop_px(i))
+		e *= _fault_factor(i)
 		lights[i].energy = e
 		# A dark lamp costs nothing to draw: its light and its dust are off
 		# (level 05 under Shift lights up eleven lamps, 24.11).
@@ -135,6 +136,18 @@ func show_at(seconds: float) -> void:
 		_shine[i] = e / energy
 	if _glow != null:
 		_glow.queue_redraw()
+
+
+## A breakdown makes some lamps stutter (`FaultFx` in group `lamp_fault`).
+func _fault_factor(i: int) -> float:
+	var factor := 1.0
+	if not is_inside_tree():
+		return factor
+	var room := get_parent()
+	for node in get_tree().get_nodes_in_group("lamp_fault"):
+		if room != null and room.is_ancestor_of(node):
+			factor *= float(node.call("lamp_factor", i))
+	return factor
 
 
 ## The quake's part: swings and falls of the lamps now (`Quakes`, D127).

@@ -19,6 +19,11 @@ extends MultiMeshInstance2D
 @export var bursts_at := PackedFloat32Array()
 ## A floor at this height in the node's coordinates: shards stop there, drops end.
 @export var has_floor := false
+## False: the node's owner shows the particles at its own seconds (`show_at`),
+## the room's clock does not (a breakdown's sparks count from the breakdown).
+@export var own_clock := true
+## The stream starts at time 0 instead of having always run (`ParticleField`).
+@export var starts_empty := false
 @export var floor_y := 0.0
 
 var field: ParticleField
@@ -32,13 +37,15 @@ var _color_end := Color.WHITE
 
 
 func _ready() -> void:
-	add_to_group("world_clock")
+	if own_clock:
+		add_to_group("world_clock")
 	var data: Variant = Content.look_particles().get(preset)
 	if not data is Dictionary:
 		push_error("TimeParticles: no preset '%s' in data/look.json" % preset)
 		return
 	field = ParticleField.from_preset(data, noise_seed)
 	field.extra_bursts = bursts_at
+	field.starts_empty = starts_empty
 	if has_floor:
 		field.set_floor(floor_y)
 	var time_data := Content.time()
