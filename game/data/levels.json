@@ -61,13 +61,13 @@
 			}
 		},
 		"quakes": {
-			"_about": "Quakes of world time (Д4, D127): a weak one at 6 s, a strong one at 14 s that drops the third lamp and a lump of plaster beside it onto the treads of the stairs under them (rows 12.66 and 12.95: Stairs.tread_y), then weak ones every 13 s. Seconds are those of the WORLD timer. The look: kit_objects.quake in look.json.",
+			"_about": "Quakes of world time (Д4, D127): a weak one at 6 s, a strong one at 14 s that drops the third lamp and a lump of plaster beside it onto the treads of the stairs under them (rows 12.66 and 13.03: Stairs.tread_y), then weak ones every 13 s. Seconds are those of the WORLD timer. The look: kit_objects.quake in look.json.",
 			"list": [{ "second": 6, "strength": 0.35 }, { "second": 14, "strength": 1.0 }],
 			"repeat_every_seconds": 13,
 			"repeat_strength": 0.3,
 			"falls": [
 				{ "kind": "lamp", "lamp": 3, "quake": 2, "delay_seconds": 0.15, "to_row": 12.66 },
-				{ "kind": "lump", "at": [12.95, 5.4], "quake": 2, "delay_seconds": 0.45, "to_row": 12.95 }
+				{ "kind": "lump", "at": [12.95, 5.4], "quake": 2, "delay_seconds": 0.45, "to_row": 13.03 }
 			]
 		},
 		"title": "01 Effect"

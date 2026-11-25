@@ -258,13 +258,23 @@ Request N-12: things the player uses. Separate pieces on one sheet with wide emp
 Request N-13: the staircase into the pit. A broken brick staircase going down from left to right, seen exactly from the side like a technical drawing, flat even light, on flat green #00FF00. About 20 steps run in a straight line from the top left corner of the picture to the bottom right corner, the slope about 3 high to 5 across. Steps of worn sooty red brick with a riveted iron angle on the edge of each step; a few steps chipped, a few loose bricks lying on them. Under the steps, the side of the staircase: brick down to the bottom edge of the picture, darker than the steps. Above the steps: flat green only. Only the staircase, nothing else.
 ```
 
-### Н-14. Платформа под фон комнаты (24.11.2026)
+### Н-14. Платформа под фон комнаты (24–25.11.2026)
 
-Платформы уровня 01 сейчас — старая доска Н-7 (тёмная сталь), на фоне картинки Ф-1 она чужая (замечания Бориса 24.11, `docs/levels/01.md`). Нужна новая в стиле картинки комнаты. В игре платформа — 2 клетки на полклетки (128 × 32 px, 4:1), героиня стоит на середине её верха; колонну и цепь, по которым она ездит, картинка комнаты уже рисует (D153). Свет и мягкость добавит игра (D153), поэтому просим ровный свет. Приложить первой картинкой фон комнаты `docs/art/gemini/raw/f1_room_v1.jpg` (стиль, цвет, ржавчина), второй — кадр с платформой `docs/art/level01_fixes.jpg` (нижний правый, где она стоит сейчас). Готовую картинку — в `raw/` как `n14_platform.jpg`, вырезать: `python3 tools/cut_kit.py n14_platform`; вставит следующий чат (О).
+**Зачем.** Платформы уровня 01 — старая доска Н-7: тонкая тёмная сталь, на фоне картинки Ф-1 она чужая (замечания Бориса 24–25.11, `docs/levels/01.md`). Образец того, как должно быть, — `docs/art/gemini/ref_platforms.jpg` (Борис, 25.11): толстые плиты, виден их верх, ржавая сталь в цвет комнаты. Такие и просим.
+
+**Размер в игре.** Платформа — 2 клетки в ширину (128 px), картинка ляжет на неё с её пропорцией: толщина плиты около четверти её длины (4:1, у Н-7 было 6:1 — слишком тонко). Героиня стоит на середине верха плиты. Колонну и балку с цепью, по которым платформы ездят, рисует фон комнаты; шестерню под плитой и свет ламп добавит игра (D153).
+
+**Что приложить:** одну картинку — `docs/art/gemini/ref_platforms.jpg`.
+
+**Запрос Н-14:**
 
 ```text
-Request N-14: a moving platform for the attached factory hall, in exactly the same painted style, colours and rust as the FIRST image. One piece in the middle of the picture on flat green #00FF00, wide empty green around it, flat even light, no shadows on the green. A short steel platform, about 4 times as wide as it is tall, seen from the side with a slight look from above, like the floors in the first image: its flat top surface visible as a strip across the upper third, riveted rusty red-brown steel plates; under it the front face, a riveted steel beam; a worn signal-yellow edge along the front of the top surface; under the middle of the beam a small carriage with two rollers. Both ends finished, not cut. Nothing else in the picture.
+Request N-14: one moving platform for this game, cut out. Paint ONE platform exactly like the two platforms in the attached picture (the slab in the middle of the hall and the one beside the column on the right): the same painted style, the same thick rusty steel slab, the same colours, rust and light. Show it alone, in the middle of the picture, on flat green #00FF00, with wide empty green all around it and no shadow on the green. Proportions: about 4 times as long as it is thick, clearly thicker than a thin plank. Seen from the side with a slight look from above, like the floors in the attached picture: the flat top surface visible as a lit strip across the upper third, riveted rusty red-brown steel; below it the front face, a darker riveted steel beam. Both ends finished, not cut. Nothing else in the picture: no column, no chain, no wall, no heroine.
 ```
+
+**Если не то:** плита тонкая — «make the slab twice as thick, about 4 times as long as it is thick»; верх не виден — «show more of the top surface, as if seen a little more from above»; другой цвет — «match the colours of the platforms in the attached picture exactly».
+
+**Куда положить:** `docs/art/gemini/raw/n14_platform.jpg`. Вставит следующий чат (О): допишет деталь `platform` в `tools/cut_kit.py` на эту картинку, вырежет её и подберёт высоту плиты в игре.
 
 ## 5. Проверка и правки
 
