@@ -25,8 +25,11 @@ extends AnimatableBody2D
 ## `kit_objects.platform` of `data/look.json`.
 ##
 ## In a painted room (`world.backdrop`, D131) the picture has the track (the
-## rail column, the chain beam): only the plank and its gear are drawn, with
-## the picture's light (`use_picture_light`, 24.11 level 01 notes).
+## rail column, the chain beam), and the platform is an N-14 machine (D165)
+## with the picture's light (`use_picture_light`, 24.11 level 01 notes): on a
+## chain trolley A, its deck over a trolley whose two wheels roll by the travel;
+## on a rack lift B, its deck in a frame round the column whose two gears turn
+## by the travel. The middle of the deck's top face is the line she stands on.
 ##
 ## Temporal object contract: docs/architecture.md, section 4.1.
 
@@ -245,6 +248,8 @@ func use_picture_light(light: ShaderMaterial) -> void:
 func _draw_kit(plank: Texture2D, size: Vector2) -> void:
 	var look := ObjectLook.of("platform")
 	var top := -size.y / 2.0
+	if _painted and _draw_machine(look, size, top):
+		return
 	var shift := _base() - position
 	var gear := ObjectLook.picture("shutter_gear_small")
 	var gear_px := ObjectLook.number(look, "gear_px", 22.0)
@@ -273,6 +278,58 @@ func _draw_kit(plank: Texture2D, size: Vector2) -> void:
 	_draw_plank(plank, Rect2(-size.x / 2.0, top, size.x, plank_h), ObjectLook.number(look, "cap_px", 24.0))
 	if (track == "rack" or _painted) and gear != null:
 		ObjectLook.draw_turned(self, gear, Vector2(0.0, top + plank_h), Vector2(gear_px, gear_px), gear_angle())
+
+
+## The N-14 machine of a painted room (see above); false when its pictures are
+## missing, so the plank is drawn instead.
+func _draw_machine(look: Dictionary, size: Vector2, top: float) -> bool:
+	var lift := track == "rack"
+	var deck := ObjectLook.picture("platform_deck_b" if lift else "platform_deck_a")
+	var body := ObjectLook.picture("platform_lift_frame" if lift else "platform_trolley")
+	var turning := ObjectLook.picture("platform_gear" if lift else "platform_wheel")
+	if deck == null or body == null or turning == null:
+		return false
+	var line := Vector2(0.0, top)
+	var texel := ObjectLook.texel("platform_deck_a")
+	var at := _at(look, "frame_at" if lift else "trolley_at")
+	var angle := machine_angle()
+	if not lift:
+		var d := ObjectLook.number(look, "wheel_px", 28.0)
+		for key: String in ["wheel_left_at", "wheel_right_at"]:
+			ObjectLook.draw_turned(self, turning, line + _at(look, key), Vector2(d, d), angle)
+	draw_texture_rect(body, Rect2(line + at, body.get_size() / texel), false)
+	if lift:
+		var g := ObjectLook.number(look, "frame_gear_px", 13.0)
+		for key: String in ["frame_gear_top_at", "frame_gear_bottom_at"]:
+			ObjectLook.draw_turned(self, turning, line + _at(look, key), Vector2(g, g), angle)
+	var deck_h := float(deck.get_height()) / texel
+	var deck_y := top - ObjectLook.number(look, "deck_top_px", 6.5)
+	_draw_plank(deck, Rect2(-size.x / 2.0, deck_y, size.x, deck_h), ObjectLook.number(look, "cap_px", 24.0))
+	return true
+
+
+## True when the platform is drawn as an N-14 machine (a painted room).
+func is_machine() -> bool:
+	return _painted and track in ["chain", "rack"]
+
+
+## The turn of the machine's wheels (trolley) or gears (lift): they roll along
+## the way, the recorded travel over their radius, so under Shift they turn back.
+func machine_angle() -> float:
+	var look := ObjectLook.of("platform")
+	if track == "rack":
+		var g := ObjectLook.number(look, "frame_gear_px", 13.0)
+		return mech_travel() / maxf(g / 2.0, 1.0) * signf(travel.y)
+	var d := ObjectLook.number(look, "wheel_px", 28.0)
+	return mech_travel() / maxf(d / 2.0, 1.0) * signf(travel.x)
+
+
+## A place `[x, y]` of the look, in room px.
+static func _at(look: Dictionary, key: String) -> Vector2:
+	var value: Variant = look.get(key)
+	if value is Array and (value as Array).size() == 2:
+		return Vector2(float(value[0]), float(value[1]))
+	return Vector2.ZERO
 
 
 ## The plank with its ends as drawn and its middle stretched between them.

@@ -67,6 +67,7 @@ func _ready() -> void:
 	object_material.set_shader_parameter("lit_gain", ObjectLook.number(look, "lit_gain", 1.0))
 	object_material.set_shader_parameter("haze_color", ObjectLook.color(look, "haze_color", Color.BLACK))
 	object_material.set_shader_parameter("haze", ObjectLook.number(look, "haze", 0.0))
+	object_material.set_shader_parameter("yellow_keep", ObjectLook.number(look, "yellow_keep", 0.0))
 	# Behind the level, moving with its camera, out of reach of its darkness.
 	layer = CanvasLayer.new()
 	layer.name = "BackdropLayer"

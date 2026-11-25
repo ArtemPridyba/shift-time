@@ -18,11 +18,20 @@ uniform float lit_gain = 1.0;
 uniform vec4 haze_color : source_color = vec4(0.0, 0.0, 0.0, 1.0);
 uniform float haze = 0.0;
 uniform float soft_px = 0.0;
+// How much the signal yellow keeps its own hue in a cone (25.11, D165): the
+// warm lit_color would turn the yellow edge orange, so saturated yellow takes
+// only the cone's brightness and is never clipped into another hue.
+uniform float yellow_keep = 0.0;
 
 varying vec2 room;
+// The draw's own colour (modulate). In fragment() COLOR already holds the
+// texture times it, so taking COLOR there would square the picture: darker and
+// more saturated, the yellow edge orange (fixed 25.11, D165).
+varying vec4 tint;
 
 void vertex() {
 	room = (MODEL_MATRIX * vec4(VERTEX, 0.0, 1.0)).xy - level_origin;
+	tint = COLOR;
 }
 
 void fragment() {
@@ -32,9 +41,19 @@ void fragment() {
 		c = (2.0 * c + texture(TEXTURE, UV + vec2(d.x, 0.0)) + texture(TEXTURE, UV - vec2(d.x, 0.0))
 				+ texture(TEXTURE, UV + vec2(0.0, d.y)) + texture(TEXTURE, UV - vec2(0.0, d.y))) / 6.0;
 	}
-	c *= COLOR;
+	c *= tint;
 	float light = picture_light(room);
-	c.rgb *= mix(vec3(dark), lit_color.rgb * lit_gain, light);
+	vec3 lit = mix(vec3(dark), lit_color.rgb * lit_gain, light);
+	vec3 warm = c.rgb * lit;
+	vec3 own = c.rgb * dot(lit, vec3(0.299, 0.587, 0.114));
+	float hi = max(c.r, max(c.g, c.b));
+	float lo = min(c.r, min(c.g, c.b));
+	float sat = (hi - lo) / max(hi, 0.001);
+	float hue = 60.0 * (c.g - c.b) / max(c.r - c.b, 0.001);
+	float yellow = yellow_keep * smoothstep(0.40, 0.55, sat) * smoothstep(18.0, 28.0, hue)
+			* (1.0 - smoothstep(75.0, 90.0, hue)) * step(c.b, c.r);
+	own /= max(1.0, max(own.r, max(own.g, own.b)));
+	c.rgb = mix(warm, own, yellow);
 	c.rgb = mix(c.rgb, max(c.rgb, haze_color.rgb), haze);
 	COLOR = c;
 }

@@ -17,6 +17,11 @@ extends Node2D
 ## opens on its own a moment into the room's history, in every branch the
 ## same. A lever that unpowers it before then keeps it shut.
 ##
+## A level can give it a fire sensor (level 03, D155): `sensor_id` names a
+## wood zone, and the first tick at the head that zone burns the sprinkler is
+## powered on its own, as if the fire alarm went off. Only at the head, so a
+## replay shows what was recorded and a branch decides anew.
+##
 ## State recorded: { "powered": bool, "flow": int }
 ##
 ## The look is decoration from world time: drops fall from the nozzles, and
@@ -35,6 +40,8 @@ const DROP_COLOR := Color(0.78, 0.85, 0.9, 0.9)
 @export var powered := false
 ## False when a WaterPipe draws the pipe along the nozzles (level 03, D108).
 @export var draw_pipe := true
+## The object_id of the wood zone the fire sensor watches; empty: no sensor.
+@export var sensor_id := ""
 
 var flow := 0
 var _step := 28
@@ -88,11 +95,25 @@ func restore_state(state: Dictionary) -> void:
 
 
 func simulate_tick(tick: int) -> void:
+	if not powered and sensor_fires():
+		powered = true
 	if powered and tick >= _start_tick:
 		flow = mini(flow + _step, FLOW_MAX)
 	else:
 		flow = maxi(flow - _step, 0)
 	queue_redraw()
+
+
+## True while the wood zone under the fire sensor burns.
+func sensor_fires() -> bool:
+	if sensor_id == "" or not is_inside_tree():
+		return false
+	var room := get_parent()
+	for node in get_tree().get_nodes_in_group("flammable"):
+		if room.is_ancestor_of(node) and str(node.get("object_id")) == sensor_id:
+			var burn: Variant = node.get("burn")
+			return burn is WoodBurn and (burn as WoodBurn).is_burning()
+	return false
 
 
 func on_time_direction_changed(_direction: int) -> void:

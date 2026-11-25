@@ -7,6 +7,8 @@ extends RefCounted
 ## Rewinding restores the recorded frames, so a burnt zone comes back through
 ## burning to whole. Water and the reverse flamethrower in normal time put the
 ## fire out: the zone is whole again and can be lit once more.
+## A zone may catch from the zone before it in a chain (level 03, D155): it
+## lights once that one has burnt `spread_seconds`, unless water covers it.
 ## Pure rules, no nodes.
 
 enum Phase { WHOLE, BURNING, BURNT }
@@ -19,11 +21,21 @@ var phase := Phase.WHOLE
 var burn := 0
 ## Ticks from lit to burnt.
 var burn_ticks := 180
+## Ticks a zone burns before the next zone of its chain catches.
+var spread_ticks := 60
 
 
 func _init(wood_data: Dictionary = {}, time_data: Dictionary = {}) -> void:
 	var per_second := float(time_data.get("physics_ticks_per_second", 60))
 	burn_ticks = maxi(int(round(float(wood_data.get("burn_seconds", 3)) * per_second)), 1)
+	spread_ticks = maxi(int(round(float(wood_data.get("spread_seconds", 1)) * per_second)), 1)
+
+
+## True when fire from `previous`, the zone before this one in a chain, sets
+## this one burning now: it burns long enough, this one is whole and dry.
+func catches_from(previous: WoodBurn, wet: bool) -> bool:
+	return phase == Phase.WHOLE and not wet and previous != null \
+		and previous.phase == Phase.BURNING and previous.burn >= previous.spread_ticks
 
 
 ## One tick at the head. `wet` is true while water covers the zone.
