@@ -56,6 +56,12 @@ var rise_px_per_second := 0.0
 ## False in a level whose water must not carry the player: `rise_px_per_second`
 ## then stays 0, so the player sinks in rising water and needs the float.
 var lifts_player := true
+## A pump that fails (level 02, D150): after running this many ticks of the
+## world clock the flow turns the other way (a draining tank starts to fill).
+## -1: the flow never turns. From `turn_after_seconds` in the level's data.
+var turn_after_ticks := -1
+## Ticks the source has run, recorded only when the flow can turn.
+var run := 0
 
 var _step := 1
 var _draft := 8.0
@@ -102,6 +108,8 @@ func apply_settings(settings: Dictionary) -> void:
 	if settings.has("outlet_inset_px"):
 		look.outlet_inset_px = float(settings["outlet_inset_px"])
 	lifts_player = bool(settings.get("lifts_player", true))
+	if settings.has("turn_after_seconds"):
+		turn_after_ticks = int(round(float(settings["turn_after_seconds"]) * _ticks))
 
 
 func _ready() -> void:
@@ -183,20 +191,30 @@ func _to_tank(node: Node, rect: Rect2) -> Rect2:
 
 
 func capture_state() -> Dictionary:
-	return {"level": level, "flow": flow, "powered": powered}
+	var state := {"level": level, "flow": flow, "powered": powered}
+	if turn_after_ticks >= 0:
+		state["run"] = run
+	return state
 
 
 func restore_state(state: Dictionary) -> void:
 	level = int(state["level"])
 	flow = int(state["flow"])
 	powered = bool(state["powered"])
+	run = int(state.get("run", 0))
 	_apply()
 
 
 func simulate_tick(_tick: int) -> void:
 	flow = 0
 	if powered:
-		var next := clampi(level + open_flow * _step, 0, LEVEL_MAX)
+		var direction := open_flow
+		if turn_after_ticks >= 0:
+			if not turned():
+				run += 1
+			if turned():
+				direction = -open_flow
+		var next := clampi(level + direction * _step, 0, LEVEL_MAX)
 		flow = signi(next - level)
 		level = next
 	_apply()
@@ -216,6 +234,11 @@ func blocks_player_at(state: Dictionary, player_rect: Rect2) -> bool:
 		if float_rect_at(float_body, int(state["level"])).intersects(body):
 			return true
 	return false
+
+
+## True once a failing pump has turned the flow (`turn_after_ticks`).
+func turned() -> bool:
+	return turn_after_ticks >= 0 and run > turn_after_ticks
 
 
 ## Level units per simulated tick.

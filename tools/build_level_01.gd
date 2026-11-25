@@ -53,6 +53,11 @@ const MAP := [
 ## The doorway the hero walks out of (decoration only), in cells.
 const ENTRANCE_CELLS := Rect2i(1, 8, 1, 2)
 
+## The flight's surface in room px (25.11 notes): straight down the painted
+## steps, then steeper over the painted rubble at its foot (about 40 degrees),
+## reaching the pit floor short of the flight's right edge.
+const STAIRS_PROFILE: Array[Vector2] = [Vector2(576, 640), Vector2(810, 807), Vector2(990, 960), Vector2(1024, 960)]
+
 ## The shutter's blade hangs under the painted gearbox of the room's picture
 ## (D131), its rack against the painted gear (`painted.Door.gear` in
 ## levels.json): its centre x and width in px, inside the doorway's cells.
@@ -73,9 +78,9 @@ const CLOCK_CELL := Vector2(7.75, 3.06)
 const WIRE_CELL := Vector2(3.6, 2.96)
 const WIRE_END := Vector2(14.0, 84.0)
 const FLOOR_ROW := 10
-## The beacon sits on the wall by the exit door's upper left corner, from the
-## door's foot: over the door there is no room under the truss.
-const BEACON_FROM_DOOR := Vector2(-66.0, -118.0)
+## The beacon sits on the top of the painted exit door's frame, in its middle
+## (25.11 notes), from the door's foot.
+const BEACON_FROM_DOOR := Vector2(-10.0, -225.0)
 ## The first row of the hall under the roof.
 const HALL_TOP_ROW := 2
 const PLATFORM_HEIGHT := 32.0
@@ -140,6 +145,7 @@ func _initialize() -> void:
 	stairs.name = "Stairs"
 	stairs.cells = stair_cells
 	stairs.descends_right = true
+	stairs.profile = PackedVector2Array(STAIRS_PROFILE)
 	_own(root, stairs)
 
 	var door: Door = (load("res://objects/door.tscn") as PackedScene).instantiate()

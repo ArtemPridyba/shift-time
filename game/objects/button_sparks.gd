@@ -15,6 +15,10 @@ const SPREAD_PX := 26.0
 
 ## The button these sparks sit on, found by path from the room.
 @export var button_path: NodePath
+## A tank with a failing pump (`Water.turn_after_ticks`), found by path from the
+## room: once its flow has turned, the pressed button sparks again, as if
+## something broke behind it (level 02, D150). Empty: no such tank.
+@export var fault_water_path: NodePath
 
 var _world_tick := 0
 var _ticks := 60.0
@@ -46,7 +50,10 @@ static func _phase(index: int, tick: int, ticks_per_second: float) -> float:
 
 func is_lit() -> bool:
 	var button := get_node_or_null(button_path) as PushButton
-	return button == null or not button.pressed
+	if button == null or not button.pressed:
+		return true
+	var tank := get_node_or_null(fault_water_path) as Water if not fault_water_path.is_empty() else null
+	return tank != null and tank.turned()
 
 
 func _draw() -> void:
