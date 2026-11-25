@@ -393,7 +393,7 @@
       "picture_bulb": 0.66
     },
     "heroine_light": {
-      "energy": 0.45,
+      "energy": 0.8,
       "radius_px": 110
     }
   }
