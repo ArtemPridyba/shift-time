@@ -1,22 +1,23 @@
 class_name BurstPipe
 extends Node2D
-## The pipe from the bottom of pool 2 to the room beyond it (level 02, D169).
-## The water in the pool presses on it: while the pool fills, the pipe shakes,
-## spray comes out by its loose plug and the needle of its gauge climbs; at
-## `burst_level` the plug flies out (`PipePlug.eject`) and the water from the
-## hole fills the pit under it. The door at the bottom of the pit is the
-## pipe's own: the pressure of a full pool opens it, but only while the plug
-## holds and the pit is dry. So the heroine has to put the plug back before
-## the burst: she carries it there from the future, under Shift (the plug in
-## her hands stays with her), and puts it in: a new branch of history in
-## which the pipe holds.
+## The pipe from the bottom of pool 2 to the room beyond it (level 02, D169,
+## reworked by D171; the name is from its first version, when the plug burst
+## out). Its valve is missing from the start: the flange over the pit stands
+## open, and the yellow handwheel (`PipePlug`) lies on the bottom of the empty
+## pool 2. While the pool fills, the open pipe shakes and drips; at
+## `leak_level` the water gushes out of the flange and fills the pit under it.
+## The door at the bottom of the pit is the pipe's own: the pressure of a full
+## pool opens it, but only while the valve is on and the pit is dry. So the
+## heroine takes the handwheel from the empty pool under Shift (taking it is no
+## interference) and puts it on the flange before the gush, again under Shift:
+## a new branch of history in which the pipe holds.
 ##
-## The pipe keeps one recorded fact, whether it burst; the rest (the shaking,
-## the needle, the jet from the hole) is drawn from recorded levels and the
-## world tick, so it plays backwards under Shift. At the head it tells the pit
-## whether water runs into it and the door whether it is powered.
+## The pipe records nothing of its own; the shaking, the needle, the drips and
+## the gush are drawn from recorded levels and the world tick, so they play
+## backwards under Shift. At the head it tells the pit whether water runs into
+## it and the door whether it is powered.
 ##
-## A level sets `burst_level`, `door_level`, `dry_level` and `shake_level`
+## A level sets `leak_level`, `door_level`, `dry_level` and `shake_level`
 ## (0 … `Water.LEVEL_MAX`) through `objects.pipe` in `data/levels.json`.
 ## Temporal object contract: docs/architecture.md, section 4.1.
 
@@ -28,10 +29,12 @@ const GAUGE_RED := Color("#b8352a")
 const WATER := Color(0.74, 0.82, 0.86, 0.8)
 const WIDTH := 22.0
 const SHAKE_PX := 2.5
+## Without the valve the pressure escapes: the needle climbs only this far.
+const OPEN_PRESSURE := 0.45
 
 @export var object_id := "pipe"
-## The pipe from the pool to the hole, in this node's coordinates; the hole is
-## the last point.
+## The pipe from the pool to the flange, in this node's coordinates; the open
+## flange is the last point.
 @export var points := PackedVector2Array()
 ## Where the gauge sits, in this node's coordinates.
 @export var gauge := Vector2.ZERO
@@ -39,11 +42,8 @@ const SHAKE_PX := 2.5
 @export var pit_path: NodePath
 @export var plug_path: NodePath
 @export var door_path: NodePath
-## How the plug flies out, pixels per second.
-@export var eject_speed := Vector2(-260.0, -380.0)
 
-var burst := false
-var burst_level := 9000
+var leak_level := 9000
 var door_level := 9800
 var dry_level := 300
 var shake_level := 300
@@ -56,18 +56,17 @@ func _ready() -> void:
 
 
 func apply_settings(settings: Dictionary) -> void:
-	burst_level = int(settings.get("burst_level", burst_level))
+	leak_level = int(settings.get("leak_level", leak_level))
 	door_level = int(settings.get("door_level", door_level))
 	dry_level = int(settings.get("dry_level", dry_level))
 	shake_level = int(settings.get("shake_level", shake_level))
 
 
 func capture_state() -> Dictionary:
-	return {"burst": burst}
+	return {}
 
 
-func restore_state(state: Dictionary) -> void:
-	burst = bool(state["burst"])
+func restore_state(_state: Dictionary) -> void:
 	queue_redraw()
 
 
@@ -76,15 +75,19 @@ func simulate_tick(_tick: int) -> void:
 	var plug := _node(plug_path) as PipePlug
 	if pool == null or plug == null:
 		return
-	if not burst and plug.seated and not plug.firm and not plug.held and pool.level >= burst_level:
-		burst = true
-		plug.eject(eject_speed)
 	var pit := _node(pit_path) as Water
 	if pit != null:
-		pit.powered = not plug.seated and pool.level >= burst_level
+		pit.powered = leaking()
 	var door := _node(door_path) as Door
 	if door != null:
 		door.powered = plug.seated and pool.level >= door_level and (pit == null or pit.level <= dry_level)
+
+
+## True while water gushes out of the open flange: no valve and the pool high.
+func leaking() -> bool:
+	var pool := _node(pool_path) as Water
+	var plug := _node(plug_path) as PipePlug
+	return pool != null and plug != null and not plug.seated and pool.level >= leak_level
 
 
 func on_time_direction_changed(_direction: int) -> void:
@@ -104,15 +107,15 @@ func hole_global() -> Vector2:
 	return to_global(points[points.size() - 1]) if not points.is_empty() else global_position
 
 
-## True while the pool presses on a loose plug that still holds.
+## True while the pool presses on the open pipe before it gushes: it shakes and drips.
 func shaking() -> bool:
 	var pool := _node(pool_path) as Water
 	var plug := _node(plug_path) as PipePlug
-	return pool != null and plug != null and plug.seated and not plug.firm and not burst and pool.level >= shake_level
+	return pool != null and plug != null and not plug.seated and pool.level >= shake_level and pool.level < leak_level
 
 
-## The shake of the pipe and the plug now: a formula of the world tick, so it
-## plays backwards and stands at frame 0.
+## The shake of the pipe now: a formula of the world tick, so it plays
+## backwards and stands at frame 0.
 func shake_offset() -> Vector2:
 	if not shaking():
 		return Vector2.ZERO
@@ -120,9 +123,14 @@ func shake_offset() -> Vector2:
 	return Vector2(sin(t * 1.7), cos(t * 2.3)) * SHAKE_PX
 
 
+## What the gauge shows, 0..1: the pool's pressure, held in only by the valve.
 func pressure() -> float:
 	var pool := _node(pool_path) as Water
-	return float(pool.level) / float(Water.LEVEL_MAX) if pool != null else 0.0
+	var plug := _node(plug_path) as PipePlug
+	if pool == null:
+		return 0.0
+	var full := float(pool.level) / float(Water.LEVEL_MAX)
+	return full if plug != null and plug.seated else full * OPEN_PRESSURE
 
 
 func _node(path: NodePath) -> Node:
@@ -143,7 +151,11 @@ func _draw() -> void:
 		draw_rect(Rect2(line[i] - Vector2(WIDTH, WIDTH) * 0.7, Vector2(WIDTH, WIDTH) * 1.4), IRON)
 	var hole := line[line.size() - 1]
 	draw_rect(Rect2(hole + Vector2(-WIDTH * 0.5, WIDTH * 0.7), Vector2(WIDTH, 26.0)), Color(RUST, 0.6))
-	draw_circle(hole, WIDTH * 0.45, Color("#0d0d10"))
+	# The open flange where the valve belongs: a wide collar with four bolts.
+	draw_rect(Rect2(hole + Vector2(-WIDTH, -5.0), Vector2(WIDTH * 2.0, 10.0)), IRON_LIGHT)
+	for x in [-WIDTH * 0.8, -WIDTH * 0.3, WIDTH * 0.3, WIDTH * 0.8]:
+		draw_circle(hole + Vector2(x, 0.0), 2.2, IRON)
+	draw_circle(hole + Vector2(0.0, 5.0), WIDTH * 0.4, Color("#0d0d10"))
 	_draw_gauge(shake)
 	_draw_water(hole)
 
@@ -157,7 +169,7 @@ func _draw_gauge(shake: Vector2) -> void:
 	draw_line(c, c + Vector2(cos(a), sin(a)) * 10.0, IRON, 2.0)
 
 
-## Spray by a shaking plug; the jet from the open hole while the pit fills.
+## Drips from the shaking open pipe; the gush from the flange while the pit fills.
 func _draw_water(hole: Vector2) -> void:
 	var plug := _node(plug_path) as PipePlug
 	var pit := _node(pit_path) as Water

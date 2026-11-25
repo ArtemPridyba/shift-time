@@ -1,19 +1,22 @@
 class_name PipePlug
 extends CharacterBody2D
-## The plug of the pipe in level 02 (D169): an item the heroine carries from
-## the future into the past. It sits loose in the hole of a `BurstPipe`; the
-## pressure knocks it out and it falls to the floor (the pipe calls `eject`).
-## E picks it up; E near the hole puts it back, firmly; E elsewhere puts it
-## down (an interaction point that is nearer wins over the drop).
+## The valve of the pipe in level 02 (D169, D171): a signal-yellow handwheel on
+## a short stem, the part missing from the open flange of a `BurstPipe`. It
+## lies on the bottom of pool 2 from the start, so the heroine can take it only
+## while the pool is empty: in the past, under Shift. E picks it up; E near the
+## flange puts it on, firmly; E elsewhere puts it down (an interaction point
+## that is nearer wins over the drop).
 ##
-## Its body is recorded like everything but the player (the flamethrower's
-## rules): lying, it falls at the head and moves back along its recorded past
-## under Shift; in the hands it stays with the heroine and ignores the frames.
-## Put back firmly, it stays in the hole and ignores the frames too, until E
-## takes it out again. Putting it back while Shift has taken the world to
-## before the burst is interference: a new branch in which the pipe holds.
-## A drop rewrites the plug's earlier frames to where it was let go, so under
-## Shift it never jumps.
+## Taking it or putting it down is no interference (D171): nothing else in the
+## room depends on where it lies, so the room's history is not cut; the
+## valve's own frames, past and future, are rewritten to its new state
+## (`rewrite_all`), so under Shift it never jumps and the world keeps the
+## button presses of its future. Putting it on the flange while Shift has taken
+## the world to before the gush is interference: a new branch in which the pipe
+## holds. In the hands and on the flange it ignores the frames.
+##
+## Its body is recorded like everything but the player: lying, it falls at the
+## head and follows its recorded past under Shift.
 ##
 ## State recorded: { "position", "vel", "held", "seated", "firm" }.
 ## Numbers: `pipe_plug` of `data/objects.json`.
@@ -22,18 +25,23 @@ extends CharacterBody2D
 const YELLOW := Color("#d9a520")
 const YELLOW_DARK := Color("#8a6612")
 const IRON := Color("#3a3a40")
-const SIZE := Vector2(30, 18)
+## The handwheel's radius and the stem under it.
+const WHEEL_R := 15.0
+const STEM := Vector2(8, 12)
 ## Where the plug sits in the hands, from the heroine's feet (facing right).
 const HAND := Vector2(22, -42)
 
 @export var object_id := "plug"
-## The pipe whose hole this plug fits, by path from this node.
+## The pipe whose flange this valve fits, by path from this node.
 @export var pipe_path: NodePath
+## On the flange from the start (the first version of D169); false: it lies
+## where the level puts it.
+@export var start_seated := false
 
 ## In the heroine's hands. Live while held: the frames never take it away.
 var held := false
-## In the hole of the pipe.
-var seated := true
+## On the flange of the pipe.
+var seated := false
 ## Put back by the heroine: the pressure no longer knocks it out, and the
 ## frames no longer take it away.
 var firm := false
@@ -63,6 +71,7 @@ func _init() -> void:
 
 
 func _ready() -> void:
+	seated = start_seated
 	add_to_group("temporal")
 	add_to_group("carried")
 	if seated:
@@ -111,13 +120,6 @@ func blocks_player_at(_state: Dictionary, _player_rect: Rect2) -> bool:
 	return false
 
 
-## The pressure knocks the plug out of the hole (the pipe calls this at the head).
-func eject(speed: Vector2) -> void:
-	seated = false
-	firm = false
-	vel = speed
-
-
 ## Lying or in the hole: a pick-up point. In the hands: by the hole, putting it
 ## back; elsewhere, the drop, which counts only when nothing else is in reach.
 func interaction_candidate() -> Dictionary:
@@ -130,14 +132,15 @@ func interaction_candidate() -> Dictionary:
 
 func get_interaction_change(_objects: Array) -> Array:
 	if not held:
-		return [{"id": object_id, "state": {"held": true, "seated": false, "firm": false, "vel": Vector2.ZERO, "act": true}}]
+		return [{"id": object_id, "rewrite_all": true,
+			"state": {"held": true, "seated": false, "firm": false, "vel": Vector2.ZERO, "act": true}}]
 	if near_hole():
 		return [{"id": object_id, "state": {"held": false, "seated": true, "firm": true,
 			"position": hole_position(), "vel": Vector2.ZERO, "act": true}}]
-	# Put down at her feet, so it does not fall: its rewritten past is where it lies.
+	# Put down at her feet, so it does not fall: its rewritten frames are where it lies.
 	var player := _player()
 	var at := Vector2(position.x, player.position.y) if player != null else position
-	return [{"id": object_id, "rewrite_past": true,
+	return [{"id": object_id, "rewrite_all": true,
 		"state": {"held": false, "seated": false, "firm": false, "position": at, "vel": Vector2.ZERO, "act": true}}]
 
 
@@ -195,13 +198,21 @@ func _player() -> Node2D:
 func _draw() -> void:
 	var shake := Vector2.ZERO
 	var pipe := _pipe()
-	if seated and not firm and pipe != null:
+	if seated and pipe != null:
 		shake = pipe.shake_offset()
-	# A thick signal-yellow disc with a grip, worn paint at the rim (D65).
-	var r := Rect2(-SIZE / 2.0 + shake + Vector2(0, -SIZE.y / 2.0), SIZE)
-	draw_rect(r, YELLOW)
-	draw_rect(Rect2(r.position, Vector2(r.size.x, 4.0)), YELLOW.lightened(0.25))
-	draw_rect(Rect2(r.position + Vector2(0, r.size.y - 4.0), Vector2(r.size.x, 4.0)), YELLOW_DARK)
-	draw_rect(Rect2(r.position + Vector2(r.size.x / 2.0 - 4.0, -8.0), Vector2(8.0, 8.0)), IRON)
-	for x in [r.position.x + 5.0, r.end.x - 5.0]:
-		draw_circle(Vector2(x, r.get_center().y), 2.0, IRON)
+	# A signal-yellow handwheel with four spokes on a short iron stem (D65):
+	# on the flange the stem points down into it, lying it rests on its rim.
+	var c := shake + Vector2(0.0, -WHEEL_R - STEM.y if seated else -WHEEL_R)
+	if seated:
+		draw_rect(Rect2(c + Vector2(-STEM.x / 2.0, WHEEL_R - 2.0), Vector2(STEM.x, STEM.y + 2.0)), IRON)
+		draw_rect(Rect2(c + Vector2(-STEM.x, WHEEL_R + STEM.y - 4.0), Vector2(STEM.x * 2.0, 5.0)), IRON)
+	draw_arc(c, WHEEL_R - 2.0, 0.0, TAU, 24, YELLOW_DARK, 6.0, true)
+	draw_arc(c, WHEEL_R - 2.5, PI * 1.1, PI * 1.9, 10, YELLOW.lightened(0.25), 2.0, true)
+	draw_arc(c, WHEEL_R - 2.0, PI * 0.1, PI * 0.9, 10, YELLOW, 4.0, true)
+	for k in 4:
+		var a := PI * 0.25 + PI * 0.5 * k
+		draw_line(c, c + Vector2(cos(a), sin(a)) * (WHEEL_R - 3.0), YELLOW, 3.0, true)
+	draw_circle(c, 4.0, IRON)
+	# Worn paint on the rim.
+	for a in [0.4, 2.3, 4.1]:
+		draw_circle(c + Vector2(cos(a), sin(a)) * (WHEEL_R - 2.0), 1.6, YELLOW_DARK)

@@ -204,6 +204,18 @@ func replace_current(frame: Dictionary) -> bool:
 	return true
 
 
+## Writes `state` as the state of `object_id` in every kept frame, past and
+## future. Used when the live player takes or puts down an item nothing else
+## depends on (the valve of level 02, D171): the room's history stays, only
+## the item's own frames change, so it never jumps under Shift or on a replay.
+func rewrite_all(object_id: String, state: Dictionary) -> void:
+	if is_empty():
+		return
+	for number in range(_first, _head + 1):
+		var frame: Dictionary = _slots[number % _capacity]
+		frame[object_id] = state.duplicate(true)
+
+
 ## Writes `state` as the state of `object_id` in every kept frame left of the
 ## cursor. Used when the live player lets an item go: the item has no past of
 ## its own before that moment (docs/architecture.md, section 2.5).

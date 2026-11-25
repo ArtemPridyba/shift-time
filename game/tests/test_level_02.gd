@@ -7,11 +7,11 @@ extends RefCounted
 ## floods the tunnel again, and only then the near gate opens, so the tunnel is
 ## crossed only with Shift. The solutions (with Shift, without it, swimming the
 ## flooded tunnel, running in during the drain) are in `tests/solutions/` and
-## run by test_solutions.gd. Between the pools and the tunnel (D169): the
-## pipe from pool 2 bursts when the pool fills, its plug flies out and the
-## pit floods; the heroine carries the plug back to before the burst under
-## Shift and puts it in, and the pressure opens the door at the bottom of the
-## dry pit.
+## run by test_solutions.gd. Between the pools and the tunnel (D169, D171):
+## the pipe from pool 2 has no valve, so the full pool gushes into the pit;
+## the heroine takes the handwheel from the empty pool under Shift, carries it
+## back to before the gush and puts it on, and the pressure opens the door at
+## the bottom of the dry pit.
 
 const LEVEL_PATH := "res://levels/level_02.tscn"
 const LEVEL_01_PATH := "res://levels/level_01.tscn"
@@ -241,93 +241,121 @@ func test_water_with_a_failing_pump_turns_and_restores() -> void:
 	plain.free()
 
 
-# --- the pipe and its plug (D169) ------------------------------------------------
+# --- the pipe and its valve (D169, D171) ------------------------------------------
 
-## Pool 2 fills: the pipe shakes, its gauge climbs, the plug flies out onto the
-## floor and the pit floods; the door stays shut.
-func test_level_02_the_full_pool_bursts_the_pipe() -> void:
+## The valve is missing from the start: the open pipe shakes while pool 2
+## fills, then gushes into the pit; the door stays shut and the gauge low.
+func test_level_02_the_open_pipe_floods_the_pit() -> void:
 	var room := await _load(LEVEL_PATH)
 	var pipe: BurstPipe = room.get_node("Pipe")
-	var plug: PipePlug = room.get_node("Plug")
+	var valve: PipePlug = room.get_node("Plug")
 	var pit: Water = room.get_node("Pit")
 	var door: Door = room.get_node("PitDoor")
-	check(plug.seated and not pipe.burst and pit.level == 0, "at the start the plug sits in the pipe and the pit is dry")
+	check(not valve.seated and pit.level == 0, "at the start the flange is open and the pit is dry")
+	check(absf(valve.global_position.y - POOL_2_FLOOR_ROW * CELL) < 4.0 and valve.global_position.x > 16 * CELL \
+		and valve.global_position.x < 22 * CELL, "the handwheel lies on the bottom of pool 2: %s" % valve.global_position)
 	var shook := false
 	await _press_button_1(room)
-	for i in 400:
+	for i in 500:
 		await _ticks(1)
 		shook = shook or pipe.shaking()
-		if pipe.burst and door.open > 0:
+		if pit.level == Water.LEVEL_MAX:
 			break
-	check(shook, "while the pool fills, the pipe shakes")
-	check(pipe.burst and not plug.seated, "the full pool bursts the pipe: the plug is out")
-	check(absf(plug.global_position.y - LOW_ROW * CELL) < 4.0 and plug.global_position.x < 32 * CELL, "the plug lies on the floor by the pit: %s" % plug.global_position)
-	check(pit.level == Water.LEVEL_MAX, "the pit floods: %d" % pit.level)
+	check(shook, "while the pool fills, the open pipe shakes")
+	check(pit.level == Water.LEVEL_MAX, "the water from the open flange floods the pit: %d" % pit.level)
 	check(door.open == 0, "the door at the bottom of the flooded pit stays shut")
-	check(pipe.pressure() > 0.95, "the gauge shows the full pool")
+	check(pipe.pressure() < 0.5, "without the valve the gauge stays low: %.2f" % pipe.pressure())
 	await _free(room)
 
 
-## The plug in her hands stays with her while Shift takes the world to before
-## the burst (the hole is empty and dry there); put in, it holds: a new branch
-## with no burst, a dry pit and the door opened by the pressure.
-func test_level_02_the_plug_carried_into_the_past_holds() -> void:
+## Taking the handwheel under Shift is no interference (D171): the world keeps
+## the press of button 1, and on release pool 2 fills again with the wheel in
+## her hands.
+func test_level_02_taking_the_valve_under_shift_keeps_the_history() -> void:
+	var room := await _load(LEVEL_PATH)
+	var time: RoomTime = room.get_node("RoomTime")
+	var valve: PipePlug = room.get_node("Plug")
+	var pool_2: Water = room.get_node("Pool2")
+	var player: Player = room.get_node("Player")
+	await _press_button_1(room)
+	await _ticks(300)
+	check(pool_2.level == Water.LEVEL_MAX, "pool 2 is full")
+	Input.action_press("rewind")
+	for i in 600:
+		await _ticks(1)
+		if time.cursor() == 0:
+			break
+	check(pool_2.level == 0, "Shift empties pool 2")
+	player.respawn(Vector2(valve.global_position.x - 20.0, POOL_2_FLOOR_ROW * CELL))
+	await _ticks(10)
+	time.player_interact(player.global_position)
+	check(valve.held, "E on the bottom of the empty pool picks the handwheel up")
+	Input.action_release("rewind")
+	await _ticks(330)
+	check(pool_2.level == Water.LEVEL_MAX, "the press is still in the history: the pool fills again: %d" % pool_2.level)
+	check(valve.held, "the handwheel stays in her hands")
+	await _free(room)
+
+
+## The handwheel in her hands stays with her while Shift takes the world to
+## before the gush; put on there, it holds: a new branch with a dry pit and
+## the door opened by the pressure.
+func test_level_02_the_valve_carried_into_the_past_holds() -> void:
 	var room := await _load(LEVEL_PATH)
 	var time: RoomTime = room.get_node("RoomTime")
 	var pipe: BurstPipe = room.get_node("Pipe")
-	var plug: PipePlug = room.get_node("Plug")
+	var valve: PipePlug = room.get_node("Plug")
 	var pit: Water = room.get_node("Pit")
 	var door: Door = room.get_node("PitDoor")
 	var player: Player = room.get_node("Player")
-	await _burst_and_pick_up(room)
-	check(plug.held, "E picks the plug up")
+	await _take_valve_and_flood(room)
 	player.respawn(_by_the_hole())
-	await _ticks(5)
+	await _ticks(40)
 	Input.action_press("rewind")
 	var stayed := true
-	for i in 400:
+	for i in 600:
 		await _ticks(1)
-		stayed = stayed and plug.held and plug.global_position.distance_to(player.global_position) < 80.0
-		if not pipe.burst and i > 30:
+		stayed = stayed and valve.held and valve.global_position.distance_to(player.global_position) < 80.0
+		if not pipe.leaking() and pit.level == 0:
 			break
-	check(not pipe.burst, "Shift takes the world to before the burst")
-	check(stayed, "the plug stays in her hands all the way back")
-	check(not plug.seated and pit.level == 0, "in that past the hole is empty and the pit dry")
+	check(not pipe.leaking() and pit.level == 0, "Shift takes the world to before the gush")
+	check(stayed, "the handwheel stays in her hands all the way back")
 	time.player_interact(player.global_position)
-	check(plug.seated and plug.firm and not plug.held, "E by the hole puts the plug in, firmly")
+	check(valve.seated and valve.firm and not valve.held, "E by the flange puts the valve on, firmly")
 	Input.action_release("rewind")
 	for i in 400:
 		await _ticks(1)
-	check(not pipe.burst and pit.level <= 300, "in the new branch the pipe holds and the pit stays dry: %d" % pit.level)
+	check(not pipe.leaking() and pit.level <= 300, "in the new branch the pipe holds and the pit stays dry: %d" % pit.level)
+	check(pipe.pressure() > 0.95, "the gauge shows the full pool")
 	check(door.open == Door.OPEN_MAX, "the pressure of the full pool opens the door: %d" % door.open)
 	await _free(room)
 
 
-## Put in after the burst, without Shift: the leak stops but the pit stays
-## full and the door shut; E takes the plug out again to try once more.
-func test_level_02_the_plug_put_in_late_leaves_the_pit_full() -> void:
+## Put on after the gush, without Shift: the leak stops but the pit stays
+## full and the door shut; E takes the valve off again to try once more.
+func test_level_02_the_valve_put_on_late_leaves_the_pit_full() -> void:
 	var room := await _load(LEVEL_PATH)
 	var time: RoomTime = room.get_node("RoomTime")
-	var plug: PipePlug = room.get_node("Plug")
+	var valve: PipePlug = room.get_node("Plug")
 	var pit: Water = room.get_node("Pit")
 	var door: Door = room.get_node("PitDoor")
 	var player: Player = room.get_node("Player")
-	await _burst_and_pick_up(room)
+	await _take_valve_and_flood(room)
 	player.respawn(_by_the_hole())
 	await _ticks(5)
 	time.player_interact(player.global_position)
-	check(plug.seated and plug.firm, "the plug is in")
+	check(valve.seated and valve.firm, "the valve is on")
 	await _ticks(5)
 	var level := pit.level
 	await _ticks(240)
 	check(level > 3000 and pit.level == level and pit.flow == 0, "the leak stops, the water stays: %d -> %d" % [level, pit.level])
 	check(door.open == 0, "the door at the bottom of the full pit stays shut")
 	time.player_interact(player.global_position)
-	check(plug.held and not plug.seated, "E takes the plug out again")
+	check(valve.held and not valve.seated, "E takes the valve off again")
 	await _free(room)
 
 
-## No way round the plug: Shift alone, all the way back to the first frame,
+## No way round the valve: Shift alone, all the way back to the first frame,
 ## never opens the door (it needs the pressure of the full pool).
 func test_level_02_shift_alone_never_opens_the_pit_door() -> void:
 	var room := await _load(LEVEL_PATH)
@@ -344,30 +372,34 @@ func test_level_02_shift_alone_never_opens_the_pit_door() -> void:
 		opened = opened or door.open > 0
 		if time.cursor() == 0:
 			break
+	Input.action_release("rewind")
 	check(time.cursor() == 0, "Shift reaches the first frame")
 	check(not opened, "the door never opened, forward or back")
 	await _free(room)
 
 
-## E away from the hole puts the plug down where she stands; under Shift it
-## stays there, never jumping back to an old place.
-func test_level_02_a_dropped_plug_stays_where_it_was_let_go() -> void:
+## E away from the flange puts the handwheel down where she stands; under
+## Shift and on the replay it stays there, never jumping back to an old place.
+func test_level_02_a_dropped_valve_stays_where_it_was_let_go() -> void:
 	var room := await _load(LEVEL_PATH)
 	var time: RoomTime = room.get_node("RoomTime")
-	var plug: PipePlug = room.get_node("Plug")
+	var valve: PipePlug = room.get_node("Plug")
 	var player: Player = room.get_node("Player")
-	await _burst_and_pick_up(room)
+	await _take_valve_and_flood(room)
 	player.respawn(Vector2(27.5 * CELL, LOW_ROW * CELL))
 	await _ticks(20)
-	time.player_interact(player.global_position)
-	check(not plug.held, "E away from the hole puts the plug down")
-	await _ticks(30)
-	var at := plug.global_position
-	check(absf(at.x - player.global_position.x) < 64.0, "it lies by her feet")
 	Input.action_press("rewind")
-	await _ticks(90)
+	await _ticks(60)
+	time.player_interact(player.global_position)
+	check(not valve.held, "E away from the flange puts the valve down, under Shift too")
+	await _ticks(30)
+	var at := valve.global_position
+	check(absf(at.x - player.global_position.x) < 64.0, "it lies by her feet")
+	await _ticks(60)
+	check(valve.global_position.distance_to(at) < 2.0, "under Shift it stays there: %s -> %s" % [at, valve.global_position])
 	Input.action_release("rewind")
-	check(plug.global_position.distance_to(at) < 2.0, "under Shift it stays there: %s -> %s" % [at, plug.global_position])
+	await _ticks(120)
+	check(valve.global_position.distance_to(at) < 2.0, "on the replay it stays there: %s -> %s" % [at, valve.global_position])
 	await _free(room)
 
 
@@ -377,12 +409,12 @@ func test_pipe_numbers_are_checked_in_data() -> void:
 		var bad := data.duplicate(true)
 		(bad["pipe_plug"] as Dictionary)[key] = 0
 		check(not Content.validate_objects(bad, Content.time()).is_empty(), "pipe_plug.%s = 0 must be refused" % key)
-	var good := {"id": "x", "scene": LEVEL_PATH, "prelude_seconds": 1, "title": "x", "objects": {"pipe": {"burst_level": 9000, "door_level": 9800}}}
+	var good := {"id": "x", "scene": LEVEL_PATH, "prelude_seconds": 1, "title": "x", "objects": {"pipe": {"leak_level": 9000, "door_level": 9800}}}
 	check(Content.validate_levels([good], 20.0).is_empty(), "valid pipe levels pass")
 	for bad_level: Variant in [-1, 10001, "high"]:
 		var entry := good.duplicate(true)
-		entry["objects"] = {"pipe": {"burst_level": bad_level}}
-		check(not Content.validate_levels([entry], 20.0).is_empty(), "burst_level %s must be refused" % [bad_level])
+		entry["objects"] = {"pipe": {"leak_level": bad_level}}
+		check(not Content.validate_levels([entry], 20.0).is_empty(), "leak_level %s must be refused" % [bad_level])
 
 
 func _press_button_1(room: Node) -> void:
@@ -391,22 +423,24 @@ func _press_button_1(room: Node) -> void:
 	time.player_interact(room.get_node("Button1").global_position)
 
 
-## Button 1, the burst, then the heroine by the plug on the floor picks it up.
-func _burst_and_pick_up(room: Node) -> void:
+## The heroine takes the handwheel from the empty pool at the start (at the
+## head: no Shift needed in a test), presses button 1 and waits for the gush.
+func _take_valve_and_flood(room: Node) -> void:
 	var time: RoomTime = room.get_node("RoomTime")
-	var pipe: BurstPipe = room.get_node("Pipe")
-	var plug: PipePlug = room.get_node("Plug")
+	var valve: PipePlug = room.get_node("Plug")
+	var pit: Water = room.get_node("Pit")
 	var player: Player = room.get_node("Player")
-	await _press_button_1(room)
-	for i in 400:
-		await _ticks(1)
-		if pipe.burst:
-			break
-	await _ticks(120)
-	player.respawn(Vector2(plug.global_position.x - 10.0, LOW_ROW * CELL))
+	await _ticks(20)
+	player.respawn(Vector2(valve.global_position.x - 20.0, POOL_2_FLOOR_ROW * CELL))
 	await _ticks(10)
 	time.player_interact(player.global_position)
-	await _ticks(5)
+	check(valve.held, "E picks the handwheel up")
+	await _press_button_1(room)
+	for i in 500:
+		await _ticks(1)
+		if pit.level > 4000:
+			break
+	await _ticks(60)
 
 
 ## Where she stands to reach the hole: the edge of the floor over the pit.
