@@ -10,10 +10,8 @@ extends SceneTree
 ## sluice: pool 1 runs into pool 2 until both stand on one line (pool 1's floor
 ## is the full line of pool 2). Right: the floor with button 2 and a tunnel that
 ## dips under the rock between two gates; its water stands to the brim. Button 2
-## starts the tunnel's drain; the pump fails before the tunnel is dry and fills
-## it to the brim again; only then the near gate opens. The far gate is opened
-## by a lever behind bars under the start floor, which only the jet out of the
-## sluice reaches, under Shift, when the heroine is not in its way (D161).
+## starts the tunnel's drain and opens the far gate; the pump fails before the
+## tunnel is dry and fills it to the brim again; only then the near gate opens.
 ## The heroine crosses with Shift held. The numbers live in data/levels.json.
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
@@ -63,17 +61,8 @@ const POOL_2_COLUMNS := Vector2i(16, 26)
 const POOL_2_TOP_ROW := 12
 const POOL_2_FLOOR_ROW := 15
 const POOL_2_FLOAT_COLUMN := 24.0
-## The sluice: on the face of the wall in the middle of pool 1, one cell high.
-## Under Shift the jet flies out of it across pool 1 (D161) while the surface
-## is below it.
-const SLUICE_CELL := Vector2i(14, 10)
-## The niche behind bars under the start floor (columns 3-4, rows 10-11): the
-## lever the jet hits stands on its floor; the heroine's reach stops at the bars.
-const NICHE_CELLS := Rect2i(3, 10, 2, 2)
-const LEVER_COLUMN := 3.6
-## The red-green lamps of the lever: in the niche and over the far gate.
-const NICHE_LAMP := Vector2(4.35, 10.4)
-const GATE_LAMP := Vector2(48.6, 9.5)
+## The sluice: on the face of the wall at the bottom of pool 1, one cell high.
+const SLUICE_CELL := Vector2i(14, 11)
 ## The buttons: on the start floor and on the right floor before the tunnel.
 const BUTTON_1_CELL := Vector2i(3, 9)
 const BUTTON_2_CELL := Vector2i(28, 12)
@@ -148,7 +137,7 @@ func _initialize() -> void:
 	var gate_out: Door = (load("res://objects/door.tscn") as PackedScene).instantiate()
 	gate_out.name = "GateOut"
 	gate_out.object_id = "gate_out"
-	gate_out.linked_id = "lever_jet"
+	gate_out.linked_id = "button_2"
 	_place_gate(root, gate_out, GATE_OUT_COLUMN)
 
 	var ground := WorldGround.new()
@@ -166,39 +155,9 @@ func _initialize() -> void:
 	sluice.position = Vector2(SLUICE_CELL.x * CELL + 16.0, (SLUICE_CELL.y + 0.5) * CELL)
 	_own(root, sluice)
 
-	# The niche, the lever in it, the jet out of the sluice and the lamps that
-	# show the lever (D161): the jet hits the lever only when nothing stands in
-	# its way; the lever opens the far gate of the tunnel.
-	var niche := BarredNiche.new()
-	niche.name = "Niche"
-	niche.size = Vector2(NICHE_CELLS.size * CELL)
-	niche.bars_side = 1
-	niche.position = Vector2(NICHE_CELLS.position * CELL)
-	_own(root, niche)
-	var lever: Lever = (load("res://objects/lever.tscn") as PackedScene).instantiate()
-	lever.name = "LeverJet"
-	lever.object_id = "lever_jet"
-	lever.target_ids = PackedStringArray(["gate_out"])
-	lever.position = Vector2(LEVER_COLUMN * CELL, NICHE_CELLS.end.y * CELL)
-	_own(root, lever)
-	var jet := ReverseJet.new()
-	jet.name = "Jet"
-	jet.water_path = NodePath("../Pool1")
-	jet.lever_path = NodePath("../LeverJet")
-	jet.direction = -1
-	jet.position = Vector2(SLUICE_CELL.x * CELL, (SLUICE_CELL.y + 0.5) * CELL)
-	jet.length_px = float((SLUICE_CELL.x - NICHE_CELLS.end.x) * CELL)
-	_own(root, jet)
-	for at: Vector2 in [NICHE_LAMP, GATE_LAMP]:
-		var lamp := LeverLamp.new()
-		lamp.name = "LeverLamp" if at == NICHE_LAMP else "GateLamp"
-		lamp.lever_path = NodePath("../LeverJet")
-		lamp.position = at * CELL
-		_own(root, lamp)
-
 	var button_1 := _add_button(root, "Button1", "button_1", BUTTON_1_CELL, ["sluice", "pool_1", "pool_2"])
 	_add_sparks(root, button_1, NodePath())
-	var button_2 := _add_button(root, "Button2", "button_2", BUTTON_2_CELL, ["tunnel"])
+	var button_2 := _add_button(root, "Button2", "button_2", BUTTON_2_CELL, ["tunnel", "gate_out"])
 	_add_sparks(root, button_2, NodePath("../../Tunnel"))
 
 	var light := WorldLight.new()

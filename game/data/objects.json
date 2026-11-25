@@ -12,7 +12,6 @@
   "button": {
     "interact_radius_px": 80
   },
-  "reverse_jet": { "speed_px": 900, "push_px_per_second": 40, "thickness_px": 14 },
   "lever": {
     "interact_radius_px": 80
   },
