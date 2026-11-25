@@ -89,7 +89,7 @@ const PIT_DOOR_CELLS := Rect2i(36, 13, 1, 2)
 const PIPE_POINTS := [Vector2(25.55, 14.6), Vector2(25.55, 10.3), Vector2(32.3, 10.3), Vector2(32.3, 10.9)]
 const GAUGE_CELL := Vector2(28.4, 10.3)
 ## The valve's handwheel lies on the bottom of pool 2, short of its float
-## (D171): it can be taken only while the pool is empty.
+## (D175): it can be taken only while the pool is empty.
 const VALVE_CELL := Vector2(20.5, 15.0)
 ## Flights of stairs (`Stairs`, as in level 01), slopes instead of steps (25.11
 ## notes): from the pit's door up to the floor of button 2, and down into the

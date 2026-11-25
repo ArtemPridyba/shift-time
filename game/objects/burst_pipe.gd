@@ -1,7 +1,7 @@
 class_name BurstPipe
 extends Node2D
 ## The pipe from the bottom of pool 2 to the room beyond it (level 02, D169,
-## reworked by D171; the name is from its first version, when the plug burst
+## reworked by D175; the name is from its first version, when the plug burst
 ## out). Its valve is missing from the start: the flange over the pit stands
 ## open, and the yellow handwheel (`PipePlug`) lies on the bottom of the empty
 ## pool 2. While the pool fills, the open pipe shakes and drips; at
@@ -10,7 +10,7 @@ extends Node2D
 ## pool opens it, but only while the valve is on and the pit is dry. So the
 ## heroine takes the handwheel from the empty pool under Shift and puts it on
 ## the flange before the gush, again under Shift; neither cuts the room's
-## history (D171): the world replays its future, and the pit and the door
+## history (D175): the world replays its future, and the pit and the door
 ## follow the valve (`rerecord`), so the pipe holds and the door opens.
 ##
 ## The pipe records nothing of its own; the shaking, the needle, the drips and
@@ -84,7 +84,7 @@ func simulate_tick(_tick: int) -> void:
 		door.powered = plug.seated and pool.level >= door_level and (pit == null or pit.level <= dry_level)
 
 
-## The valve changed while the cursor is left of the head (D171): the pit and
+## The valve changed while the cursor is left of the head (D175): the pit and
 ## the door are simulated again over the recorded future, from the frame
 ## after the cursor to the head, with the pool's recorded levels and the valve
 ## as it is now; their new states are written into those frames. The rest of

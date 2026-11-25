@@ -173,7 +173,7 @@ func rewrite_past(objects: Array, object_id: String) -> bool:
 
 
 ## The live player took or put down an item without changing the room's
-## history (D171): every kept frame gets the item's present state; nothing is
+## history (D175): every kept frame gets the item's present state; nothing is
 ## cut. Returns false when there is no such object.
 func rewrite_all(objects: Array, object_id: String) -> bool:
 	var target := _object(objects, object_id)

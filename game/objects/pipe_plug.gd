@@ -1,6 +1,6 @@
 class_name PipePlug
 extends CharacterBody2D
-## The valve of the pipe in level 02 (D169, D171): a signal-yellow handwheel on
+## The valve of the pipe in level 02 (D169, D175): a signal-yellow handwheel on
 ## a short stem, the part missing from the open flange of a `BurstPipe`. It
 ## lies on the bottom of pool 2 from the start, so the heroine can take it only
 ## while the pool is empty: in the past, under Shift. E picks it up; E near the
@@ -8,7 +8,7 @@ extends CharacterBody2D
 ## that is nearer wins over the drop).
 ##
 ## Taking it, putting it down or putting it on the flange is no interference
-## (D171): the room's history is not cut, so the world keeps the button
+## (D175): the room's history is not cut, so the world keeps the button
 ## presses of its future, even when the valve goes on at frame 0. The valve's
 ## own frames, past and future, are rewritten to its new state (`rewrite_all`),
 ## so under Shift it never jumps; only the pit and the door depend on it, and

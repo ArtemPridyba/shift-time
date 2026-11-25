@@ -15,6 +15,16 @@
 		{ "actions": ["interact"], "ticks": 6 },
 		{ "actions": ["move_left"], "ticks": 20 },
 		{ "actions": [], "ticks": 230 },
-		{ "actions": ["move_right"], "ticks": 200 }
+		{ "actions": ["move_right"], "ticks": 215 },
+		{ "actions": ["interact"], "ticks": 6 },
+		{ "actions": [], "ticks": 4 },
+		{ "actions": ["use_item"], "ticks": 30 },
+		{ "actions": [], "ticks": 4 },
+		{ "actions": ["move_right"], "ticks": 300 },
+		{ "actions": [], "ticks": 4 },
+		{ "actions": ["rewind"], "ticks": 20 },
+		{ "actions": ["rewind", "use_item"], "ticks": 12 },
+		{ "actions": [], "ticks": 200 },
+		{ "actions": ["move_right"], "ticks": 150 }
 	]
 }

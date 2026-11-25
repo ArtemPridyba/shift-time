@@ -7,7 +7,7 @@ extends RefCounted
 ## floods the tunnel again, and only then the near gate opens, so the tunnel is
 ## crossed only with Shift. The solutions (with Shift, without it, swimming the
 ## flooded tunnel, running in during the drain) are in `tests/solutions/` and
-## run by test_solutions.gd. Between the pools and the tunnel (D169, D171):
+## run by test_solutions.gd. Between the pools and the tunnel (D169, D175):
 ## the pipe from pool 2 has no valve, so the full pool gushes into the pit;
 ## the heroine takes the handwheel from the empty pool under Shift, carries it
 ## back to before the gush and puts it on, and the pressure opens the door at
@@ -241,7 +241,7 @@ func test_water_with_a_failing_pump_turns_and_restores() -> void:
 	plain.free()
 
 
-# --- the pipe and its valve (D169, D171) ------------------------------------------
+# --- the pipe and its valve (D169, D175) ------------------------------------------
 
 ## The valve is missing from the start: the open pipe shakes while pool 2
 ## fills, then gushes into the pit; the door stays shut and the gauge low.
@@ -268,7 +268,7 @@ func test_level_02_the_open_pipe_floods_the_pit() -> void:
 	await _free(room)
 
 
-## Taking the handwheel under Shift is no interference (D171): the world keeps
+## Taking the handwheel under Shift is no interference (D175): the world keeps
 ## the press of button 1, and on release pool 2 fills again with the wheel in
 ## her hands.
 func test_level_02_taking_the_valve_under_shift_keeps_the_history() -> void:
@@ -332,7 +332,7 @@ func test_level_02_the_valve_carried_into_the_past_holds() -> void:
 
 
 ## Artem's playtest (25.11): Shift held all the way to frame 0, before the
-## press of button 1, and the valve put on there. That cuts nothing (D171):
+## press of button 1, and the valve put on there. That cuts nothing (D175):
 ## the world replays the press, pool 2 fills, the pipe holds, the door opens.
 func test_level_02_the_valve_put_on_at_frame_0_keeps_the_press() -> void:
 	var room := await _load(LEVEL_PATH)

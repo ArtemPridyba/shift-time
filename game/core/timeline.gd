@@ -206,7 +206,7 @@ func replace_current(frame: Dictionary) -> bool:
 
 ## Writes `state` as the state of `object_id` in every kept frame, past and
 ## future. Used when the live player takes or puts down an item nothing else
-## depends on (the valve of level 02, D171): the room's history stays, only
+## depends on (the valve of level 02, D175): the room's history stays, only
 ## the item's own frames change, so it never jumps under Shift or on a replay.
 func rewrite_all(object_id: String, state: Dictionary) -> void:
 	if is_empty():
@@ -219,7 +219,7 @@ func rewrite_all(object_id: String, state: Dictionary) -> void:
 ## Writes `state` as the state of `object_id` in kept frame `number` only.
 ## Used when what depends on an item is re-derived along the recorded future
 ## without cutting the room's history (the pit and the door under the valve of
-## level 02, D171). Returns false outside the kept frames.
+## level 02, D175). Returns false outside the kept frames.
 func write_at(number: int, object_id: String, state: Dictionary) -> bool:
 	if number < _first or number > _head:
 		return false

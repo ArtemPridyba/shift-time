@@ -189,7 +189,7 @@ func player_interact(player_pos: Vector2) -> void:
 			world.rewrite_past(temporal_objects(), id)
 
 
-## A change that is no interference (`rewrite_all`, D171): `partial` is merged
+## A change that is no interference (`rewrite_all`, D175): `partial` is merged
 ## over the object's present state, and that state is written into all its
 ## frames, past and future; the room's history is not cut.
 func _set_without_branch(id: String, partial: Dictionary) -> void:
