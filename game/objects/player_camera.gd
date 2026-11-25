@@ -6,7 +6,9 @@ extends Camera2D
 ## player sets how close with the mouse wheel or the = and - keys (D95,
 ## 21.11.2026): from the whole room on the screen to `zoom_max` of
 ## `data/camera.json`; a level starts at `zoom`, and the choice is kept for the
-## next levels while the game is open. Presentation only: it changes nothing in
+## next levels while the game is open. While she rides the minecart of level
+## 04 (D168) it pulls back by `ride_zoom` and looks `ride_lead_px` ahead along
+## the ride, so the next switch shows early. Presentation only: it changes nothing in
 ## the world and nothing is recorded.
 
 
@@ -117,11 +119,16 @@ func _physics_process(delta: float) -> void:
 			_start_left = 0.0
 	var want := 1.0 if _start_left > 0.0 or Input.is_action_pressed("overview") else 0.0
 	_view = move_toward(_view, want, delta / _number("overview_blend_seconds", 0.7))
-	_shown = CameraView.ease_zoom(_shown, _chosen, _number("zoom_speed", 10.0), delta)
+	var ride: Dictionary = player.call("ride_view") if player != null and player.has_method("ride_view") else {}
+	var want_zoom := _chosen * (_number("ride_zoom", 1.0) if not ride.is_empty() else 1.0)
+	_shown = CameraView.ease_zoom(_shown, _clamped(want_zoom), _number("zoom_speed", 10.0), delta)
 	var facing := 1.0
 	if player != null and player.has_method("facing"):
 		facing = float(player.call("facing"))
 	var target := facing * _number("lead_px", 140.0)
+	if not ride.is_empty():
+		var motion: Vector2 = ride.get("direction", Vector2.ZERO)
+		target = signf(motion.x) * _number("ride_lead_px", 360.0) if absf(motion.x) > 0.3 else _lead
 	_lead = lerpf(_lead, target, 1.0 - exp(-_number("lead_speed", 2.5) * delta))
 	_apply()
 
