@@ -700,8 +700,10 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 const LOOK_PIPE_COLORS: Array[String] = ["shell", "shell_light", "empty", "water", "dash"]
 const LOOK_KIT_OBJECTS := {
 	"shutter": ["blade_region", "painted_blade_region", "stripe_region", "housing_frame_px", "brick_tint", "wheel_px", "wheel_turns", "gear_px"],
-	"picture_light": ["dark", "lit_color", "lit_gain", "haze_color", "haze", "soft_px"],
-	"platform": ["cap_px", "rack_px", "chain_px", "gear_px", "track_above_px", "track_below_px", "chain_below_px"],
+	"picture_light": ["dark", "lit_color", "lit_gain", "haze_color", "haze", "soft_px", "yellow_keep"],
+	"platform": ["cap_px", "rack_px", "chain_px", "gear_px", "track_above_px", "track_below_px", "chain_below_px",
+		"deck_top_px", "trolley_at", "wheel_px", "wheel_left_at", "wheel_right_at", "frame_at", "frame_gear_px",
+		"frame_gear_top_at", "frame_gear_bottom_at"],
 	"exit_door": ["height_px", "open_distance_px", "floor_tolerance_px", "wheel_px", "wheel_turns",
 		"wheel_seconds", "out_seconds", "out_px", "slide_seconds", "rail_px", "light", "light_energy", "light_radius_px"],
 	"clock": ["diameter_px", "minute_turn_seconds", "start_minutes"],
@@ -761,7 +763,8 @@ static func validate_look(data: Variant) -> PackedStringArray:
 
 ## The objects of a level dressed from the kit (task Д4): every object of
 ## LOOK_KIT_OBJECTS with its keys; `*_region` are [x, y, w, h] of a picture,
-## strings are colours, other numbers are above 0 (`start_minutes` from 0).
+## `*_at` are [x, y] (any sign), strings are colours, other numbers are
+## above 0 (`start_minutes`, `soft_px`, `haze`, `yellow_keep` from 0).
 static func validate_kit_objects(objects: Variant) -> PackedStringArray:
 	var errors := PackedStringArray()
 	if not objects is Dictionary:
@@ -780,7 +783,13 @@ static func validate_kit_objects(objects: Variant) -> PackedStringArray:
 			var value: Variant = one[key]
 			if key.begins_with("_"):
 				continue
-			if key.ends_with("_region"):
+			if key.ends_with("_at"):
+				var at_ok: bool = value is Array and value.size() == 2
+				for n: Variant in (value if value is Array else []):
+					at_ok = at_ok and _is_number(n)
+				if not at_ok:
+					errors.append("%s: '%s' must be [x, y], two numbers" % [where, key])
+			elif key.ends_with("_region"):
 				var ok: bool = value is Array and value.size() == 4
 				for n: Variant in (value if value is Array else []):
 					ok = ok and _is_number(n) and float(n) >= 0.0
@@ -789,7 +798,7 @@ static func validate_kit_objects(objects: Variant) -> PackedStringArray:
 			elif value is String:
 				if not Color.html_is_valid(value):
 					errors.append("%s: '%s' must be a color like \"#9fd0ff\"" % [where, key])
-			elif not _is_number(value) or float(value) < 0.0 or (float(value) == 0.0 and not key in ["start_minutes", "soft_px", "haze"]):
+			elif not _is_number(value) or float(value) < 0.0 or (float(value) == 0.0 and not key in ["start_minutes", "soft_px", "haze", "yellow_keep"]):
 				errors.append("%s: '%s' must be a number above 0" % [where, key])
 	return errors
 
