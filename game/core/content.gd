@@ -14,6 +14,9 @@ const TIME_HUD_PATH := "res://data/time_hud.json"
 const ART_PATH := "res://data/art.json"
 const LOOK_PATH := "res://data/look.json"
 const CAMERA_PATH := "res://data/camera.json"
+const MENU_PATH := "res://data/menu.json"
+## Texts of the menu buttons (`menu.json`, `buttons`).
+const MENU_BUTTONS: Array[String] = ["start", "continue", "levels", "quit", "back", "resume", "restart", "main_menu", "passed"]
 ## Numbers of `camera.json` (D83), each above 0.
 const CAMERA_KEYS := ["zoom", "zoom_max", "zoom_step", "zoom_speed", "lead_px", "lead_speed", "follow_speed", "overview_start_seconds", "overview_blend_seconds", "feet_screen_y"]
 ## Colour roles every palette in `art.json` must give, each as a ramp from dark to light.
@@ -202,6 +205,11 @@ static func level_for_scene(scene_path: String) -> Dictionary:
 
 
 ## The levels of the level list.
+static func menu() -> Dictionary:
+	var data: Variant = load_json(MENU_PATH)
+	return data if data is Dictionary else {}
+
+
 static func levels() -> Array:
 	var data: Variant = load_json(LEVELS_PATH)
 	return data if data is Array else []
@@ -234,6 +242,56 @@ static func validate() -> PackedStringArray:
 	errors.append_array(validate_look(load_json(LOOK_PATH)))
 	errors.append_array(HeroineData.validate(load_json(HeroineData.PATH)))
 	errors.append_array(validate_camera(load_json(CAMERA_PATH)))
+	errors.append_array(validate_menu(load_json(MENU_PATH)))
+	return errors
+
+
+## The menu, transitions, pause and final screen (`menu.json`, tasks 4.2, 4.3).
+static func validate_menu(data: Variant) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not data is Dictionary:
+		errors.append("menu.json: expected an object")
+		return errors
+	var menu_data := data as Dictionary
+	for key in ["title", "pause_title"]:
+		if not menu_data.get(key) is String or str(menu_data[key]).is_empty():
+			errors.append("menu.json: '%s' must be a non-empty text" % key)
+	var picture: Variant = menu_data.get("background")
+	if not picture is String or not ResourceLoader.exists(str(picture)):
+		errors.append("menu.json: 'background' must point to a picture of the game, got '%s'" % [picture])
+	var dim: Variant = menu_data.get("dim")
+	if not _is_number(dim) or float(dim) < 0.0 or float(dim) > 1.0:
+		errors.append("menu.json: 'dim' must be a number from 0 to 1")
+	for key in ["fade_seconds", "title_card_seconds"]:
+		var value: Variant = menu_data.get(key)
+		if not _is_number(value) or float(value) <= 0.0 or float(value) > 5.0:
+			errors.append("menu.json: '%s' must be a number above 0 and at most 5" % key)
+	for key in ["unlock_in_order", "pause_on_focus_loss"]:
+		if not menu_data.get(key) is bool:
+			errors.append("menu.json: '%s' must be true or false" % key)
+	var buttons: Variant = menu_data.get("buttons")
+	if not buttons is Dictionary:
+		errors.append("menu.json: missing section 'buttons'")
+	else:
+		for key in MENU_BUTTONS:
+			var text: Variant = (buttons as Dictionary).get(key)
+			if not text is String or str(text).is_empty():
+				errors.append("menu.json: 'buttons.%s' must be a non-empty text" % key)
+	var final: Variant = menu_data.get("final")
+	if not final is Dictionary:
+		errors.append("menu.json: missing section 'final'")
+	else:
+		var heading: Variant = (final as Dictionary).get("heading")
+		if not heading is String or str(heading).is_empty():
+			errors.append("menu.json: 'final.heading' must be a non-empty text")
+		var lines: Variant = (final as Dictionary).get("lines")
+		if not lines is Array:
+			errors.append("menu.json: 'final.lines' must be a list of texts")
+		else:
+			for line: Variant in lines:
+				if not line is String:
+					errors.append("menu.json: 'final.lines' must hold only texts")
+					break
 	return errors
 
 
