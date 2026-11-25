@@ -33,6 +33,10 @@ const FLAME_SHADER := preload("res://objects/wood_flame.gdshader")
 ## The zone's size in pixels; the node is its centre.
 @export var size := Vector2(256, 32)
 @export_enum("Whole:0", "Burning:1", "Burnt:2") var start_phase := 0
+## The object_id of the zone before this one in a chain of fire (level 03,
+## D155): this zone catches once that one has burnt `spread_seconds`, unless
+## it is wet. Empty: no chain.
+@export var spread_from := ""
 
 var burn: WoodBurn
 ## The frame on which the fire was last put out, for the steam; -1 never.
@@ -60,6 +64,7 @@ var _behind: Node2D
 var _front: Node2D
 ## The world tick the look is drawn at.
 var _clock := 0
+var _previous: WoodZone
 
 
 func _init() -> void:
@@ -97,10 +102,13 @@ func _ready() -> void:
 
 
 ## Per-level settings from `objects` of the level's entry: `burn_seconds`
-## overrides objects.json for this zone (real seconds, like all fire).
+## overrides objects.json for this zone (real seconds, like all fire), and so
+## does `spread_seconds`: how long it burns before the next zone catches.
 func apply_settings(settings: Dictionary) -> void:
 	if settings.has("burn_seconds"):
 		burn.burn_ticks = maxi(int(round(float(settings["burn_seconds"]) * _per_second)), 1)
+	if settings.has("spread_seconds"):
+		burn.spread_ticks = maxi(int(round(float(settings["spread_seconds"]) * _per_second)), 1)
 
 
 func capture_state() -> Dictionary:
@@ -116,12 +124,32 @@ func restore_state(state: Dictionary) -> void:
 
 
 func simulate_tick(tick: int) -> void:
-	match burn.tick(is_wet()):
+	var wet := is_wet()
+	match burn.tick(wet):
 		WoodBurn.Event.DOUSED:
 			doused = tick
 		WoodBurn.Event.BURNT_OUT:
 			burnt = tick
+	var previous := previous_zone()
+	if previous != null and burn.catches_from(previous.burn, wet):
+		burn.ignite()
 	_apply()
+
+
+## The zone this one catches from (`spread_from`), in the same room; null
+## when there is none.
+func previous_zone() -> WoodZone:
+	if spread_from == "" or not is_inside_tree():
+		return null
+	if _previous != null and is_instance_valid(_previous) and _previous.object_id == spread_from:
+		return _previous
+	_previous = null
+	var room := get_parent()
+	for node in get_tree().get_nodes_in_group("flammable"):
+		if node is WoodZone and room.is_ancestor_of(node) and (node as WoodZone).object_id == spread_from:
+			_previous = node as WoodZone
+			break
+	return _previous
 
 
 func on_time_direction_changed(direction: int) -> void:
@@ -141,6 +169,15 @@ func on_world_tick(tick: int, _recorded: bool) -> void:
 	if tick != _clock:
 		_clock = tick
 		_update_look()
+
+
+## Sets a whole zone burning at the head (a torch thrust into it keeps it
+## burning, level 03). Returns false when there is nothing to light.
+func catch_fire() -> bool:
+	if not burn.ignite():
+		return false
+	_apply()
+	return true
 
 
 ## The state a live source writes to light the zone; empty when it cannot burn.

@@ -74,7 +74,7 @@ const LEVER_KEYS: Array[String] = ["interact_radius_px"]
 const LAMP_KEYS: Array[String] = ["break_seconds", "fall_seconds", "shatter_seconds", "fall_distance_px", "flash_seconds", "flash_radius_px", "light_radius_px"]
 const DARKNESS_KEYS: Array[String] = ["ambient", "player_outline_alpha"]
 ## Fire (task 2.7): wood zones, the steam of a doused fire, the reverse flamethrower.
-const WOOD_KEYS: Array[String] = ["burn_seconds", "flame_px", "flame_side_px"]
+const WOOD_KEYS: Array[String] = ["burn_seconds", "spread_seconds", "flame_px", "flame_side_px"]
 ## The look of fire (decoration, task 2.7А): all numbers above 0.
 const FIRE_LOOK_KEYS: Array[String] = [
 	"ignite_seconds", "fade_seconds", "flame_rise_px", "sparks", "spark_rise_px", "spark_seconds",
@@ -84,6 +84,8 @@ const FIRE_LOOK_KEYS: Array[String] = [
 ## The sprinkler pipe of level 03 (D104): rain that puts burning wood out.
 const SPRINKLER_KEYS: Array[String] = ["spin_up_seconds", "nozzle_spacing_px", "drop_speed_px", "drops_per_nozzle"]
 const STEAM_KEYS: Array[String] = ["seconds", "puffs", "rise_px", "radius_px"]
+## The torch of level 03 (D155): an item that carries fire from the past.
+const TORCH_KEYS: Array[String] = ["interact_radius_px", "reach_px", "follow_px", "gravity", "max_fall_speed"]
 const FLAMETHROWER_KEYS: Array[String] = ["interact_radius_px", "reach_px", "jet_px", "follow_px", "gravity", "max_fall_speed"]
 ## Every window in which the player must act is at least this long (design rules).
 const MIN_WINDOW_SECONDS := 3.0
@@ -540,7 +542,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	# 10000 is Water.LEVEL_MAX (core/ does not refer to objects/).
 	if 10000.0 / (float(data["water"]["full_seconds"]) * ticks) > max_step:
 		errors.append("objects.json: 'water.full_seconds' is too short: the level would jump more than max_state_step per tick")
-	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS]]:
+	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS]]:
 		var isec := interact_section as Array
 		var isec_name: String = isec[0]
 		var ientry: Variant = data.get(isec_name)
@@ -574,6 +576,9 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 				errors.append("objects.json: 'flamethrower.%s' moves more than max_state_step per tick" % key)
 		if float(thrower["max_fall_speed"]) / real_ticks > max_step:
 			errors.append("objects.json: 'flamethrower.max_fall_speed' moves more than max_state_step per tick")
+		var torch: Dictionary = data["torch"]
+		if float(torch["follow_px"]) > max_step or float(torch["max_fall_speed"]) / real_ticks > max_step:
+			errors.append("objects.json: 'torch.follow_px' and 'torch.max_fall_speed' must move at most max_state_step per tick")
 		var dark: Variant = data.get("darkness")
 		if not dark is Dictionary:
 			errors.append("objects.json: missing object 'darkness'")
