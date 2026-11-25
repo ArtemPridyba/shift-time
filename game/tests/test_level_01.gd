@@ -278,7 +278,15 @@ func test_level_01_stairs_are_walked_down_and_up_without_a_jump() -> void:
 		Input.action_release(action)
 		check(ticks < 4 * 60, "%s: she gets across the stairs in time, at x %.0f" % [action, player.global_position.x])
 		check(off_floor <= 2, "%s: she keeps to the stairs, %d ticks off the floor" % [action, off_floor])
-		check(worst < 16.0, "%s: her feet stay on the slope, %.1f px at most" % [action, worst])
+		# Her box rests on the slope by its uphill corner: over the steepest
+		# part of the flight (the rubble at its foot, 25.11) her middle is half
+		# her width times that slope above it.
+		var steepest := 0.0
+		for i in range(1, stairs.profile.size()):
+			var a := stairs.profile[i - 1]
+			var b := stairs.profile[i]
+			steepest = maxf(steepest, absf(b.y - a.y) / maxf(b.x - a.x, 0.001))
+		check(worst < 22.0 * steepest + 2.0, "%s: her feet stay on the slope, %.1f px at most" % [action, worst])
 	check(player.is_on_floor() and absf(player.global_position.y - stairs.surface_y(player.global_position.x)) < 16.0, "back up, she stands on the top of the flight, at %s, the slope at %.1f" % [player.global_position, stairs.surface_y(player.global_position.x)])
 	await _free(room)
 
@@ -869,4 +877,22 @@ func test_level_01_objects_take_the_pictures_light() -> void:
 	await _ticks(2)
 	check(light.get_shader_parameter("lamp_shine") == painted.picture.material.get_shader_parameter("lamp_shine"),
 			"and they shine as the picture's do")
+	await _free(room)
+
+
+## 25.11 notes: at its foot the painted flight is steeper (rubble); the slope
+## follows it as a broken line from the top of the flight to the pit floor.
+func test_level_01_stairs_follow_the_painted_rubble() -> void:
+	var room := await _load()
+	var stairs: Stairs = room.get_node("Stairs")
+	var r := stairs.rect_px()
+	check(stairs.profile.size() >= 3, "the flight of level 01 is a broken line")
+	check(stairs.profile[0].is_equal_approx(r.position) and stairs.profile[stairs.profile.size() - 1].is_equal_approx(r.end),
+			"it runs from the flight's top-left corner to its bottom-right one")
+	var shape := stairs.get_node("Slope") as CollisionPolygon2D
+	check(Geometry2D.decompose_polygon_in_convex(shape.polygon).size() > 0, "its solid part is a valid polygon")
+	for x in [600.0, 760.0, 900.0, 980.0]:
+		check(stairs.tread_y(x) >= stairs.surface_y(stairs.rect_px().position.x) and stairs.tread_y(x) <= r.end.y,
+				"the tread at %.0f lies on the flight" % x)
+	check(stairs.surface_y(950.0) > 920.0, "near its foot the slope is down at the painted rubble: %.1f" % stairs.surface_y(950.0))
 	await _free(room)

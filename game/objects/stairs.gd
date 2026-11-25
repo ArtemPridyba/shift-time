@@ -13,6 +13,11 @@ extends StaticBody2D
 @export var cells := Rect2i()
 ## True: the top is on the left and it goes down to the right ('\').
 @export var descends_right := true
+## The slope's surface as a broken line in room px, from the flight's left
+## edge to its right one, when a painted flight is not straight (level 01: the
+## rubble at its foot is steeper, 25.11 notes); empty: the straight slope
+## between the rect's corners.
+@export var profile := PackedVector2Array()
 
 var _world: Dictionary
 ## True when the level's picture draws the flight (D131).
@@ -35,6 +40,12 @@ func _ready() -> void:
 ## The solid part in room pixels: the triangle under the slope.
 func slope_polygon() -> PackedVector2Array:
 	var r := rect_px()
+	if profile.size() >= 2:
+		var points := profile.duplicate()
+		for corner: Vector2 in [Vector2(profile[profile.size() - 1].x, r.end.y), Vector2(profile[0].x, r.end.y)]:
+			if not corner.is_equal_approx(points[points.size() - 1]) and not corner.is_equal_approx(points[0]):
+				points.append(corner)
+		return points
 	if descends_right:
 		return PackedVector2Array([r.position, r.end, Vector2(r.position.x, r.end.y)])
 	return PackedVector2Array([Vector2(r.end.x, r.position.y), Vector2(r.position.x, r.end.y), r.end])
@@ -46,6 +57,15 @@ func rect_px() -> Rect2:
 
 ## The height of the slope at room x (its top surface), clamped to the flight.
 func surface_y(x: float) -> float:
+	if profile.size() >= 2:
+		if x <= profile[0].x:
+			return profile[0].y
+		for i in range(1, profile.size()):
+			if x <= profile[i].x:
+				var a := profile[i - 1]
+				var b := profile[i]
+				return lerpf(a.y, b.y, (x - a.x) / maxf(b.x - a.x, 0.001))
+		return profile[profile.size() - 1].y
 	var r := rect_px()
 	var k := clampf((x - r.position.x) / maxf(r.size.x, 1.0), 0.0, 1.0)
 	return r.position.y + r.size.y * (k if descends_right else 1.0 - k)
@@ -65,7 +85,8 @@ func holds_feet(at: Vector2, half_width: float) -> bool:
 
 ## The top of the tread at room x, where her soles stand (D120): steps of
 ## `tread_px` across, each level with the slope at its middle, as `_draw`
-## draws them; left and right of the flight, the floor at its ends.
+## draws them (with a `profile`, the broken slope at its middle); left and
+## right of the flight, the floor at its ends.
 func tread_y(x: float) -> float:
 	var r := rect_px()
 	if x < r.position.x:
@@ -74,8 +95,7 @@ func tread_y(x: float) -> float:
 		return r.end.y if descends_right else r.position.y
 	var n := step_count()
 	var column := mini(int(floor((x - r.position.x) / tread_px())), n - 1)
-	var from_top := column if descends_right else n - 1 - column
-	return r.position.y + r.size.y / float(n) * (float(from_top) + 0.5)
+	return surface_y(r.position.x + tread_px() * (float(column) + 0.5))
 
 
 ## The middle of every tread across, room x plus `offset_x` (the node's x in
