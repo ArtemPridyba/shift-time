@@ -258,23 +258,51 @@ Request N-12: things the player uses. Separate pieces on one sheet with wide emp
 Request N-13: the staircase into the pit. A broken brick staircase going down from left to right, seen exactly from the side like a technical drawing, flat even light, on flat green #00FF00. About 20 steps run in a straight line from the top left corner of the picture to the bottom right corner, the slope about 3 high to 5 across. Steps of worn sooty red brick with a riveted iron angle on the edge of each step; a few steps chipped, a few loose bricks lying on them. Under the steps, the side of the staircase: brick down to the bottom edge of the picture, darker than the steps. Above the steps: flat green only. Only the staircase, nothing else.
 ```
 
-### Н-14. Платформа под фон комнаты (24–25.11.2026)
+### Н-14. Платформы-машины (24–25.11.2026, версия 2)
 
-**Зачем.** Платформы уровня 01 — старая доска Н-7: тонкая тёмная сталь, на фоне картинки Ф-1 она чужая (замечания Бориса 24–25.11, `docs/levels/01.md`). Образец того, как должно быть, — `docs/art/gemini/ref_platforms.jpg` (Борис, 25.11): толстые плиты, виден их верх, ржавая сталь в цвет комнаты. Такие и просим.
+**Что было.** Первая попытка — [raw/n14_platforms_v1.png](gemini/raw/n14_platforms_v1.png). Настил хороший: толстый, ржавый, верх видно, жёлтая кромка. Остальное не подошло к нашей комнате (Борис, 25.11; примерка в игре — в чате):
+- две платформы в конце поездки стоят вплотную (D136), а их низ разный, и под стыком получается некрасивый треугольник;
+- лифт Б едет по нарисованной колонне шириной в треть настила, а его каретка с шестерёнкой крошечная и колонну не обхватывает;
+- тележку А тянет цепь балки, а у неё снизу колёса, которые висят в воздухе (колёса Борису в целом нравятся — пусть будут, но катятся по цепи).
 
-**Размер в игре.** Платформа — 2 клетки в ширину (128 px), картинка ляжет на неё с её пропорцией: толщина плиты около четверти её длины (4:1, у Н-7 было 6:1 — слишком тонко). Героиня стоит на середине верха плиты. Колонну и балку с цепью, по которым платформы ездят, рисует фон комнаты; шестерню под плитой и свет ламп добавит игра (D153).
+**Что приложить, по порядку:**
+1. `docs/art/gemini/raw/n14_platforms_v1.png` — прошлая попытка: «настил оставить, низ переделать».
+2. `docs/art/gemini/ref_platforms_place.jpg` — кадр из игры с подписями: где тележка А и лифт Б, где цепь балки, где колонна, где они стыкуются (старые тонкие доски там показывают место и длину настила).
+3. `docs/art/gemini/ref_platforms.jpg` — стиль и цвет комнаты.
 
-**Что приложить:** одну картинку — `docs/art/gemini/ref_platforms.jpg`.
-
-**Запрос Н-14:**
+**Запрос Н-14 v2:**
 
 ```text
-Request N-14: one moving platform for this game, cut out. Paint ONE platform exactly like the two platforms in the attached picture (the slab in the middle of the hall and the one beside the column on the right): the same painted style, the same thick rusty steel slab, the same colours, rust and light. Show it alone, in the middle of the picture, on flat green #00FF00, with wide empty green all around it and no shadow on the green. Proportions: about 4 times as long as it is thick, clearly thicker than a thin plank. Seen from the side with a slight look from above, like the floors in the attached picture: the flat top surface visible as a lit strip across the upper third, riveted rusty red-brown steel; below it the front face, a darker riveted steel beam. Both ends finished, not cut. Nothing else in the picture: no column, no chain, no wall, no heroine.
+Request N-14 v2: the two moving platforms again, fitted to the place where they work. Three pictures are attached.
+
+PICTURE 1 is your previous attempt. Keep the two decks exactly as they are: the thick riveted rusty deck, its visible top, the worn signal-yellow edge, the same size and colours. Redo everything under and behind the decks.
+
+PICTURE 2 is the real place in the game, with labels. The heroine rides these machines to cross a pit in a dark red-brick factory hall. Platform A is pulled left and right by the CHAIN of the horizontal beam, which runs just under the bottom of the deck. Platform B rides up and down the TOOTHED COLUMN standing behind it; the column is about one third as wide as the deck and B's deck is centred on it. At the end of the ride A and B stand side by side, deck against deck, at the same height, and the heroine walks from one onto the other. The two thin yellow outlines show where the decks are and how long they are.
+
+PICTURE 3 shows the painted style, light and colours of the hall; match it.
+
+Rules for both platforms, so they fit together:
+- Both decks are exactly the same length and thickness, their tops at the same height.
+- Their ends are cut square and flat, with nothing sticking out past the ends: no hooks, no chains, no brackets at the ends. Put side by side they form one even bridge with no gap and no step.
+- Under each deck the same straight riveted girder runs along the whole deck, ends square too, so the undersides also meet flush when they stand side by side. Everything else hangs only under the middle of the deck, and no deeper than the deck is thick, so there are no empty triangles at the joint.
+
+Platform A, the chain trolley: under the middle of its girder, a compact steel carriage that rides ON the chain: two grooved wheels that roll along the chain and a clamp that grips the chain between them. The wheels sit on the chain line, not in the air. Seen from the side.
+
+Platform B, the rack lift: at the middle of the back of its deck, a tall steel sleeve carriage as wide as the column in picture 2, wrapped around the column, the column itself not painted (leave the column's place inside the sleeve empty green). On the sleeve, two toothed pinion gears, one near the top and one near the bottom, big enough to mesh the column's teeth, plus guide shoes. Its size must match the column: big, not a tiny box.
+
+Also separately, each alone, seen straight from the side as a perfect circle: the grooved wheel of A, and the pinion gear of B. The game turns them.
+
+On flat green #00FF00, all pieces apart with wide empty green between them, no shadows on the green, nothing else: no column, no chain, no beam, no wall, no heroine, no text.
 ```
 
-**Если не то:** плита тонкая — «make the slab twice as thick, about 4 times as long as it is thick»; верх не виден — «show more of the top surface, as if seen a little more from above»; другой цвет — «match the colours of the platforms in the attached picture exactly».
+**Если не то:**
+- концы снова торчат — «nothing past the ends of the decks: the ends are flat, two decks side by side touch along their whole height»;
+- низ разный — «both decks have the same straight girder under them along their whole length»;
+- каретка Б маленькая — «make B's sleeve as wide as the column in picture 2, it wraps around the column»;
+- колёса А в воздухе — «A's wheels roll on the chain, which runs just under the deck, as in picture 2»;
+- перерисовал настил — «keep the decks exactly as in picture 1».
 
-**Куда положить:** `docs/art/gemini/raw/n14_platform.jpg`. Вставит следующий чат (О): допишет деталь `platform` в `tools/cut_kit.py` на эту картинку, вырежет её и подберёт высоту плиты в игре.
+**Куда положить:** `docs/art/gemini/raw/n14_platforms_v2.png` (или `.jpg`). Перед вставкой — примерка в кадре игры, как с первой попыткой. Вставит следующий чат (О): детали в `tools/cut_kit.py` (настилы А и Б, колесо, шестерня), платформы уровня 01 вместо доски Н-7 и шестерни кода, колёса и шестерни крутятся по ходу.
 
 ## 5. Проверка и правки
 
