@@ -11,8 +11,10 @@ extends RefCounted
 ## Act 2, from the heroine's step onto the crane (`ride`, ticks since that
 ## step, -1 before it): the second quake, the crane breaks loose and rides down
 ## its sloping rail; the lamps over the rail fall as it passes under them.
-## Act 3, from the crane's arrival at the end of the rail: the third quake, the
-## crane sags and falls, the ceiling comes down in chunks, lamps fall among
+## Act 3, from the crane's arrival at the end of the rail (or earlier, from the
+## point `blast_way` of its ride, D171: then the crane rides on through act 3's
+## slowed world and reaches the end later): the third quake, the crane sags
+## and falls once it is at the end, the ceiling comes down in chunks, lamps fall among
 ## them still shining, an explosion flares up in the background (`blast`), and
 ## for a while the world runs slow. Act 3 is counted on a slowed clock:
 ## `slow_ticks` turns real ticks since the arrival into ticks of the world. The
@@ -36,7 +38,8 @@ extends RefCounted
 ##       "to_row", "fall_seconds" (absent: the kit's), "lit": shines on its
 ##       way down}] lamps that fall on their own;
 ##   "crane": {"delay_seconds" from the step to setting off, "speed" px per
-##       world second, "lamps": [lamps over the rail], "lamp_lead_px",
+##       world second, "blast_way": where along its rail (0 … 1, default 1,
+##       its arrival) act 3 begins, "lamps": [lamps over the rail], "lamp_lead_px",
 ##       "lamp_to_row", "sag_seconds", "sag_px", "tilt_degrees",
 ##       "fall_second" after act 3's quake, "fall_seconds"};
 ##   "slow": {"from_seconds" after act 3's quake, "ease_seconds", "tempo",
@@ -76,6 +79,16 @@ var sag_px := 0.0
 var tilt_degrees := 0.0
 var crane_fall_at := 0
 var crane_fall_ticks := 1
+## Where along its rail the crane is when act 3 begins: 1 at its arrival.
+var blast_way := 1.0
+## The ride tick on which act 3 begins and the one on which the crane reaches
+## the end of its rail, both with no brake and no calm (set by `aim`).
+var act3_at := 1
+var _arrive := 1
+## The pedal (D171): the ride tick on which the crane was put on its brake, -1
+## before: from there it stays where it was, whatever the world does. `Collapse`
+## sets it from its recorded state, like `calm`.
+var brake := -1
 ## The slow part of act 3, in real ticks since the crane's arrival.
 var slow_from := 0
 var slow_ease := 1
@@ -130,6 +143,7 @@ static func from_data(data: Variant, ticks_per_second: float, quake: Dictionary,
 	plan.tilt_degrees = float(crane.get("tilt_degrees", 0.0))
 	plan.crane_fall_at = ticks.call(crane.get("fall_second", 1.0))
 	plan.crane_fall_ticks = maxi(ticks.call(crane.get("fall_seconds", 1.0)), 1)
+	plan.blast_way = clampf(float(crane.get("blast_way", 1.0)), 0.0, 1.0)
 	var slow: Dictionary = d.get("slow", {}) if d.get("slow", {}) is Dictionary else {}
 	plan.slow_from = ticks.call(slow.get("from_seconds", 0.0))
 	plan.slow_ease = maxi(ticks.call(slow.get("ease_seconds", 0.5)), 1)
@@ -160,18 +174,34 @@ static func from_data(data: Variant, ticks_per_second: float, quake: Dictionary,
 ## Aims the crane: it rides `travel_px` pixels from `start_x` (its middle);
 ## `lamp_x` are the x of every lamp of the world.
 func aim(start_x: float, travel: Vector2, lamp_x: Array) -> void:
+	var kept_brake := brake
+	var kept_calm := calm
+	brake = -1
+	calm = -1
 	ride_ticks = maxi(int(ceil(travel.length() / ride_step)), 1)
+	var end := ride_delay + ride_ticks
+	act3_at = end
+	_arrive = end
+	if blast_way < 1.0:
+		act3_at = ride_delay
+		while act3_at < end and _eased(float(act3_at - ride_delay) / float(ride_ticks), 0.15) < blast_way:
+			act3_at += 1
+		_arrive = act3_at
+		while world_ride(_arrive) < float(end) and _arrive < act3_at + 1000000:
+			_arrive += 1
 	crane_hits.clear()
 	for lamp in crane_lamps:
 		var hit := -1
 		if lamp >= 0 and lamp < lamp_x.size() and absf(travel.x) > 0.0:
-			for t in range(ride_delay, ride_delay + ride_ticks + 1):
+			for t in range(ride_delay, _arrive + 1):
 				if (start_x + crane_way(t) * travel.x - float(lamp_x[lamp]) + lamp_lead_px * signf(travel.x)) * signf(travel.x) >= 0.0:
 					hit = t
 					break
 		crane_hits.append(hit)
-	# The last thing of act 3 to come to rest, in its own (slowed) ticks.
-	var last := crane_fall_at + crane_fall_ticks + shake_ticks
+	# The last thing of act 3 to come to rest, in its own (slowed) ticks; the
+	# crane sags and falls from its arrival, which comes `end - act3_at` world
+	# ticks after act 3 began.
+	var last := end - act3_at + crane_fall_at + crane_fall_ticks + shake_ticks
 	for p in pieces:
 		if int(p["act"]) == 3:
 			last = maxi(last, int(p["at"]) + int(p["fall"]) + shatter_ticks)
@@ -181,29 +211,62 @@ func aim(start_x: float, travel: Vector2, lamp_x: Array) -> void:
 	var real := 0
 	while slow_ticks(float(real)) < float(last) and real < 100000:
 		real += 1
-	ride_end = arrival() + real
+	ride_end = act3_at + real
 	for hit in crane_hits:
 		ride_end = maxi(ride_end, hit + lamp_fall_ticks + shatter_ticks)
+	brake = kept_brake
+	calm = kept_calm
 
 
-## The ride tick on which the crane reaches the end of its rail.
+## The ride tick on which the crane reaches the end of its rail (with no brake
+## and before her step onto the exit ledge).
 func arrival() -> int:
-	return ride_delay + ride_ticks
+	return _arrive
+
+
+## Ticks of the world since her step onto the crane, for ride tick `ride`: they
+## keep time until act 3 begins and then run on its slowed clock.
+func world_ride(ride: int) -> float:
+	if ride < act3_at:
+		return float(ride)
+	return float(act3_at) + slow_ticks(float(ride - act3_at))
+
+
+## The ride tick the crane's pose is read at: `ride`, or the tick of the brake.
+func _held(ride: int) -> int:
+	return ride if brake < 0 else mini(ride, brake)
 
 
 ## How far along its rail the crane is at ride tick `ride`: 0 … 1. It breaks
-## loose slowly, then rides at an even speed.
+## loose slowly, then rides at an even speed (slower once act 3's world slows
+## down); on the brake it stays.
 func crane_way(ride: int) -> float:
-	if ride < ride_delay:
+	var w := world_ride(_held(ride))
+	if w < float(ride_delay):
 		return 0.0
-	return _eased(float(ride - ride_delay) / float(ride_ticks), 0.15)
+	return _eased((w - float(ride_delay)) / float(ride_ticks), 0.15)
 
 
-## Ticks of act 3's world (slowed) for `ride`; -1 before the crane arrives.
+## World ticks since the crane reached the end of its rail, -1 before (or when
+## the brake held it on the way).
+func _at_end(ride: int) -> float:
+	var t := world_ride(_held(ride)) - float(ride_delay + ride_ticks)
+	return t if t >= 0.0 else -1.0
+
+
+## True while she can put the crane on its brake: it rides or waits at the end
+## of its rail, and has not started to fall yet.
+func can_brake(ride: int) -> bool:
+	if brake >= 0 or ride < ride_delay:
+		return false
+	return _at_end(ride) < float(crane_fall_at)
+
+
+## Ticks of act 3's world (slowed) for `ride`; -1 before it begins.
 func act3(ride: int) -> float:
-	if ride < arrival():
+	if ride < act3_at:
 		return -1.0
-	return slow_ticks(float(ride - arrival()))
+	return slow_ticks(float(ride - act3_at))
 
 
 ## World ticks that have passed `real` ticks after the crane's arrival: the
@@ -233,21 +296,21 @@ func slow_ticks(real: float) -> float:
 func _hold() -> float:
 	if calm < 0:
 		return float(slow_hold)
-	return clampf(float(calm - arrival() - slow_from - slow_ease), 0.0, float(slow_hold))
+	return clampf(float(calm - act3_at - slow_from - slow_ease), 0.0, float(slow_hold))
 
 
 ## True while her step onto the exit ledge can still end the slow part: from
 ## the world's slowing down until it would end by itself.
 func can_calm(ride: int) -> bool:
-	var r := ride - arrival()
+	var r := ride - act3_at
 	return calm < 0 and r >= slow_from and r < slow_from + slow_ease + slow_hold
 
 
 ## How slow the world runs now, for the look: 0 normal … 1 at the slowest.
 func slowness(ride: int) -> float:
-	if ride < arrival() or tempo >= 1.0:
+	if ride < act3_at or tempo >= 1.0:
 		return 0.0
-	var r := float(ride - arrival())
+	var r := float(ride - act3_at)
 	var a := float(slow_from)
 	var e := float(slow_ease)
 	var h := _hold()
@@ -358,7 +421,7 @@ func broken(k: int, clock: int, ride: int) -> float:
 func crane_pose(ride: int, travel: Vector2, fall_px: float) -> Dictionary:
 	var at := travel * crane_way(ride)
 	var tilt := 0.0
-	var t := act3(ride)
+	var t := _at_end(ride)
 	if t >= 0.0:
 		var sag := clampf(t / float(sag_ticks), 0.0, 1.0)
 		at.y += sag_px * sag
@@ -371,7 +434,7 @@ func crane_pose(ride: int, travel: Vector2, fall_px: float) -> Dictionary:
 
 ## True once the crane lies at the bottom of the pit.
 func crane_down(ride: int) -> bool:
-	return act3(ride) >= float(crane_fall_at + crane_fall_ticks)
+	return _at_end(ride) >= float(crane_fall_at + crane_fall_ticks)
 
 
 ## The fall of lamp `lamp` now, as `WorldLight` reads it, or {} when this
@@ -397,14 +460,14 @@ func shake(clock: int, ride: int) -> float:
 	var amount := _shake(clock - quake_tick)
 	if ride >= 0:
 		amount = maxf(amount, _shake(ride))
-		amount = maxf(amount, _shake(ride - arrival()))
+		amount = maxf(amount, _shake(ride - act3_at))
 	return amount
 
 
 ## Ticks since the latest quake began (for the sway of the look), -1 before any.
 func since_quake(clock: int, ride: int) -> int:
-	if ride >= arrival():
-		return ride - arrival()
+	if ride >= act3_at:
+		return ride - act3_at
 	if ride >= 0:
 		return ride
 	return clock - quake_tick if clock >= quake_tick else -1
@@ -493,6 +556,9 @@ static func problems(data: Variant, where: String, lamp_count: int) -> PackedStr
 		for key: String in ["delay_seconds", "fall_second", "sag_px", "lamp_lead_px", "tilt_degrees"]:
 			if not not_negative.call(c.get(key)):
 				errors.append("%s: 'collapse.crane.%s' must be a number from 0" % [where, key])
+		var w: Variant = c.get("blast_way", 1.0)
+		if not (w is float or w is int) or float(w) < 0.0 or float(w) > 1.0:
+			errors.append("%s: 'collapse.crane.blast_way' must be from 0 to 1" % where)
 		for lamp: Variant in c.get("lamps", []):
 			if not lamp_ok.call(lamp) or int(lamp) < 0:
 				errors.append("%s: 'collapse.crane.lamps' must hold lamps of world.lamps" % where)
