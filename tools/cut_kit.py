@@ -33,6 +33,11 @@ LOOK = os.path.join(ROOT, "game", "data", "look.json")
 TEXEL = 2
 
 
+# N-14 v2 (D165): the source of the platform machines and its scale.
+N14 = "n14_platforms_v2.jpg"
+N14_SCALE = 0.19
+
+
 def world():
     with open(LOOK, encoding="utf-8") as f:
         return json.load(f)["world"]
@@ -58,6 +63,18 @@ def key_green(rgb):
     out = rgb.copy()
     out[..., 1] = np.where(excess > 0.0, np.maximum(r, b), g)
     return out, alpha
+
+
+def key_green_deep(rgb):
+    """Like key_green, and green in shadow goes too: the dark green seen
+    through a window of a piece (the lift frame of N-14) is green by its hue,
+    not by how far green outshines red and blue."""
+    out, alpha = key_green(rgb)
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    other = np.maximum(r, b)
+    ratio = g / np.maximum(other, 0.02)
+    deep = smoothstep(1.4, 2.0, ratio) * smoothstep(0.04, 0.10, g - other)
+    return out, alpha * (1.0 - deep)
 
 
 def key_black(rgb):
@@ -100,6 +117,27 @@ def select(alpha, seed, grow):
     sel = Image.fromarray(((np.asarray(small) == 128) * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(3))
     sel = np.asarray(sel.resize((w, h), Image.NEAREST)) > 0
     return alpha * sel
+
+
+def erase(alpha, spec):
+    """Holes where code draws a turning part over the painted one (N-14: the
+    trolley's wheels, the lift frame's gears). `erase`: rings (cx, cy, r_in,
+    r_out) in pixels of the source picture, r_in 0 for a disc; `keep`: rects
+    (x0, y0, x1, y1) in the same pixels that stay (the axle boxes in front of
+    the wheels). The edge is soft over a pixel and a half."""
+    x0, y0 = spec["px_box"][:2]
+    h, w = alpha.shape
+    ys, xs = np.mgrid[0:h, 0:w].astype(np.float32)
+    xs += x0
+    ys += y0
+    hole = np.zeros_like(alpha)
+    for cx, cy, r_in, r_out in spec["erase"]:
+        d = np.hypot(xs - cx, ys - cy)
+        ring = smoothstep(r_in - 1.5, r_in, d) if r_in > 0 else 1.0
+        hole = np.maximum(hole, ring * (1.0 - smoothstep(r_out, r_out + 1.5, d)))
+    for kx0, ky0, kx1, ky1 in spec.get("keep", ()):
+        hole[(xs >= kx0) & (xs < kx1) & (ys >= ky0) & (ys < ky1)] = 0.0
+    return alpha * (1.0 - hole)
 
 
 def crop(rgb, alpha, pad=2):
@@ -207,11 +245,18 @@ def piece_from(raw, spec):
     if "box" in spec:
         x0, y0, x1, y1 = box_px(spec["box"], rgb.shape)
         rgb = rgb[y0:y1, x0:x1]
-    keyer = {"green": key_green, "black": key_black, "plaster": key_plaster}[spec.get("key", "green")]
+    elif "px_box" in spec:
+        x0, y0, x1, y1 = spec["px_box"]
+        rgb = rgb[y0:y1, x0:x1]
+    keyer = {"green": key_green, "green_deep": key_green_deep, "black": key_black,
+             "plaster": key_plaster}[spec.get("key", "green")]
     rgb, alpha = keyer(rgb)
     if "seed" in spec:
         alpha = select(alpha, spec["seed"], spec.get("grow", 0))
-    rgb, alpha = crop(rgb, alpha)
+    if "erase" in spec:
+        alpha = erase(alpha, spec)
+    if spec.get("crop", True):
+        rgb, alpha = crop(rgb, alpha)
     if spec.get("rotate"):
         rgb = np.rot90(rgb, spec["rotate"]).copy()
         alpha = np.rot90(alpha, spec["rotate"]).copy()
@@ -255,7 +300,13 @@ def make(name, spec, raw, w):
         cross = spec["cross"] * TEXEL
         size = fit((rgb.shape[1], rgb.shape[0]), height=cross) if axis == 1 else fit((rgb.shape[1], rgb.shape[0]), width=cross)
         return resize(rgb, alpha, size, wrap_axes=(axis,))
-    size = fit((rgb.shape[1], rgb.shape[0]), **{k: v * TEXEL for k, v in spec["fit"].items()})
+    if "scale" in spec:
+        # Room pixels per pixel of the source: the parts of one machine keep
+        # their sizes to each other (N-14).
+        k = spec["scale"] * TEXEL
+        size = max(1, int(round(rgb.shape[1] * k))), max(1, int(round(rgb.shape[0] * k)))
+    else:
+        size = fit((rgb.shape[1], rgb.shape[0]), **{k: v * TEXEL for k, v in spec["fit"].items()})
     return resize(rgb, alpha, size)
 
 
@@ -343,6 +394,25 @@ PIECES = {
                       "trim": (0.05, 0.95), "cross": 24},
     "platform_chain": {"make": "strip", "src": "n7_platforms_fixed.png", "box": (0.37, 0.61, 0.95, 0.74), "axis": 1,
                        "trim": (0.02, 0.98), "period": (0.6, 0.9), "cross": 10},
+    # N-14 v2, variant 1 (D165): the platform machines of a painted room. All
+    # parts at N14_SCALE room px per source px, so the deck is 40 px high and
+    # the lift frame as wide as the painted column; boxes in source pixels.
+    # Where they go on the platform: kit_objects.platform in look.json.
+    "platform_deck_a": {"make": "piece", "src": N14, "key": "green_deep", "px_box": (93, 315, 853, 525),
+                        "crop": False, "scale": N14_SCALE},
+    "platform_deck_b": {"make": "piece", "src": N14, "key": "green_deep", "px_box": (957, 315, 1637, 525),
+                        "crop": False, "scale": N14_SCALE},
+    "platform_trolley": {"make": "piece", "src": N14, "key": "green_deep", "px_box": (272, 520, 676, 712),
+                         "crop": False, "scale": N14_SCALE,
+                         "erase": [(354, 636, 0, 74), (593, 636, 0, 74)],
+                         "keep": [(322, 605, 420, 661), (527, 605, 625, 661), (418, 540, 530, 712)]},
+    "platform_lift_frame": {"make": "piece", "src": N14, "key": "green_deep", "px_box": (1168, 160, 1442, 826),
+                            "crop": False, "scale": N14_SCALE,
+                            "erase": [(1394, 251, 17, 36), (1394, 716, 17, 36)]},
+    "platform_wheel": {"make": "piece", "src": N14, "key": "green_deep", "px_box": (1700, 277, 1925, 506),
+                       "fit": {"longest": 28}},
+    "platform_gear": {"make": "piece", "src": N14, "key": "green_deep", "px_box": (1700, 590, 1925, 819),
+                      "fit": {"longest": 16}},
     "wall_lamp": {"make": "piece", "src": "n8_lamps_clock_fixed.png", "box": (0.19, 0.21, 0.40, 0.73), "fit": {"longest": 48}},
     "clock": {"make": "piece", "src": "n8_lamps_clock_fixed.png", "box": (0.41, 0.13, 0.82, 0.86), "fit": {"longest": 96}},
     "clock_hand_hour": {"make": "piece", "src": "n8_lamps_clock.jpg", "box": (0.84, 0.36, 0.90, 0.71), "fit": {"longest": 48}},
