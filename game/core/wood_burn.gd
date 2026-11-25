@@ -23,6 +23,9 @@ var burn := 0
 var burn_ticks := 180
 ## Ticks a zone burns before the next zone of its chain catches.
 var spread_ticks := 60
+## Spilled oil (level 03, D155): it burns on and on, water does not put it
+## out, only the reverse flamethrower does; it is never solid.
+var oil := false
 
 
 func _init(wood_data: Dictionary = {}, time_data: Dictionary = {}) -> void:
@@ -34,13 +37,13 @@ func _init(wood_data: Dictionary = {}, time_data: Dictionary = {}) -> void:
 ## True when fire from `previous`, the zone before this one in a chain, sets
 ## this one burning now: it burns long enough, this one is whole and dry.
 func catches_from(previous: WoodBurn, wet: bool) -> bool:
-	return phase == Phase.WHOLE and not wet and previous != null \
+	return phase == Phase.WHOLE and (oil or not wet) and previous != null \
 		and previous.phase == Phase.BURNING and previous.burn >= previous.spread_ticks
 
 
 ## One tick at the head. `wet` is true while water covers the zone.
 func tick(wet: bool) -> Event:
-	if phase != Phase.BURNING:
+	if phase != Phase.BURNING or oil:
 		return Event.NONE
 	if wet:
 		douse()
@@ -73,7 +76,7 @@ func douse() -> bool:
 
 ## Solid while whole or burning: a burnt bridge is a gap, a burnt wall a passage.
 func is_solid() -> bool:
-	return phase != Phase.BURNT
+	return phase != Phase.BURNT and not oil
 
 
 func is_burning() -> bool:

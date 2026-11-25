@@ -62,6 +62,10 @@
     "flame_px": 40,
     "flame_side_px": 12
   },
+  "ramp": {
+    "fall_seconds": 0.8,
+    "thickness_px": 14
+  },
   "torch": {
     "interact_radius_px": 80,
     "reach_px": 40,

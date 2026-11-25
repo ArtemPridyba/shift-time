@@ -37,6 +37,10 @@ const FLAME_SHADER := preload("res://objects/wood_flame.gdshader")
 ## D155): this zone catches once that one has burnt `spread_seconds`, unless
 ## it is wet. Empty: no chain.
 @export var spread_from := ""
+## Spilled oil on the floor (level 03): never solid, burns until the reverse
+## flamethrower sucks its fire in, the rain cannot put it out, and the player
+## wades through it slowly (`slows_rect`).
+@export var oil := false
 
 var burn: WoodBurn
 ## The frame on which the fire was last put out, for the steam; -1 never.
@@ -88,6 +92,7 @@ func _ready() -> void:
 	add_to_group("flammable")
 	add_to_group("fire")
 	add_to_group("world_clock")
+	burn.oil = oil
 	burn.phase = clampi(start_phase, WoodBurn.Phase.WHOLE, WoodBurn.Phase.BURNT) as WoodBurn.Phase
 	var shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if shape == null:
@@ -209,6 +214,11 @@ func burns_rect(rect: Rect2) -> bool:
 	return fire.intersects(rect)
 
 
+## True when `rect` (global) wades through this oil, burning or not.
+func slows_rect(rect: Rect2) -> bool:
+	return oil and global_rect().grow_individual(0.0, _flame_px, 0.0, 0.0).intersects(rect)
+
+
 ## True while water covers part of the zone.
 func is_wet() -> bool:
 	if not is_inside_tree():
@@ -248,6 +258,9 @@ func _build_look() -> void:
 	_wood = _shader_rect("Wood", WOOD_SHADER, Rect2(-size / 2.0, size))
 	var mat := _wood.material as ShaderMaterial
 	mat.set_shader_parameter("size", size)
+	if oil:
+		# A black, glossy spill rather than planks.
+		_wood.modulate = Color(0.22, 0.2, 0.19)
 	mat.set_shader_parameter("vertical", 1.0 if size.y > size.x else 0.0)
 	_behind = Node2D.new()
 	_behind.name = "Smoke"

@@ -59,6 +59,8 @@ func _physics_process(delta: float) -> void:
 		_intro_left -= 1
 		modulate.a = minf(1.0, 2.0 * (1.0 - float(_intro_left) / float(_intro_total)))
 	var water := water_contact()
+	if is_in_oil():
+		water["slow"] = true
 	velocity = _motion.step(velocity, axis, jump, is_on_floor(), delta, water)
 	move_and_slide()
 	_rig.set_exit(float(_intro_left) / float(_intro_total) if _intro_left > 0 else 0.0)
@@ -186,6 +188,17 @@ func is_in_fire() -> bool:
 	var body := Rect2(global_position - Vector2(_size.x / 2.0, _size.y), _size)
 	for node in get_tree().get_nodes_in_group("fire"):
 		if node.has_method("burns_rect") and bool(node.call("burns_rect", body)):
+			return true
+	return false
+
+
+## True while the feet wade through spilled oil (group `fire`, `slows_rect`).
+func is_in_oil() -> bool:
+	if not is_inside_tree():
+		return false
+	var body := Rect2(global_position - Vector2(_size.x / 2.0, _size.y), _size)
+	for node in get_tree().get_nodes_in_group("fire"):
+		if node.has_method("slows_rect") and bool(node.call("slows_rect", body)):
 			return true
 	return false
 

@@ -21,7 +21,8 @@ func _init(params: Dictionary) -> void:
 
 ## Returns the new velocity for one physics tick.
 ## `axis` is -1..1 (left..right), `jump_pressed` is true on the tick of the press.
-## `water` is the player's contact with water (`water_contact`), empty on land.
+## `water` is the player's contact with water (`water_contact`), empty on land;
+## `slow` in it means thick oil underfoot: walking only is slower.
 func step(
 	velocity: Vector2, axis: float, jump_pressed: bool, on_floor: bool, delta: float,
 	water: Dictionary = {}
@@ -32,7 +33,8 @@ func step(
 	# Rising water carries the player on its surface, like a platform.
 	var carried := in_water and float(water.get("rise", 0.0)) > 0.0
 	var walk := float(_params["walk_speed"])
-	if in_water:
+	# Oil is as thick as water to walk through (level 03), but it holds no one.
+	if in_water or bool(water.get("slow", false)):
 		walk *= float(_params["water_walk_factor"])
 
 	# Horizontal: accelerate towards the target speed, or slow down by friction.
