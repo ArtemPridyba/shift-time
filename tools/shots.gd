@@ -32,6 +32,9 @@ extends SceneTree
 ##   --follow W,H      crop every frame to W x H screen pixels around the
 ##                     player (group `player`), before --scale: for close
 ##                     looks at the heroine's animations (`--follow 240,160 --scale 3`)
+##   --view X,Y,W,H    a still camera on this rect of the room, in cells
+##                     (to see a whole part of a level at once:
+##                     `--view 40,3,26,19` is the end of level 05)
 ##   --on-stairs DX@T  at tick T put the player DX px right of the left edge
 ##                     of the room's `Stairs` flight, on its surface (to film
 ##                     the walk on the stairs: `--on-stairs 28@185`)
@@ -79,6 +82,8 @@ func _run() -> void:
 	root.add_child(room)
 	for i in SETTLE_TICKS:
 		await physics_frame
+	if _args.has("view"):
+		_still_camera(room)
 
 	var tick := 0
 	var saved := 0
@@ -119,6 +124,22 @@ func _save(out_dir: String, tick: int, manager: Node, scale: float) -> void:
 		image.resize(int(image.get_width() * scale), int(image.get_height() * scale), Image.INTERPOLATE_LANCZOS)
 	var reverse := manager != null and bool(manager.call("is_rewinding"))
 	image.save_png(out_dir.path_join("t%05d_%s.png" % [tick, "rev" if reverse else "fwd"]))
+
+
+## `--view X,Y,W,H`: a camera of its own, current, framing that rect (cells)
+## whole; the level's camera stays but no longer shows.
+func _still_camera(room: Node) -> void:
+	var v := str(_args["view"]).split(",")
+	var cell := 64.0
+	var rect := Rect2(float(v[0]) * cell, float(v[1]) * cell, float(v[2]) * cell, float(v[3]) * cell)
+	var screen := Vector2(root.get_viewport().get_visible_rect().size)
+	var camera := Camera2D.new()
+	camera.name = "ShotsCamera"
+	camera.position = rect.get_center()
+	var fit := minf(screen.x / rect.size.x, screen.y / rect.size.y)
+	camera.zoom = Vector2(fit, fit)
+	room.add_child(camera)
+	camera.make_current()
 
 
 ## `--on-stairs DX@T`: at tick T the player stands DX px right of the left edge
