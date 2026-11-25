@@ -89,7 +89,7 @@
 			"gate_in": { "open_level": 9500, "open_seconds": 1.5, "close_seconds": 1.5 }
 		},
 		"world": {
-			"_about": "Level 02 in the Night shop (same kit, height and scale as level 01, D112, D150, D161), 68 cells wide and 17 high, the roof on rows 0-1. Lamps: 0 over the start and button 1, 1 over pool 1's float, 2 over pool 2's float, 3 over the floor where the plug falls, 4 over the pit and the pipe's hole, 5 over the steps and button 2, 6-7 over the tunnel, 8 by the exit.",
+			"_about": "Level 02 in the Night shop (same kit, height and scale as level 01, D112, D150, D164), 68 cells wide and 17 high, the roof on rows 0-1. Lamps: 0 over the start and button 1, 1 over pool 1's float, 2 over pool 2's float, 3 over the floor where the plug falls, 4 over the pit and the pipe's hole, 5 over the steps and button 2, 6-7 over the tunnel, 8 by the exit.",
 			"ceiling": 2,
 			"back": [
 				{ "kind": "truss", "rect": [1, 2, 66, 0.6] },

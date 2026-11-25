@@ -1,6 +1,6 @@
 class_name BurstPipe
 extends Node2D
-## The pipe from the bottom of pool 2 to the room beyond it (level 02, D161).
+## The pipe from the bottom of pool 2 to the room beyond it (level 02, D164).
 ## The water in the pool presses on it: while the pool fills, the pipe shakes,
 ## spray comes out by its loose plug and the needle of its gauge climbs; at
 ## `burst_level` the plug flies out (`PipePlug.eject`) and the water from the

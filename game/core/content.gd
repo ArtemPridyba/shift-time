@@ -68,7 +68,7 @@ const TIME_PLATE_KEYS: Array[String] = ["contact_px"]
 ## Where a shutter of a level starts (level 04).
 const SHUTTER_STARTS: Array[String] = ["open", "closed"]
 const LEVER_KEYS: Array[String] = ["interact_radius_px"]
-## The plug of level 02's pipe (D161): an item, like the flamethrower; all above 0.
+## The plug of level 02's pipe (D164): an item, like the flamethrower; all above 0.
 const PIPE_PLUG_KEYS: Array[String] = ["interact_radius_px", "insert_radius_px", "gravity", "max_fall_speed", "friction_px", "follow_px"]
 const LAMP_KEYS: Array[String] = ["break_seconds", "fall_seconds", "shatter_seconds", "fall_distance_px", "flash_seconds", "flash_radius_px", "light_radius_px"]
 const DARKNESS_KEYS: Array[String] = ["ambient", "player_outline_alpha"]
