@@ -3,8 +3,8 @@
 	"expect": "no_exit",
 	"segments": [
 		{ "actions": [], "ticks": 40 },
-		{ "actions": ["move_right"], "ticks": 100 },
-		{ "actions": ["jump", "move_right"], "ticks": 30 },
-		{ "actions": [], "ticks": 600 }
+		{ "actions": ["move_right"], "ticks": 600 },
+		{ "actions": [], "ticks": 300 },
+		{ "actions": ["move_right"], "ticks": 300 }
 	]
 }

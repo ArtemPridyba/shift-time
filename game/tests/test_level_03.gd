@@ -1,9 +1,11 @@
 extends RefCounted
-## Tests of level 03 «Нить» (card docs/levels/03.md, D177): the torch taken
-## and put back by walking past its stand, out in the rain even in the hands;
-## the ropes it lights, which burn through; the winch's board that stays where
-## it is once its brake rope has burnt; the cage the counterweight lifts once
-## its stop rope has burnt; the level's picture and geometry. Also the objects
+## Tests of level 03 «Нить» (card docs/levels/03.md, D177, D178): the torch
+## taken and lit again at its burner, out in the rain even in the hands; the
+## fire detector that sets off the rain, and under Shift answers only once
+## time runs forward; the ropes the torch lights, which burn through; the
+## winch's board (and its brake, kept in the code); the cage the
+## counterweight lifts once its stop rope has burnt; the level's picture,
+## geometry and windows. Also the objects
 ## of the earlier level 03 that stay in the code: the latch platform and the
 ## door that opens once (D103), the sprinkler with its start, sensor and pipe,
 ## the chain of wood zones and the oil.
@@ -390,85 +392,108 @@ func test_cage_rises_when_its_stop_rope_burns_and_comes_down_in_the_frames() -> 
 	await _tree.process_frame
 
 
+func test_detector_powers_its_sprinkler_once_and_rearms_after_its_rain() -> void:
+	var rain := Sprinkler.new()
+	rain.torch_sensor = true
+	rain.size = Vector2(200, 300)
+	rain.apply_settings({"rain_seconds": 1.0, "spin_up_seconds": 0.25})
+	_tree.root.add_child(rain)
+	check(rain.is_in_group("torch_lightable"), "a detector answers a torch like a rope")
+	check(rain.light_rect() == Rect2(Vector2(-100, 0), Vector2(200, 300)), "it watches the rain's span")
+	check(rain.torch_change() == {"powered": true, "run": 0}, "an armed detector is set off by a burning torch")
+	rain.restore_state({"powered": true, "flow": 0, "run": 0})
+	check(rain.torch_change().is_empty(), "a detector already set off takes nothing more")
+	var full := -1
+	for tick in 140:
+		rain.simulate_tick(tick)
+		if full < 0 and rain.is_raining():
+			full = tick
+	check(full >= 0 and full <= 16, "spin_up_seconds from the level: full rain after %d ticks" % full)
+	check(not rain.powered and rain.flow == 0 and rain.run == 0, "after rain_seconds it shuts and the detector is armed again")
+	check(rain.torch_change() == {"powered": true, "run": 0}, "armed again, it answers the next torch")
+	rain.queue_free()
+	await _tree.process_frame
+
+
 func test_level_03_prelude_leaves_the_picture_of_the_card() -> void:
 	var room := await _load()
 	await _ticks(150)
 	var ramp: WinchRamp = room.get_node("Ramp")
 	var torch: Torch = room.get_node("Torch")
-	check(ramp.is_up() and not ramp.locked, "the winch has raised the board: the way is closed")
-	check(not (room.get_node("Sprinkler") as Sprinkler).is_raining(), "the rain over the mezzanine has stopped")
-	check(torch.mounted and torch.lit and not torch.held, "the torch burns on its stand across the pit")
-	check((room.get_node("BrakeRope") as FireRope).is_whole() and (room.get_node("StopRope") as FireRope).is_whole(), "both ropes are whole")
+	var lift: MovingPlatform = room.get_node("Lift")
+	var deck: Node2D = room.get_node("Mezzanine")
+	check(ramp.is_up(), "the winch has raised the board: the way is closed")
+	check(absf(lift.position.y - 16.0 - _deck_top(deck).y) < 1.0, "the lift has ridden up to the mezzanine")
+	check(torch.burner and torch.mounted and torch.lit and not torch.held, "the torch burns at its burner on the mezzanine")
+	check(not (room.get_node("Sprinkler") as Sprinkler).powered, "the detector is armed, it does not rain")
+	check((room.get_node("StopRope") as FireRope).is_whole(), "the cage's rope is whole")
 	check((room.get_node("Cage") as CounterweightCage).rise < 0, "the cage waits at the bottom")
 	await _free(room)
 
 
-func test_level_03_past_has_the_slope_in_the_rain_then_the_bridge() -> void:
+func test_level_03_past_has_the_bridge_and_the_lift_at_the_floor() -> void:
 	var room := await _load()
 	var ramp: WinchRamp = room.get_node("Ramp")
-	var rain: Sprinkler = room.get_node("Sprinkler")
+	var lift: MovingPlatform = room.get_node("Lift")
 	var time: RoomTime = room.get_node("RoomTime")
-	var flat_dry := false
+	var floor_y := ramp.position.y
 	Input.action_press("rewind")
 	while time.cursor() > 0:
 		await _ticks(1)
-		if ramp.is_flat() and not rain.is_raining():
-			flat_dry = true
 	await _ticks(2)
-	check(flat_dry, "in the past the board lies as a bridge while the mezzanine is dry")
-	check(ramp.is_slope() and rain.is_raining(), "at frame 0 the board leads up to the mezzanine and it rains there")
-	check((room.get_node("Torch") as Torch).lit, "the torch burns on its stand in the whole past")
+	check(ramp.is_flat(), "at frame 0 the board lies as a bridge")
+	check(absf(lift.position.y - 16.0 - floor_y) < 1.0, "at frame 0 the lift waits flush with the floor")
 	Input.action_release("rewind")
 	await _free(room)
 
 
-func test_level_03_torch_is_taken_and_put_back_by_walking_past() -> void:
+func test_level_03_torch_is_taken_and_lit_again_at_the_burner() -> void:
 	var room := await _load()
 	await _ticks(150)
 	var torch: Torch = room.get_node("Torch")
 	var player: Player = room.get_node("Player")
-	player.respawn(torch.home + Vector2(-60.0, torch.floor_offset_px))
+	player.respawn(torch.home + Vector2(-70.0, torch.floor_offset_px))
 	await _ticks(4)
-	Input.action_press("move_right")
-	await _ticks(45)
-	Input.action_release("move_right")
-	check(torch.held and torch.lit, "walking past the stand with empty hands takes the torch (she is at %s, stand %s)" % [player.body_rect(), torch.stand_rect()])
-	Input.action_press("move_left")
-	await _ticks(70)
-	Input.action_release("move_left")
-	check(not torch.held and torch.mounted and torch.position == torch.home, "walking past the empty stand with the torch puts it back")
-	var time: RoomTime = room.get_node("RoomTime")
-	var any_held := false
-	for k in range(time.world.timeline.first(), time.cursor()):
-		var frame: Variant = time.world.timeline.frame_at(k)
-		if frame is Dictionary and bool(((frame as Dictionary)["torch"] as Dictionary)["held"]):
-			any_held = true
-	check(not any_held, "put back, it takes back the frames it spent in the hands")
+	await _press_for("move_right", 30)
+	check(torch.held and torch.lit, "walking past the burner with empty hands takes the burning torch")
+	torch.lit = false
+	await _press_for("move_left", 30)
+	check(torch.held and torch.lit, "walking past the burner with the torch out lights it again")
+	check(not torch.mounted, "a burner never takes the torch back")
 	await _free(room)
 
 
-func test_level_03_torch_goes_out_in_the_rain_in_the_hands() -> void:
-	var room := await _load()
-	await _ticks(150)
+func test_level_03_detector_puts_out_the_torch_in_normal_time() -> void:
+	var room := await _take_torch()
 	var torch: Torch = room.get_node("Torch")
+	var rain: Sprinkler = room.get_node("Sprinkler")
+	await _press_for("move_right", 60)
+	check(rain.powered, "a burning torch under the detector sets it off")
+	check(torch.held and not torch.lit, "its rain puts the torch out before she is through")
+	await _free(room)
+
+
+func test_level_03_under_shift_the_rain_comes_after_her() -> void:
+	var room := await _take_torch()
+	var torch: Torch = room.get_node("Torch")
+	var rain: Sprinkler = room.get_node("Sprinkler")
 	var player: Player = room.get_node("Player")
-	player.respawn(torch.home + Vector2(-60.0, torch.floor_offset_px))
-	await _ticks(4)
-	await _press_for("move_right", 20)
-	await _ticks(20)
-	check(torch.held and torch.lit, "she has the burning torch")
-	var time: RoomTime = room.get_node("RoomTime")
+	var zone := rain.light_rect()
+	var seen := false
+	var dry := true
 	Input.action_press("rewind")
-	while time.cursor() > 0:
+	Input.action_press("move_right")
+	while player.position.x < zone.end.x + 30.0:
 		await _ticks(1)
-	check(torch.held and torch.lit, "dry under the mezzanine, it burns on under Shift")
-	var deck: Node2D = room.get_node("Mezzanine")
-	player.respawn(Vector2(deck.position.x, deck.position.y - 12.0))
-	await _ticks(6)
-	check(not torch.lit, "in the rain on the mezzanine it goes out in her hands")
+		seen = seen or rain.powered
+		dry = dry and rain.flow == 0
+	Input.action_release("move_right")
 	Input.action_release("rewind")
-	await _ticks(30)
-	check(not torch.lit, "nothing lights it again in the hands")
+	check(seen, "under Shift the detector sees her torch: its lamp lights")
+	check(dry and torch.lit, "but no rain falls while the world runs back")
+	await _ticks(40)
+	check(rain.is_raining(), "time running forward reaches the frame she was seen in: the rain comes")
+	check(torch.lit and not zone.intersects(torch.flame_rect()), "she is past it, the torch burns on")
 	await _free(room)
 
 
@@ -477,27 +502,29 @@ func test_level_03_geometry() -> void:
 	var params := Content.player()
 	var ramp: WinchRamp = room.get_node("Ramp")
 	var deck: Node2D = room.get_node("Mezzanine")
-	var deck_top := Vector2(deck.position.x - ((deck.get_child(0) as CollisionShape2D).shape as RectangleShape2D).size.x / 2.0,
-		deck.position.y - ((deck.get_child(0) as CollisionShape2D).shape as RectangleShape2D).size.y / 2.0)
+	var deck_top := _deck_top(deck)
 	var gravity := float(params["gravity"])
 	var jump_up := pow(float(params["jump_velocity"]), 2.0) / (2.0 * gravity)
 	var floor_y := ramp.position.y
 	check(floor_y - deck_top.y > jump_up + 20.0, "the mezzanine is out of a jump's reach from the floor")
-	check(deck_top.x - ramp.position.x > 2.0 * float(params["walk_speed"]) * float(params["jump_velocity"]) / gravity, "the pit is wider than a jump")
+	check(14.0 * 64.0 - ramp.position.x > 2.0 * float(params["walk_speed"]) * float(params["jump_velocity"]) / gravity, "the pit is wider than a jump")
 	ramp.restore_state({"clock": 0, "locked": false})
-	check(ramp.tip().distance_to(deck_top) < 2.0, "the slope's tip meets the mezzanine's edge")
-	check(ramp.slope_deg < float(params["floor_max_angle_deg"]) - 5.0, "the slope is walkable")
-	ramp.restore_state({"clock": int(5 * Content.world_ticks_per_second(Content.time())), "locked": false})
-	check(ramp.is_flat() and ramp.tip().x > deck_top.x + 20.0, "lying, the board reaches the far bank")
-	var rain := (room.get_node("Sprinkler") as Sprinkler)
-	var rain_rect := Rect2(rain.global_position - Vector2(rain.size.x / 2.0, 0.0), rain.size)
+	check(ramp.is_flat() and ramp.tip().x > 14.0 * 64.0 + 20.0, "lying, the board reaches the far bank")
+	var lift: MovingPlatform = room.get_node("Lift")
+	check(ramp.tip().x < lift.position.x - lift.width / 2.0, "the board's tip stops short of the lift")
+	check(is_equal_approx(floor_y + lift.travel.y, deck_top.y), "the lift rides from the floor to the mezzanine's top")
+	check(is_equal_approx(lift.position.x + lift.width / 2.0, deck_top.x), "at the top the lift meets the mezzanine's edge")
+	var rain: Sprinkler = room.get_node("Sprinkler")
+	var zone := rain.light_rect()
 	var torch: Torch = room.get_node("Torch")
-	check(not rain_rect.intersects(torch.flame_rect()), "no rain falls on the torch's stand")
-	var brake: FireRope = room.get_node("BrakeRope")
-	check(not rain_rect.intersects(brake.light_rect()), "no rain falls on the brake rope")
-	check(absf(brake.points[0].y - (floor_y - 84.0)) < 30.0, "the brake rope's end hangs at the torch's height over the floor")
+	var reach := float(Content.objects()["torch"].get("reach_px", 24))
+	check(zone.position.x > torch.home.x + 22.0 + 8.0 + reach + 2.0, "taking the torch at the burner does not set off the detector")
 	var stop: FireRope = room.get_node("StopRope")
-	check(absf(stop.points[0].y - (deck_top.y - 84.0)) < 30.0, "rope 2's end hangs at the torch's height over the mezzanine")
+	check(not zone.intersects(stop.light_rect().grow(8.0)), "no rain falls on the cage's rope")
+	check(stop.light_rect().position.x - (zone.end.x + reach) > 40.0, "between the rain and the rope there is room to let go of Shift")
+	check(absf(stop.points[0].y - (deck_top.y - 84.0)) < 30.0, "the rope's end hangs at the torch's height over the mezzanine")
+	var blocks: TileMapLayer = room.get_node("Blocks")
+	check(blocks.get_cell_source_id(Vector2i(24, 12)) >= 0, "a wall closes the floor under the mezzanine before the shaft")
 	var cage: CounterweightCage = room.get_node("Cage")
 	check(is_equal_approx(cage.floor_y_at(1000000), 7.0 * 64.0), "the cage rises to the gallery's floor")
 	await _free(room)
@@ -505,23 +532,40 @@ func test_level_03_geometry() -> void:
 
 func test_level_03_windows() -> void:
 	var entry := Content.level_for_scene(LEVEL_PATH)
-	var keys: Array = entry["objects"]["ramp"]["keys"]
-	var slope_ends := 0.0
-	var flat_from := -1.0
+	var objects: Dictionary = entry["objects"]
+	var keys: Array = objects["ramp"]["keys"]
 	var flat_to := 0.0
-	for k in keys.size():
-		var key := keys[k] as Array
-		if str(key[1]) == "slope" and (k == 0 or str((keys[k - 1] as Array)[1]) == "slope"):
-			slope_ends = float(key[0])
-		if str(key[1]) == "flat":
-			if flat_from < 0.0:
-				flat_from = float(key[0])
-			flat_to = float(key[0])
+	for key: Variant in keys:
+		if str((key as Array)[1]) == "flat":
+			flat_to = float((key as Array)[0])
 	var tempo := float(Content.time()["world_tempo"])
-	check(slope_ends >= 3.0 and flat_to - flat_from >= 3.0, "the slope and the bridge each hold at least 3 s")
-	var stop := float(entry["objects"]["sprinkler"]["stop_seconds"])
-	check(stop > slope_ends / tempo + 0.5, "the rain stops only after the board has left the slope: the way up is never dry in the recorded past")
-	check(float(entry["objects"]["brake"]["burn_seconds"]) < slope_ends / tempo, "a brake lit at frame 0 drops while the board is still sloped")
+	check(flat_to / tempo >= 3.0, "the bridge lies at least 3 s in the past")
+	check(float(objects["lift"]["delay_seconds"]) / tempo >= 3.0, "the lift waits at the floor at least 3 s in the past")
+	var rain: Dictionary = objects["sprinkler"]
+	check(float(rain["rain_seconds"]) >= 3.0, "the rain runs long enough to read")
+	var walk := float(Content.player()["walk_speed"])
+	check(float(rain["spin_up_seconds"]) < (22.0 - 18.5) * 64.0 / walk / 2.0, "the rain comes before she can run through it")
+
+
+func _deck_top(deck: Node2D) -> Vector2:
+	var box := (deck.get_child(0) as CollisionShape2D).shape as RectangleShape2D
+	return deck.position - box.size / 2.0
+
+
+## The level after its prelude, with her on the mezzanine holding the burning
+## torch, just left of the detector's watch.
+func _take_torch() -> Node:
+	var room := await _load()
+	await _ticks(150)
+	var torch: Torch = room.get_node("Torch")
+	var player: Player = room.get_node("Player")
+	player.respawn(torch.home + Vector2(-40.0, torch.floor_offset_px))
+	await _ticks(4)
+	await _press_for("move_right", 6)
+	await _ticks(10)
+	var rain: Sprinkler = room.get_node("Sprinkler")
+	check(torch.held and torch.lit and not rain.powered, "she holds the burning torch left of the detector's watch")
+	return room
 
 
 func _press_for(action: String, ticks: int) -> void:
