@@ -17,6 +17,10 @@ extends Node2D
 ## opens on its own a moment into the room's history, in every branch the
 ## same. A lever that unpowers it before then keeps it shut.
 ##
+## A level can also stop it (level 03 «Нить», D177): `stop_seconds` shuts the
+## rain from that frame on, in every branch the same, and `start_full` (an
+## export) makes a powered sprinkler rain at full flow from the first frame.
+##
 ## A level can give it a fire sensor (level 03, D155): `sensor_id` names a
 ## wood zone, and the first tick at the head that zone burns the sprinkler is
 ## powered on its own, as if the fire alarm went off. Only at the head, so a
@@ -42,6 +46,8 @@ const DROP_COLOR := Color(0.78, 0.85, 0.9, 0.9)
 @export var draw_pipe := true
 ## The object_id of the wood zone the fire sensor watches; empty: no sensor.
 @export var sensor_id := ""
+## Raining at full flow on the first frame (powered and no start).
+@export var start_full := false
 
 var flow := 0
 var _step := 28
@@ -52,6 +58,8 @@ var _per_second := 60.0
 var _world_tick := 0
 ## The first world frame the rain may run on; 0 for a plain sprinkler.
 var _start_tick := 0
+## The first world frame the rain is shut again; -1 never.
+var _stop_tick := -1
 
 
 func _init() -> void:
@@ -70,6 +78,8 @@ func configure(data: Dictionary, time_data: Dictionary) -> void:
 func apply_settings(settings: Dictionary) -> void:
 	if settings.has("start_seconds"):
 		_start_tick = maxi(int(round(float(settings["start_seconds"]) * _per_second)), 0)
+	if settings.has("stop_seconds"):
+		_stop_tick = maxi(int(round(float(settings["stop_seconds"]) * _per_second)), 0)
 
 
 ## The first world frame the rain may run on.
@@ -81,6 +91,8 @@ func _ready() -> void:
 	add_to_group("temporal")
 	add_to_group("water")
 	add_to_group("world_clock")
+	if start_full and powered and _start_tick == 0:
+		flow = FLOW_MAX
 	queue_redraw()
 
 
@@ -97,7 +109,7 @@ func restore_state(state: Dictionary) -> void:
 func simulate_tick(tick: int) -> void:
 	if not powered and sensor_fires():
 		powered = true
-	if powered and tick >= _start_tick:
+	if powered and tick >= _start_tick and (_stop_tick < 0 or tick < _stop_tick):
 		flow = mini(flow + _step, FLOW_MAX)
 	else:
 		flow = maxi(flow - _step, 0)

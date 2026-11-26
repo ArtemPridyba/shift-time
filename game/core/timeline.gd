@@ -238,6 +238,20 @@ func rewrite_past(object_id: String, state: Dictionary) -> void:
 		frame[object_id] = state.duplicate(true)
 
 
+## Writes `state` as the state of `object_id` only in the kept frames left of
+## the cursor where its recorded state has `flag` set: a torch put back on its
+## stand takes back the frames it spent in the hands, and its own past on the
+## stand before them stays as it was (level 03, D177).
+func rewrite_past_where(object_id: String, state: Dictionary, flag: String) -> void:
+	if is_empty():
+		return
+	for number in range(_first, _cursor):
+		var frame: Dictionary = _slots[number % _capacity]
+		var old: Variant = frame.get(object_id)
+		if old is Dictionary and bool((old as Dictionary).get(flag, false)):
+			frame[object_id] = state.duplicate(true)
+
+
 ## Forgets everything.
 func clear() -> void:
 	_slots.fill(null)

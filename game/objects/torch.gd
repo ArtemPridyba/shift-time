@@ -1,26 +1,29 @@
 class_name Torch
 extends CharacterBody2D
-## A torch (level 03, D155): an item like the body of the reverse flamethrower.
-## It hangs in a holder on a wall (`mounted`), E takes it, E drops it.
+## A torch on its stand (level 03 «Нить», D177). No key: she walks past the
+## stand with empty hands and takes the torch; she walks past the empty stand
+## with the torch and puts it back (D159). The step counts when her body comes
+## to the stand, in normal time or under Shift; left of the head it is
+## interference and the room branches.
 ##
-## - Lying or in the holder it is recorded like everything but the player: it
-##   burns or is out (`lit`), and rain over it puts it out at the head, so
-##   under Shift it burns again. A dropped torch falls at the head.
+## - On the stand it is recorded like everything but the player: it burns or
+##   is out (`lit`), and rain over its head puts it out at the head, so under
+##   Shift it burns again.
 ## - In the hands it is out of time, like everything the player holds: the
-##   frames never take it, and rain never puts it out. A torch that was out
-##   when taken is only a stick.
-## - Its fire is live and never recorded; it lights wood only in normal time
-##   and only one way: E near whole wood with the torch burning in the hands
-##   thrusts it in (`host`). The wood burns from that tick, the torch stays in
-##   the fire, can never be taken again, and burns up with the wood. The
-##   earlier frames are rewritten to the torch in the wood, as a drop does
-##   (decision 13.11.2026), so under Shift it never jumps; a torch stuck in
-##   whole wood at the head (a branch before the thrust) lights it again.
-##   Under Shift E with the torch in the hands only drops it.
+##   frames never take it. Its fire is live: rain over it puts it out there
+##   too, in either direction of time, and nothing lights it again in the
+##   hands. Carried past the lit end of a whole `FireRope` (group
+##   `torch_lightable`) while it burns, it sets the rope burning, in normal
+##   time or under Shift (the rope's change goes through `apply_change`).
+## - Put back, it takes back the frames it spent in the hands
+##   (`RoomTime.rewrite_past_where`, «held»): they now show it on the stand as
+##   it was put back, so it never jumps; the frames before it was taken stay
+##   as they were, so rewinding past the take shows it burning again where it
+##   burnt.
 ##
-## The node is the torch's foot; the flame is at its top.
+## The node is the torch's foot on the stand; the flame is at its top.
 ##
-## State recorded: { "position", "fall", "held", "lit", "mounted", "host" }
+## State recorded: { "position", "fall", "held", "lit", "mounted" }
 ##
 ## Temporal object contract: docs/architecture.md, section 4.1.
 
@@ -36,24 +39,25 @@ const HAND := Vector2(22, -30)
 @export var object_id := "torch"
 ## Burning when the room loads.
 @export var lit := true
-## In a holder on a wall when the room loads: it does not fall.
-@export var mounted := false
-## For a torch in a holder: pixels from its foot down to the floor the player
-## stands on in front of it, so E reaches it from there.
+## On its stand when the room loads.
+@export var mounted := true
+## Pixels from its foot down to the floor the player stands on in front of
+## the stand: the stand's reach is measured from there.
 @export var floor_offset_px := 0.0
 
 var held := false
 var fall_speed := 0.0
-## The object_id of the wood the torch was thrust into; empty: none.
-var host := ""
 var time_direction := 1
 
-var _radius := 80.0
-var _reach := 40.0
+## The stand: where the torch stands when put back (the node's place on load).
+var home := Vector2.ZERO
+var _stand_px := 40.0
+var _reach := 24.0
 var _follow := 24.0
-var _gravity := 2200.0
-var _max_fall := 1200.0
 var _per_second := 60.0
+## Whether the player's body was at the stand last tick. Not recorded: the
+## step is the player's, and the player is never in history.
+var _at_stand := false
 ## The flame's own clock (live, never recorded).
 var _live_t := 0.0
 
@@ -64,17 +68,17 @@ func _init() -> void:
 	collision_layer = 4
 	collision_mask = 1
 	var data: Dictionary = Content.objects().get("torch", {})
-	_radius = float(data.get("interact_radius_px", 80))
-	_reach = float(data.get("reach_px", 40))
+	_stand_px = float(data.get("stand_px", 40))
+	_reach = float(data.get("reach_px", 24))
 	_follow = float(data.get("follow_px", 24))
-	_gravity = float(data.get("gravity", 2200))
-	_max_fall = float(data.get("max_fall_speed", 1200))
 	_per_second = float(Content.time().get("physics_ticks_per_second", 60))
 
 
 func _ready() -> void:
 	add_to_group("temporal")
 	add_to_group("carried")
+	add_to_group("plate")
+	home = position
 	if get_node_or_null("CollisionShape2D") == null:
 		var shape := CollisionShape2D.new()
 		shape.name = "CollisionShape2D"
@@ -82,15 +86,19 @@ func _ready() -> void:
 		rect.size = Vector2(12.0, 8.0)
 		shape.shape = rect
 		shape.position = Vector2(0.0, -4.0)
+		shape.disabled = true
 		add_child(shape)
 
 
+## In the hands the frames are never read back, so they keep the stand as the
+## place: a carried torch writes no new frame every tick and the history is
+## not used up while she walks with it (the room may stand still, D56).
 func capture_state() -> Dictionary:
-	return {"position": position, "fall": fall_speed, "held": held, "lit": lit, "mounted": mounted, "host": host}
+	return {"position": home if held else position, "fall": fall_speed, "held": held, "lit": lit, "mounted": mounted}
 
 
-## In the hands the frames are ignored, unless this is the let-go itself
-## (`let_go` in the state, from `get_interaction_change`).
+## In the hands the frames are ignored, unless this is the put-back itself
+## (`let_go` in the state).
 func restore_state(state: Dictionary) -> void:
 	if held and not bool(state.get("let_go", false)):
 		return
@@ -99,36 +107,16 @@ func restore_state(state: Dictionary) -> void:
 	fall_speed = float(state["fall"])
 	lit = bool(state["lit"])
 	mounted = bool(state["mounted"])
-	host = str(state["host"])
 	queue_redraw()
 
 
-## At the head: rain puts a lying torch out, a dropped one falls, one in wood
-## keeps the wood burning and burns up with it. Nothing while held.
+## At the head: rain puts a torch on the stand out. Nothing while held.
 func simulate_tick(_tick: int) -> void:
 	if held:
-		return
-	if host != "":
-		var wood := _wood(host)
-		if wood != null:
-			if wood.burn.phase == WoodBurn.Phase.BURNT:
-				if lit:
-					lit = false
-					queue_redraw()
-			elif lit:
-				wood.catch_fire()
 		return
 	if lit and is_wet():
 		lit = false
 		queue_redraw()
-	if mounted or not is_inside_tree() or not Engine.is_in_physics_frame():
-		return
-	fall_speed = minf(fall_speed + _gravity / _per_second, _max_fall)
-	velocity = Vector2(0.0, fall_speed)
-	move_and_slide()
-	if is_on_floor():
-		fall_speed = 0.0
-	velocity = Vector2.ZERO
 
 
 func on_time_direction_changed(direction: int) -> void:
@@ -139,14 +127,9 @@ func blocks_player_at(_state: Dictionary, _player_rect: Rect2) -> bool:
 	return false
 
 
-## True while it burns in the player's hands or in wood: what is seen to burn.
+## True while it burns in the player's hands.
 func is_burning() -> bool:
-	return lit and (host == "" or _host_burning())
-
-
-## Gone into the fire of the wood it was thrust into.
-func is_spent() -> bool:
-	return host != "" and not lit
+	return lit
 
 
 ## The flame in global pixels: the torch's head.
@@ -167,54 +150,53 @@ func is_wet() -> bool:
 	return false
 
 
-## The whole wood the burning torch in the hands can be thrust into now: in
-## normal time, within `reach_px` of the flame. Null when there is none.
-func wood_in_reach() -> WoodZone:
-	if not held or not lit or time_direction < 0 or not is_inside_tree():
-		return null
-	var room := get_parent()
-	var reach := flame_rect().grow(_reach)
-	for node in get_tree().get_nodes_in_group("flammable"):
-		var wood := node as WoodZone
-		if wood == null or not room.is_ancestor_of(wood):
-			continue
-		if wood.burn.phase == WoodBurn.Phase.WHOLE and reach.intersects(wood.global_rect()):
-			return wood
-	return null
+## The stand's reach in the parent's pixels: `stand_px` to each side of the
+## stand, from the floor in front of it up to a body's height.
+func stand_rect() -> Rect2:
+	var floor_y := home.y + floor_offset_px
+	return Rect2(Vector2(home.x - _stand_px, floor_y - 96.0), Vector2(2.0 * _stand_px, 96.0))
 
 
-## Lying or in the holder: a pick-up point. In the hands: the thrust into
-## wood when there is wood in reach, else the drop, which counts only when no
-## other interaction point is in reach. In wood: nothing.
-func interaction_candidate() -> Dictionary:
-	if host != "":
-		return {"id": object_id, "position": global_position, "radius": -1.0}
-	if held:
-		if wood_in_reach() != null:
-			return {"id": object_id, "position": global_position, "radius": 1.0e9}
-		return {"id": object_id, "position": global_position, "radius": 1.0e9, "fallback": true}
-	var at := global_position + Vector2(0.0, floor_offset_px if mounted else 0.0)
-	return {"id": object_id, "position": at, "radius": _radius}
+## Called by RoomTime after every tick (group `plate`) with the player's rect:
+## her coming to the stand takes or puts back the torch; a burning torch in
+## her hands lights the ropes it passes. Changes go through
+## `room.apply_change`; the room is an argument, never kept.
+func sense(room: Object, _direction: int, player_rect: Rect2) -> void:
+	var at := player_rect.has_area() and stand_rect().intersects(player_rect)
+	if at and not _at_stand:
+		if not held and mounted:
+			room.call("apply_change", object_id, {"held": true, "mounted": false})
+		elif held:
+			room.call("apply_change", object_id, {"held": false, "let_go": true, "fall": 0.0,
+				"position": home, "lit": lit, "mounted": true})
+			room.call("rewrite_past_where", object_id, "held")
+	_at_stand = at
+	if held and lit:
+		_light_ropes(room)
 
 
-func get_interaction_change(_objects: Array) -> Array:
-	if not held:
-		return [{"id": object_id, "state": {"held": true, "mounted": false}}]
-	var wood := wood_in_reach()
-	if wood != null:
-		var at := wood.position + Vector2(0.0, wood.size.y * 0.25)
-		return [
-			{"id": object_id, "rewrite_past": true, "state": {"held": false, "let_go": true,
-				"fall": 0.0, "position": at, "lit": true, "mounted": false, "host": wood.object_id}},
-			{"id": wood.object_id, "state": wood.ignite_change()},
-		]
-	return [{"id": object_id, "rewrite_past": true, "state": {"held": false, "let_go": true,
-		"fall": 0.0, "position": position, "lit": lit, "mounted": false, "host": ""}}]
+## Back to the room as loaded: no step in progress.
+func forget_step() -> void:
+	_at_stand = false
 
 
 ## The room's reset: out of the hands, so the first frame can put it back.
 func forget_hands() -> void:
 	held = false
+
+
+func _light_ropes(room: Object) -> void:
+	if not is_inside_tree():
+		return
+	var parent := get_parent()
+	var reach := flame_rect().grow(_reach)
+	for node in get_tree().get_nodes_in_group("torch_lightable"):
+		if not parent.is_ancestor_of(node) or not node.has_method("light_rect"):
+			continue
+		if reach.intersects(node.call("light_rect") as Rect2):
+			var change: Dictionary = node.call("torch_change")
+			if not change.is_empty():
+				room.call("apply_change", str(node.get("object_id")), change)
 
 
 func _physics_process(_delta: float) -> void:
@@ -226,6 +208,9 @@ func _physics_process(_delta: float) -> void:
 	var facing := -1.0 if float(player.call("facing")) < 0.0 else 1.0
 	var target: Vector2 = player.position + Vector2(HAND.x * facing, HAND.y)
 	position = position.move_toward(target, _follow)
+	# Her fire is live: rain puts it out in the hands too, in either direction.
+	if lit and is_wet():
+		lit = false
 	queue_redraw()
 
 
@@ -245,27 +230,9 @@ func _player() -> Node2D:
 	return null
 
 
-func _wood(id: String) -> WoodZone:
-	if not is_inside_tree():
-		return null
-	var room := get_parent()
-	for node in get_tree().get_nodes_in_group("flammable"):
-		if node is WoodZone and room.is_ancestor_of(node) and (node as WoodZone).object_id == id:
-			return node as WoodZone
-	return null
-
-
-func _host_burning() -> bool:
-	var wood := _wood(host)
-	return wood != null and wood.burn.is_burning()
-
-
 func _draw() -> void:
-	if is_spent():
-		return
-	if mounted:
-		draw_rect(Rect2(Vector2(-9.0, -14.0), Vector2(18.0, 6.0)), HOLDER_COLOR)
-		draw_rect(Rect2(Vector2(-3.0, -14.0), Vector2(6.0, 20.0)), HOLDER_COLOR)
+	if mounted and not held:
+		draw_rect(Rect2(Vector2(-9.0, -6.0), Vector2(18.0, 8.0)), HOLDER_COLOR)
 	draw_line(Vector2.ZERO, Vector2(0.0, -LENGTH), STICK_COLOR, 6.0, true)
 	draw_rect(Rect2(Vector2(-5.0, -LENGTH - 2.0), Vector2(10.0, 12.0)), WRAP_COLOR)
 	if not lit:

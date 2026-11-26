@@ -96,7 +96,12 @@ const SPRINKLER_KEYS: Array[String] = ["spin_up_seconds", "nozzle_spacing_px", "
 const STEAM_KEYS: Array[String] = ["seconds", "puffs", "rise_px", "radius_px"]
 ## The torch of level 03 (D155): an item that carries fire from the past.
 const RAMP_KEYS: Array[String] = ["fall_seconds", "thickness_px"]
-const TORCH_KEYS: Array[String] = ["interact_radius_px", "reach_px", "follow_px", "gravity", "max_fall_speed"]
+const TORCH_KEYS: Array[String] = ["stand_px", "reach_px", "follow_px"]
+const ROPE_KEYS: Array[String] = ["burn_seconds", "reach_px"]
+const WINCH_RAMP_KEYS: Array[String] = ["thickness_px"]
+const CAGE_KEYS: Array[String] = ["rise_seconds", "floor_px", "bars_px"]
+## The poses of a winch ramp's schedule (`objects.<id>.keys`, level 03).
+const WINCH_POSES: Array[String] = ["flat", "slope", "up"]
 const FLAMETHROWER_KEYS: Array[String] = ["interact_radius_px", "reach_px", "jet_px", "follow_px", "gravity", "max_fall_speed"]
 ## Every window in which the player must act is at least this long (design rules).
 const MIN_WINDOW_SECONDS := 3.0
@@ -475,8 +480,30 @@ static func _object_settings_problems(settings: Variant, where: String) -> Packe
 				errors.append("%s: 'objects.%s.%s' must be a number from 0 to 10000" % [where, id, key])
 			elif str(key) == "start" and not value in SHUTTER_STARTS:
 				errors.append("%s: 'objects.%s.start' must be one of %s" % [where, id, SHUTTER_STARTS])
+			elif str(key) == "keys":
+				errors.append_array(_winch_key_problems(value, "%s: 'objects.%s.keys'" % [where, id]))
 			elif str(key) == "cycle" and not value in LEVEL_DOOR_CYCLES:
 				errors.append("%s: 'objects.%s.cycle' must be one of %s" % [where, id, LEVEL_DOOR_CYCLES])
+	return errors
+
+
+## The schedule of a winch ramp (level 03, D177): a list of at least one
+## [world seconds, pose], the seconds 0 or more and rising, the pose one of
+## WINCH_POSES.
+static func _winch_key_problems(keys: Variant, where: String) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if not keys is Array or (keys as Array).is_empty():
+		errors.append("%s must be a list of [seconds, pose]" % where)
+		return errors
+	var last := -1.0
+	for key: Variant in keys:
+		if not key is Array or (key as Array).size() != 2 or not _is_number(key[0]) or float(key[0]) < 0.0 \
+				or not str(key[1]) in WINCH_POSES:
+			errors.append("%s: every key must be [seconds 0 or more, one of %s]" % [where, WINCH_POSES])
+			continue
+		if float(key[0]) <= last:
+			errors.append("%s: the seconds must rise" % where)
+		last = float(key[0])
 	return errors
 
 
@@ -555,7 +582,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	# 10000 is Water.LEVEL_MAX (core/ does not refer to objects/).
 	if 10000.0 / (float(data["water"]["full_seconds"]) * ticks) > max_step:
 		errors.append("objects.json: 'water.full_seconds' is too short: the level would jump more than max_state_step per tick")
-	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["pipe_plug", PIPE_PLUG_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["ramp", RAMP_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS], ["rail_switch", RAIL_SWITCH_KEYS], ["minecart", MINECART_KEYS]]:
+	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["pipe_plug", PIPE_PLUG_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["rope", ROPE_KEYS], ["winch_ramp", WINCH_RAMP_KEYS], ["cage", CAGE_KEYS], ["ramp", RAMP_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS], ["rail_switch", RAIL_SWITCH_KEYS], ["minecart", MINECART_KEYS]]:
 		var isec := interact_section as Array
 		var isec_name: String = isec[0]
 		var ientry: Variant = data.get(isec_name)
@@ -600,9 +627,10 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 		# fall, twice its average step (the fall is quadratic).
 		if 2.0 * 288.0 * deg_to_rad(64.0) / (float(data["ramp"]["fall_seconds"]) * ticks) > max_step:
 			errors.append("objects.json: 'ramp.fall_seconds' is too short: the ramp's tip would jump more than max_state_step per tick")
-		var torch: Dictionary = data["torch"]
-		if float(torch["follow_px"]) > max_step or float(torch["max_fall_speed"]) / real_ticks > max_step:
-			errors.append("objects.json: 'torch.follow_px' and 'torch.max_fall_speed' must move at most max_state_step per tick")
+		if float(data["torch"]["follow_px"]) > max_step:
+			errors.append("objects.json: 'torch.follow_px' must move at most max_state_step per tick")
+		if float(data["rope"]["burn_seconds"]) < MIN_WINDOW_SECONDS:
+			errors.append("objects.json: 'rope.burn_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
 		var dark: Variant = data.get("darkness")
 		if not dark is Dictionary:
 			errors.append("objects.json: missing object 'darkness'")
