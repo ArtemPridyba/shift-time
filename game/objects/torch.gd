@@ -21,6 +21,11 @@ extends CharacterBody2D
 ##   as they were, so rewinding past the take shows it burning again where it
 ##   burnt.
 ##
+## - A `burner` stand (level 03, D178) is a gas burner with a pilot flame that
+##   never goes out: walking past it with the torch in the hands lights the
+##   torch again and keeps it in the hands; such a stand never takes it back.
+##   The torch's fire in the hands is live, so this changes no frame.
+##
 ## The node is the torch's foot on the stand; the flame is at its top.
 ##
 ## State recorded: { "position", "fall", "held", "lit", "mounted" }
@@ -44,6 +49,8 @@ const HAND := Vector2(22, -30)
 ## Pixels from its foot down to the floor the player stands on in front of
 ## the stand: the stand's reach is measured from there.
 @export var floor_offset_px := 0.0
+## The stand is a gas burner that lights the torch again (see above).
+@export var burner := false
 
 var held := false
 var fall_speed := 0.0
@@ -163,7 +170,11 @@ func stand_rect() -> Rect2:
 ## `room.apply_change`; the room is an argument, never kept.
 func sense(room: Object, _direction: int, player_rect: Rect2) -> void:
 	var at := player_rect.has_area() and stand_rect().intersects(player_rect)
-	if at and not _at_stand:
+	if at and held and burner:
+		if not lit:
+			lit = true
+			queue_redraw()
+	elif at and not _at_stand:
 		if not held and mounted:
 			room.call("apply_change", object_id, {"held": true, "mounted": false})
 		elif held:
@@ -216,7 +227,7 @@ func _physics_process(_delta: float) -> void:
 
 func _process(delta: float) -> void:
 	_live_t += delta
-	if lit:
+	if lit or burner:
 		queue_redraw()
 
 
@@ -231,6 +242,8 @@ func _player() -> Node2D:
 
 
 func _draw() -> void:
+	if burner:
+		_draw_burner(home - position)
 	if mounted and not held:
 		draw_rect(Rect2(Vector2(-9.0, -6.0), Vector2(18.0, 8.0)), HOLDER_COLOR)
 	draw_line(Vector2.ZERO, Vector2(0.0, -LENGTH), STICK_COLOR, 6.0, true)
@@ -245,3 +258,20 @@ func _draw() -> void:
 		Vector2(-7.0, base), tip, Vector2(7.0, base), Vector2(0.0, base + 4.0)]), FLAME_COLOR)
 	draw_colored_polygon(PackedVector2Array([
 		Vector2(-3.5, base), tip * Vector2(0.6, 1.0) + Vector2(0.0, 7.0), Vector2(3.5, base)]), FLAME_CORE_COLOR)
+
+
+## The gas burner at the stand, `at` in the torch's own pixels: a pipe up from
+## the floor, a nozzle and a small flame that flickers by the live clock.
+func _draw_burner(at: Vector2) -> void:
+	var floor_at := at + Vector2(0.0, floor_offset_px)
+	draw_rect(Rect2(floor_at + Vector2(-4.0, -floor_offset_px - 4.0), Vector2(8.0, floor_offset_px + 4.0)), HOLDER_COLOR)
+	draw_rect(Rect2(floor_at + Vector2(-12.0, -6.0), Vector2(24.0, 6.0)), HOLDER_COLOR.darkened(0.3))
+	var nozzle := at + Vector2(14.0, -18.0)
+	draw_rect(Rect2(at + Vector2(2.0, -14.0), Vector2(12.0, 5.0)), HOLDER_COLOR)
+	draw_rect(Rect2(nozzle + Vector2(-2.0, 0.0), Vector2(6.0, 6.0)), HOLDER_COLOR.darkened(0.2))
+	var t := _live_t
+	var tip := nozzle + Vector2(1.0 + sin(t * 11.0) * 1.5, -12.0 - sin(t * 17.0) * 2.0)
+	draw_colored_polygon(PackedVector2Array([
+		nozzle + Vector2(-3.0, 1.0), tip, nozzle + Vector2(5.0, 1.0)]), FLAME_COLOR)
+	draw_colored_polygon(PackedVector2Array([
+		nozzle + Vector2(-1.0, 1.0), tip + Vector2(0.0, 5.0), nozzle + Vector2(3.0, 1.0)]), FLAME_CORE_COLOR)
