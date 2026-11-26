@@ -200,6 +200,12 @@ func apply_change(id: String, partial: Dictionary) -> bool:
 	return player_action(id, state)
 
 
+## The frames left of the cursor where `id` had `flag` set take its present
+## state (a torch put back on its stand, D177).
+func rewrite_past_where(id: String, flag: String) -> bool:
+	return world.rewrite_past_where(temporal_objects(), id, flag)
+
+
 ## Back to the room as it was loaded, with a fresh history and its prelude
 ## run again: the player comes back into the same past.
 func reset() -> void:

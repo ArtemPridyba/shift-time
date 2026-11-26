@@ -172,6 +172,16 @@ func rewrite_past(objects: Array, object_id: String) -> bool:
 	return true
 
 
+## Like `rewrite_past`, but only the frames where the object's state had
+## `flag` set (`Timeline.rewrite_past_where`).
+func rewrite_past_where(objects: Array, object_id: String, flag: String) -> bool:
+	var target := _object(objects, object_id)
+	if target == null or timeline.is_empty():
+		return false
+	timeline.rewrite_past_where(object_id, (target.call("capture_state") as Dictionary).duplicate(true), flag)
+	return true
+
+
 ## True when a solid object, put into its state from `frame`, would overlap the
 ## player in a way it is not allowed to (`blocks_player_at`).
 func crushes(frame: Dictionary, objects: Array, player_rect: Rect2) -> bool:
