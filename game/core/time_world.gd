@@ -172,6 +172,19 @@ func rewrite_past(objects: Array, object_id: String) -> bool:
 	return true
 
 
+## The live player took or put down an item without changing the room's
+## history (D175): every kept frame gets the item's present state; nothing is
+## cut. Returns false when there is no such object.
+func rewrite_all(objects: Array, object_id: String) -> bool:
+	var target := _object(objects, object_id)
+	if target == null:
+		return false
+	if timeline.is_empty():
+		start(objects)
+	timeline.rewrite_all(object_id, (target.call("capture_state") as Dictionary).duplicate(true))
+	return true
+
+
 ## Like `rewrite_past`, but only the frames where the object's state had
 ## `flag` set (`Timeline.rewrite_past_where`).
 func rewrite_past_where(objects: Array, object_id: String, flag: String) -> bool:

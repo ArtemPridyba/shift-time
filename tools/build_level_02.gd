@@ -26,23 +26,23 @@ const SCENE_PATH := "res://levels/level_02.tscn"
 const LEVEL_ID := "level_02"
 
 const MAP := [
-	"####################################################################",
-	"####################################################################",
-	"#...................................###............................#",
-	"#...................................###............................#",
-	"#...................................###............................#",
-	"#...................................###............................#",
-	"#...................................###............................#",
-	"#...................................###............................#",
-	"#S..................................###............................#",
-	"#####.........##....................###......##################....#",
-	"#####.........##....................###.........############....EE.#",
-	"#####.........##....................###.........############....EE.#",
-	"################..........######....#....#####................######",
-	"################..........######........#######..............#######",
-	"################..........######.......#############################",
-	"####################################################################",
-	"####################################################################",
+	"######################################################################",
+	"######################################################################",
+	"#...................................##...............................#",
+	"#...................................##...............................#",
+	"#...................................##...............................#",
+	"#...................................##...............................#",
+	"#...................................##...............................#",
+	"#...................................##...............................#",
+	"#S..................................##...............................#",
+	"#####.........##....................##.......####################....#",
+	"#####.........##....................##...........############.....EE.#",
+	"#####.........##....................##...........############.....EE.#",
+	"################..........######....#....#####..................######",
+	"################..........######.........#####..................######",
+	"################..........######.........#############################",
+	"######################################################################",
+	"######################################################################",
 ]
 
 ## The doorway the heroine walks out of (decoration), two cells as in level 01.
@@ -68,19 +68,18 @@ const BUTTON_1_CELL := Vector2i(3, 9)
 const BUTTON_2_CELL := Vector2i(43, 12)
 ## The tunnel: water from the brim (row 12, the floor at the gates) down to the
 ## floor under the rock (row 14), from the first step to the last.
-const TUNNEL_COLUMNS := Vector2i(46, 62)
+const TUNNEL_COLUMNS := Vector2i(46, 64)
 const TUNNEL_TOP_ROW := 12
 const TUNNEL_FLOOR_ROW := 14
 ## The gates stand in the mouths on the floor (rows 10-11) and sink into it.
 const GATE_IN_COLUMN := 45
-const GATE_OUT_COLUMN := 62
+const GATE_OUT_COLUMN := 64
 const GATE_ROWS := Vector2i(10, 12)
 ## The room of the pipe (D169), between the pools and the tunnel: the floor
 ## (columns 26-31, row 12), the pit (columns 32-35) down to row 15 with its
-## door in column 36 (rows 13-14), the corridor beyond (columns 37-38, rows
-## 12-14, high enough to jump onto the first step) and
-## steps up to the floor of button 2. Columns 36-38 are a wall up to the
-## roof: the only way on is the door at the bottom of the pit.
+## door in column 36 (rows 13-14) and a slope beyond it up to the floor of
+## button 2. Columns 36-37 are a wall up to the roof: the only way on is the
+## door at the bottom of the pit.
 const PIT_COLUMNS := Vector2i(32, 36)
 const PIT_TOP_ROW := 12
 const PIT_FLOOR_ROW := 15
@@ -89,7 +88,31 @@ const PIT_DOOR_CELLS := Rect2i(36, 13, 1, 2)
 ## of the room, to the hole over the pit; the gauge on the way.
 const PIPE_POINTS := [Vector2(25.55, 14.6), Vector2(25.55, 10.3), Vector2(32.3, 10.3), Vector2(32.3, 10.9)]
 const GAUGE_CELL := Vector2(28.4, 10.3)
+## The valve's handwheel lies on the bottom of pool 2, short of its float
+## (D175): it can be taken only while the pool is empty.
+const VALVE_CELL := Vector2(20.5, 15.0)
+## Flights of stairs (`Stairs`, as in level 01), slopes instead of steps (25.11
+## notes): from the pit's door up to the floor of button 2, and down into the
+## tunnel and up out of it. Cells [x, y, w, h]; true when it goes down to the
+## right. Their cells are empty in MAP: the flight is the collision.
+const FLIGHTS := [
+	[Rect2i(37, 12, 4, 3), false],
+	[Rect2i(46, 12, 3, 2), true],
+	[Rect2i(61, 12, 3, 2), false],
+]
 const BEACON_FROM_DOOR := Vector2(-66.0, -118.0)
+## The pump room on the slab over the tunnel (row 9, 25.11 notes): the motor's
+## middle, the panel's top-left corner on the back wall, the cable from it down
+## to button 2 and the discharge pipe from the pump up and into the right wall.
+const SLAB_ROW := 9
+const MOTOR_COLUMN := 52.0
+const PANEL_CELL := Vector2(46.4, 6.0)
+const CABLE_POINTS := [Vector2(46.6, 7.45), Vector2(46.6, 8.45), Vector2(44.9, 8.45), Vector2(44.9, 11.75), Vector2(43.95, 11.75)]
+const DISCHARGE_POINTS := [Vector2(53.85, 3.3), Vector2(69.0, 3.3)]
+## The lamps that stutter when the pump fails (indices of `lamps` in the
+## level's world): over button 2 and over the pump room.
+const BUTTON_2_LAMP := 5
+const PUMP_LAMP := 6
 
 
 func _initialize() -> void:
@@ -163,7 +186,8 @@ func _initialize() -> void:
 	plug.name = "Plug"
 	plug.object_id = "plug"
 	plug.pipe_path = NodePath("../Pipe")
-	plug.position = PIPE_POINTS[PIPE_POINTS.size() - 1] * CELL
+	plug.start_seated = false
+	plug.position = VALVE_CELL * CELL
 	_own(root, plug)
 	var pit_door: Door = (load("res://objects/door.tscn") as PackedScene).instantiate()
 	pit_door.name = "PitDoor"
@@ -186,6 +210,23 @@ func _initialize() -> void:
 	gate_out.linked_id = "button_2"
 	_place_gate(root, gate_out, GATE_OUT_COLUMN)
 
+	var pumps := PumpRoom.new()
+	pumps.name = "PumpRoom"
+	pumps.tunnel_path = NodePath("../Tunnel")
+	pumps.floor_y = float(SLAB_ROW * CELL)
+	pumps.motor_x = MOTOR_COLUMN * CELL
+	pumps.panel_at = PANEL_CELL * CELL
+	pumps.cable = _px(CABLE_POINTS)
+	pumps.discharge = _px(DISCHARGE_POINTS)
+	_own(root, pumps)
+
+	for i in FLIGHTS.size():
+		var flight := Stairs.new()
+		flight.name = "Stairs" if i == 0 else "Stairs%d" % (i + 1)
+		flight.cells = FLIGHTS[i][0]
+		flight.descends_right = FLIGHTS[i][1]
+		_own(root, flight)
+
 	var ground := WorldGround.new()
 	ground.name = "WorldGround"
 	ground.level_id = LEVEL_ID
@@ -204,7 +245,14 @@ func _initialize() -> void:
 	var button_1 := _add_button(root, "Button1", "button_1", BUTTON_1_CELL, ["sluice", "pool_1", "pool_2"])
 	_add_sparks(root, button_1, NodePath())
 	var button_2 := _add_button(root, "Button2", "button_2", BUTTON_2_CELL, ["tunnel", "gate_out"])
-	_add_sparks(root, button_2, NodePath("../../Tunnel"))
+	_add_sparks(root, button_2, NodePath())
+	# The pump fails: sparks and smoke at the button, sparks at the panel,
+	# smoke from the motor, the lamps over them stutter (25.11 notes).
+	var slab_y := float(SLAB_ROW * CELL)
+	_add_fault(root, "Button2Fault", button_2.position + Vector2(0, -6), true, true, PackedInt32Array([BUTTON_2_LAMP]), 26.0, 41)
+	var panel := PANEL_CELL * CELL + Vector2(32, 46)
+	_add_fault(root, "PanelFault", panel, true, false, PackedInt32Array([PUMP_LAMP]), slab_y - panel.y, 43)
+	_add_fault(root, "MotorFault", Vector2(MOTOR_COLUMN * CELL - 10.0, slab_y - 80.0), false, true, PackedInt32Array(), 80.0, 47)
 
 	var light := WorldLight.new()
 	light.name = "WorldLight"
@@ -290,13 +338,33 @@ func _add_button(root: Node, node_name: String, id: String, cell: Vector2i, targ
 	return button
 
 
-func _add_sparks(root: Node, button: PushButton, fault_path: NodePath) -> void:
+func _add_sparks(root: Node, button: PushButton, _unused: NodePath) -> void:
 	var sparks := ButtonSparks.new()
 	sparks.name = "Sparks"
 	sparks.button_path = NodePath("..")
-	sparks.fault_water_path = fault_path
 	button.add_child(sparks)
 	sparks.owner = root
+
+
+## A breakdown of the tunnel's pump at `at` (room px): sparks, smoke, lamps.
+func _add_fault(root: Node, node_name: String, at: Vector2, sparks: bool, smoke: bool, lamps: PackedInt32Array, floor_below: float, noise_seed: int) -> void:
+	var fault := FaultFx.new()
+	fault.name = node_name
+	fault.water_path = NodePath("../Tunnel")
+	fault.position = at
+	fault.sparks = sparks
+	fault.smoke = smoke
+	fault.lamps = lamps
+	fault.floor_y = floor_below
+	fault.noise_seed = noise_seed
+	_own(root, fault)
+
+
+func _px(cells: Array) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	for at: Vector2 in cells:
+		points.append(at * CELL)
+	return points
 
 
 func _own(root: Node, child: Node) -> void:

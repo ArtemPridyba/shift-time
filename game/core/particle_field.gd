@@ -52,6 +52,9 @@ var burst_area := Vector2.ZERO
 ## Moments (world seconds) of the bursts the owner adds, besides the periodic ones.
 var extra_bursts := PackedFloat32Array()
 var noise_seed := 1
+## True: the stream starts at time 0, nothing was born before it (smoke from
+## a breakdown); false: the stream has always run (dust in a lamp's light).
+var starts_empty := false
 
 
 static func from_preset(preset: Dictionary, field_seed: int) -> ParticleField:
@@ -108,6 +111,8 @@ func sample(t: float) -> PackedFloat32Array:
 	var out := PackedFloat32Array()
 	if rate > 0.0:
 		var first := int(floor((t - lifetime) * rate)) + 1
+		if starts_empty:
+			first = maxi(first, 0)
 		var last := int(floor(t * rate))
 		for i in range(first, last + 1):
 			_add(out, t, float(i) / rate, noise_seed, i, _stream_origin(noise_seed, i))

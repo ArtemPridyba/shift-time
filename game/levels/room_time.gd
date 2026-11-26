@@ -77,16 +77,24 @@ func _physics_process(_delta: float) -> void:
 	_tell_world_clock()
 
 
-## Time plates (group `plate`, level 04) feel the player's step after the
-## world moved, by the direction of this tick, and change their shutters
-## through `apply_change`.
+## Time plates (group `plate`, level 04) feel the player's step and the
+## wheels of a minecart (group `minecart`, D168) after the world moved, by the
+## direction of this tick, and change their shutters through `apply_change`.
 func _tell_plates(direction: int) -> void:
 	var room := get_parent()
 	if room == null:
 		return
 	var rect := _player_rect()
+	var wheels: Array = []
+	for cart in get_tree().get_nodes_in_group("minecart"):
+		if room.is_ancestor_of(cart) and cart.has_method("wheel_rect"):
+			wheels.append(cart.call("wheel_rect"))
 	for node in get_tree().get_nodes_in_group("plate"):
-		if room.is_ancestor_of(node) and node.has_method("sense"):
+		if not room.is_ancestor_of(node) or not node.has_method("sense"):
+			continue
+		if node is TimePlate:
+			node.call("sense", self, direction, rect, wheels)
+		else:
 			node.call("sense", self, direction, rect)
 
 
@@ -181,9 +189,28 @@ func player_interact(player_pos: Vector2) -> void:
 	for change: Variant in changes:
 		var ch := change as Dictionary
 		var id := str(ch.get("id", ""))
+		if bool(ch.get("rewrite_all", false)):
+			_set_without_branch(id, ch.get("state", {}) as Dictionary)
+			continue
 		apply_change(id, ch.get("state", {}) as Dictionary)
 		if bool(ch.get("rewrite_past", false)):
 			world.rewrite_past(temporal_objects(), id)
+
+
+## A change that is no interference (`rewrite_all`, D175): `partial` is merged
+## over the object's present state, and that state is written into all its
+## frames, past and future; the room's history is not cut.
+func _set_without_branch(id: String, partial: Dictionary) -> void:
+	for obj: Variant in temporal_objects():
+		if obj is Object and (obj as Object).has_method("capture_state") and str((obj as Object).get("object_id")) == id:
+			var state: Dictionary = ((obj as Object).call("capture_state") as Dictionary).duplicate(true)
+			state.merge(partial.duplicate(true), true)
+			(obj as Object).call("restore_state", state)
+			world.rewrite_all(temporal_objects(), id)
+			# What depends on the item follows it along the recorded future.
+			if (obj as Object).has_method("after_rewrite"):
+				(obj as Object).call("after_rewrite", world.timeline)
+			return
 
 
 ## A player's change to one object: `partial` is merged over the object's
@@ -216,6 +243,10 @@ func reset() -> void:
 	for node in get_tree().get_nodes_in_group("plate"):
 		if room != null and room.is_ancestor_of(node) and node.has_method("forget_step"):
 			node.call("forget_step")
+	# The minecart is out of time (D168): a reset parks it, nothing rewinds it.
+	for node in get_tree().get_nodes_in_group("minecart"):
+		if room != null and room.is_ancestor_of(node) and node.has_method("reset_ride"):
+			node.call("reset_ride")
 	var objects := temporal_objects()
 	_recorder.restore(_initial, objects)
 	world.start(objects)

@@ -114,6 +114,101 @@ func test_collapse_plan_crane_rides_strikes_lamps_in_order_then_act_3() -> void:
 	check(plan.shake(0, plan.arrival()) == 1.0, "the arrival shakes it again")
 
 
+## A plan whose act 3 begins halfway down a level rail (D176): one tick per
+## second, so the seconds are ticks.
+func _mid_ride_plan() -> CollapsePlan:
+	var plan := CollapsePlan.from_data({"crane": {"delay_seconds": 2, "speed": 10, "blast_way": 0.5,
+		"sag_seconds": 2, "sag_px": 10, "fall_second": 3, "fall_seconds": 2},
+		"pieces": [{"act": 3, "second": 2, "fall_seconds": 5, "kind": "sink"}],
+		"slow": {"from_seconds": 0, "ease_seconds": 1, "hold_seconds": 40, "tempo": 0.25}}, 1.0, {}, {})
+	plan.aim(0.0, Vector2(100.0, 0.0), [])
+	return plan
+
+
+func test_collapse_plan_act_3_can_begin_halfway_down_the_rail() -> void:
+	var plan := _mid_ride_plan()
+	var end := plan.ride_delay + plan.ride_ticks
+	check(plan.act3_at > plan.ride_delay and plan.act3_at < end, "act 3 begins on the way, tick %d" % plan.act3_at)
+	check(plan.crane_way(plan.act3_at) >= 0.5 and plan.crane_way(plan.act3_at - 1) < 0.5,
+		"it begins where the crane is halfway down its rail")
+	check(plan.act3(plan.act3_at - 1) < 0.0 and plan.act3(plan.act3_at) == 0.0, "act 3's clock starts there")
+	check(plan.shake(0, plan.act3_at) == 1.0, "the third quake shakes the hall there")
+	var a := plan.act3_at + 5
+	var before := plan.crane_way(plan.act3_at - 1) - plan.crane_way(plan.act3_at - 2)
+	check(plan.crane_way(a + 1) - plan.crane_way(a) < before * 0.5, "the crane rides on slower in the slow world")
+	check(plan.arrival() > end, "so it reaches the end later, tick %d" % plan.arrival())
+	var at_end := plan.crane_pose(plan.arrival(), Vector2(100.0, 0.0), 0.0)["at"] as Vector2
+	check(is_equal_approx(at_end.x, 100.0) and at_end.y < 2.0, "it stops at the end of the rail, %s" % at_end)
+	check((plan.crane_pose(plan.arrival() - 1, Vector2(100.0, 0.0), 0.0)["at"] as Vector2).y == 0.0,
+		"it sags only once it is at the end")
+	check(not plan.crane_down(plan.arrival()) and plan.crane_down(plan.ride_end), "and falls into the pit after that")
+	var last := 0.0
+	for r in plan.ride_end:
+		var now := plan.crane_way(r)
+		check(now >= last, "the crane never jumps back on its way at %d" % r)
+		last = now
+
+
+func test_collapse_plan_the_brake_holds_the_crane_where_it_was() -> void:
+	var plan := _mid_ride_plan()
+	var at := plan.act3_at + 4
+	check(plan.can_brake(at), "the riding crane can be put on its brake")
+	check(not plan.can_brake(plan.ride_delay - 1), "a waiting one cannot")
+	var way := plan.crane_way(at)
+	plan.brake = at
+	check(not plan.can_brake(at + 1), "once on the brake it stays on it")
+	check(plan.crane_way(plan.ride_end) == way, "on the brake it stays where it was")
+	check(not plan.crane_down(plan.ride_end), "and never falls")
+	check(plan.crane_way(at - 3) < way, "before the brake it rode as recorded")
+	check(plan.act3(plan.ride_end) > plan.act3(at), "the world runs on around it")
+	plan.brake = -1
+	check(plan.crane_down(plan.ride_end), "without the brake it ends in the pit")
+	check(not plan.can_brake(plan.ride_end), "and a falling crane cannot be held")
+
+
+class FakeRoom:
+	var changes: Array[Dictionary] = []
+
+	func apply_change(_id: String, partial: Dictionary) -> bool:
+		changes.append(partial)
+		return true
+
+
+## Her rect standing with her feet on `floor` (a rect), in its middle.
+static func _standing_on(floor: Rect2) -> Rect2:
+	return Rect2(Vector2(floor.get_center().x - 16.0, floor.position.y - HEIGHT), Vector2(32.0, HEIGHT))
+
+
+func test_collapse_pedal_brakes_the_crane_she_jumped_into_from_a_piece_under_shift() -> void:
+	var collapse := Collapse.new()
+	collapse.plan = _mid_ride_plan()
+	collapse.pieces = [Rect2(0, -200, 64, 16)]
+	collapse.rests = [Rect2(0, 400, 64, 16)]
+	collapse.crane_rect = Rect2(100, 0, 96, 16)
+	collapse.crane_travel = Vector2(100.0, 0.0)
+	_tree.root.add_child(collapse)
+	var ride := collapse.plan.act3_at + 3
+	collapse.restore_state({"clock": 0, "ride": ride, "calm": -1, "brake": -1})
+	var room := FakeRoom.new()
+	var crane := _standing_on(collapse.crane_load_rect())
+	collapse.sense(room, -1, crane)
+	collapse.sense(room, 1, crane)
+	check(room.changes.is_empty() and not collapse.pedal_armed(), "standing on the crane all along does nothing")
+	collapse.sense(room, -1, _standing_on(collapse.piece_rect(0)))
+	collapse.sense(room, 1, crane)
+	check(room.changes.is_empty(), "jumping into it in normal time does nothing")
+	collapse.sense(room, -1, _standing_on(collapse.piece_rect(0)))
+	collapse.sense(room, -1, crane)
+	check(collapse.pedal_armed() and room.changes.is_empty(), "jumping into it under Shift makes the pedal hers")
+	collapse.sense(room, -1, Rect2(crane.position - Vector2(0, 40), crane.size))
+	collapse.sense(room, -1, crane)
+	check(collapse.pedal_armed(), "a jump on its floor keeps it hers")
+	collapse.sense(room, 1, crane)
+	check(room.changes.size() == 1 and int(room.changes[0].get("brake", -2)) == ride,
+		"letting go of Shift puts the crane on its brake there: %s" % [room.changes])
+	collapse.free()
+
+
 func test_collapse_data_is_checked() -> void:
 	var entry := Content.level_for_scene(LEVEL_PATH)
 	var lamps: Array = (entry["world"] as Dictionary)["lamps"]

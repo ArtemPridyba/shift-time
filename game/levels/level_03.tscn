@@ -22,33 +22,33 @@
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_sdat0"]
 size = Vector2(576, 24)
 
-[node name="Level03" type="Node2D" unique_id=1206373371]
+[node name="Level03" type="Node2D" unique_id=1884043552]
 script = ExtResource("1_lwtrp")
 
-[node name="Blocks" type="TileMapLayer" parent="." unique_id=56052253]
+[node name="Blocks" type="TileMapLayer" parent="." unique_id=1462672047]
 visible = false
 tile_map_data = PackedByteArray("AAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAACAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAFAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAHAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAJAAAAAAAAAAAAAAAKAAAAAAAAAAAAAAALAAAAAAAAAAAAAAAMAAAAAAAAAAAAAAANAAAAAAAAAAAAAAAOAAAAAAAAAAAAAAAPAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAARAAAAAAAAAAAAAAASAAAAAAAAAAAAAAATAAAAAAAAAAAAAAAUAAAAAAAAAAAAAAAVAAAAAAAAAAAAAAAWAAAAAAAAAAAAAAAXAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAaAAAAAAAAAAAAAAAbAAAAAAAAAAAAAAAcAAAAAAAAAAAAAAAdAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAABAAEAAAAAAAAAAAACAAEAAAAAAAAAAAADAAEAAAAAAAAAAAAEAAEAAAAAAAAAAAAFAAEAAAAAAAAAAAAGAAEAAAAAAAAAAAAHAAEAAAAAAAAAAAAIAAEAAAAAAAAAAAAJAAEAAAAAAAAAAAAKAAEAAAAAAAAAAAALAAEAAAAAAAAAAAAMAAEAAAAAAAAAAAANAAEAAAAAAAAAAAAOAAEAAAAAAAAAAAAPAAEAAAAAAAAAAAAQAAEAAAAAAAAAAAARAAEAAAAAAAAAAAASAAEAAAAAAAAAAAATAAEAAAAAAAAAAAAUAAEAAAAAAAAAAAAVAAEAAAAAAAAAAAAWAAEAAAAAAAAAAAAXAAEAAAAAAAAAAAAYAAEAAAAAAAAAAAAZAAEAAAAAAAAAAAAaAAEAAAAAAAAAAAAbAAEAAAAAAAAAAAAcAAEAAAAAAAAAAAAdAAEAAAAAAAAAAAAAAAIAAAAAAAAAAAAdAAIAAAAAAAAAAAAAAAMAAAAAAAAAAAAdAAMAAAAAAAAAAAAAAAQAAAAAAAAAAAAdAAQAAAAAAAAAAAAAAAUAAAAAAAAAAAAdAAUAAAAAAAAAAAAAAAYAAAAAAAAAAAAdAAYAAAAAAAAAAAAAAAcAAAAAAAAAAAAZAAcAAAAAAAAAAAAaAAcAAAAAAAAAAAAbAAcAAAAAAAAAAAAcAAcAAAAAAAAAAAAdAAcAAAAAAAAAAAAAAAgAAAAAAAAAAAAZAAgAAAAAAAAAAAAaAAgAAAAAAAAAAAAbAAgAAAAAAAAAAAAcAAgAAAAAAAAAAAAdAAgAAAAAAAAAAAAAAAkAAAAAAAAAAAAZAAkAAAAAAAAAAAAaAAkAAAAAAAAAAAAbAAkAAAAAAAAAAAAcAAkAAAAAAAAAAAAdAAkAAAAAAAAAAAAAAAoAAAAAAAAAAAAZAAoAAAAAAAAAAAAaAAoAAAAAAAAAAAAbAAoAAAAAAAAAAAAcAAoAAAAAAAAAAAAdAAoAAAAAAAAAAAAAAAsAAAAAAAAAAAAZAAsAAAAAAAAAAAAaAAsAAAAAAAAAAAAbAAsAAAAAAAAAAAAcAAsAAAAAAAAAAAAdAAsAAAAAAAAAAAAAAAwAAAAAAAAAAAAZAAwAAAAAAAAAAAAaAAwAAAAAAAAAAAAbAAwAAAAAAAAAAAAcAAwAAAAAAAAAAAAdAAwAAAAAAAAAAAAAAA0AAAAAAAAAAAABAA0AAAAAAAAAAAACAA0AAAAAAAAAAAADAA0AAAAAAAAAAAAEAA0AAAAAAAAAAAAFAA0AAAAAAAAAAAAGAA0AAAAAAAAAAAAHAA0AAAAAAAAAAAAIAA0AAAAAAAAAAAAOAA0AAAAAAAAAAAAPAA0AAAAAAAAAAAAQAA0AAAAAAAAAAAARAA0AAAAAAAAAAAASAA0AAAAAAAAAAAATAA0AAAAAAAAAAAAUAA0AAAAAAAAAAAAVAA0AAAAAAAAAAAAWAA0AAAAAAAAAAAAZAA0AAAAAAAAAAAAaAA0AAAAAAAAAAAAbAA0AAAAAAAAAAAAcAA0AAAAAAAAAAAAdAA0AAAAAAAAAAAAAAA4AAAAAAAAAAAABAA4AAAAAAAAAAAACAA4AAAAAAAAAAAADAA4AAAAAAAAAAAAEAA4AAAAAAAAAAAAFAA4AAAAAAAAAAAAGAA4AAAAAAAAAAAAHAA4AAAAAAAAAAAAIAA4AAAAAAAAAAAAOAA4AAAAAAAAAAAAPAA4AAAAAAAAAAAAQAA4AAAAAAAAAAAARAA4AAAAAAAAAAAASAA4AAAAAAAAAAAATAA4AAAAAAAAAAAAUAA4AAAAAAAAAAAAVAA4AAAAAAAAAAAAWAA4AAAAAAAAAAAAXAA4AAAAAAAAAAAAYAA4AAAAAAAAAAAAZAA4AAAAAAAAAAAAaAA4AAAAAAAAAAAAbAA4AAAAAAAAAAAAcAA4AAAAAAAAAAAAdAA4AAAAAAAAAAAAAAA8AAAAAAAAAAAABAA8AAAAAAAAAAAACAA8AAAAAAAAAAAADAA8AAAAAAAAAAAAEAA8AAAAAAAAAAAAFAA8AAAAAAAAAAAAGAA8AAAAAAAAAAAAHAA8AAAAAAAAAAAAIAA8AAAAAAAAAAAAOAA8AAAAAAAAAAAAPAA8AAAAAAAAAAAAQAA8AAAAAAAAAAAARAA8AAAAAAAAAAAASAA8AAAAAAAAAAAATAA8AAAAAAAAAAAAUAA8AAAAAAAAAAAAVAA8AAAAAAAAAAAAWAA8AAAAAAAAAAAAXAA8AAAAAAAAAAAAYAA8AAAAAAAAAAAAZAA8AAAAAAAAAAAAaAA8AAAAAAAAAAAAbAA8AAAAAAAAAAAAcAA8AAAAAAAAAAAAdAA8AAAAAAAAAAAAAABAAAAAAAAAAAAABABAAAAAAAAAAAAACABAAAAAAAAAAAAADABAAAAAAAAAAAAAEABAAAAAAAAAAAAAFABAAAAAAAAAAAAAGABAAAAAAAAAAAAAHABAAAAAAAAAAAAAIABAAAAAAAAAAAAAOABAAAAAAAAAAAAAPABAAAAAAAAAAAAAQABAAAAAAAAAAAAARABAAAAAAAAAAAAASABAAAAAAAAAAAAATABAAAAAAAAAAAAAUABAAAAAAAAAAAAAVABAAAAAAAAAAAAAWABAAAAAAAAAAAAAXABAAAAAAAAAAAAAYABAAAAAAAAAAAAAZABAAAAAAAAAAAAAaABAAAAAAAAAAAAAbABAAAAAAAAAAAAAcABAAAAAAAAAAAAAdABAAAAAAAAAAAAA=")
 tile_set = ExtResource("2_2la83")
 
-[node name="SpawnPoint" type="Marker2D" parent="." unique_id=1708387431]
+[node name="SpawnPoint" type="Marker2D" parent="." unique_id=1887101138]
 position = Vector2(96, 832)
 
-[node name="WorldBack" type="Node2D" parent="." unique_id=2062919732]
+[node name="WorldBack" type="Node2D" parent="." unique_id=843156603]
 script = ExtResource("3_myllq")
 level_id = "level_03"
 
-[node name="Entrance" type="Node2D" parent="." unique_id=110335]
+[node name="Entrance" type="Node2D" parent="." unique_id=1072813104]
 position = Vector2(64, 704)
 script = ExtResource("4_k7dv5")
 size = Vector2(64, 128)
 
-[node name="Mezzanine" type="StaticBody2D" parent="." unique_id=1275154547]
+[node name="Mezzanine" type="StaticBody2D" parent="." unique_id=892640395]
 position = Vector2(1184, 652)
 
-[node name="@CollisionShape2D@2" type="CollisionShape2D" parent="Mezzanine" unique_id=1099566375]
+[node name="@CollisionShape2D@2" type="CollisionShape2D" parent="Mezzanine" unique_id=681946725]
 shape = SubResource("RectangleShape2D_sdat0")
 
-[node name="MezzanineLook" type="ColorRect" parent="." unique_id=1526680348]
+[node name="MezzanineLook" type="ColorRect" parent="." unique_id=2012201306]
 offset_left = 896.0
 offset_top = 640.0
 offset_right = 1472.0
@@ -56,7 +56,7 @@ offset_bottom = 664.0
 mouse_filter = 2
 color = Color(0.22745098, 0.24705882, 0.27450982, 1)
 
-[node name="MezzanineEdge" type="ColorRect" parent="." unique_id=519037699]
+[node name="MezzanineEdge" type="ColorRect" parent="." unique_id=2082503893]
 offset_left = 896.0
 offset_top = 640.0
 offset_right = 1472.0
@@ -64,17 +64,17 @@ offset_bottom = 644.0
 mouse_filter = 2
 color = Color(0.3529412, 0.38039216, 0.41960785, 1)
 
-[node name="BrakeRope" type="Node2D" parent="." unique_id=211105256]
+[node name="BrakeRope" type="Node2D" parent="." unique_id=1408694523]
 script = ExtResource("5_jx2nq")
 object_id = "brake"
 points = PackedVector2Array(288, 761.6, 288, 422.4)
 
-[node name="StopRope" type="Node2D" parent="." unique_id=1955119293]
+[node name="StopRope" type="Node2D" parent="." unique_id=2109171634]
 script = ExtResource("5_jx2nq")
 object_id = "stop_rope"
 points = PackedVector2Array(1312, 560, 1433.6, 601.6, 1465.6, 640, 1494.4, 825.6)
 
-[node name="Ramp" type="AnimatableBody2D" parent="." unique_id=1691869462]
+[node name="Ramp" type="AnimatableBody2D" parent="." unique_id=1495705587]
 position = Vector2(576, 832)
 script = ExtResource("6_my8pt")
 length_px = 373.1809
@@ -82,7 +82,7 @@ slope_deg = 30.96375653207352
 pulley = Vector2(720, 166.4)
 drum = Vector2(288, 384)
 
-[node name="Stand" type="ColorRect" parent="." unique_id=755971613]
+[node name="Stand" type="ColorRect" parent="." unique_id=195311250]
 offset_left = 989.0
 offset_top = 776.0
 offset_right = 995.0
@@ -90,34 +90,34 @@ offset_bottom = 832.0
 mouse_filter = 2
 color = Color(0.2901961, 0.3137255, 0.34509805, 1)
 
-[node name="Torch" type="CharacterBody2D" parent="." unique_id=1433108655]
+[node name="Torch" type="CharacterBody2D" parent="." unique_id=1392241337]
 process_physics_priority = 10
 position = Vector2(992, 776)
 collision_layer = 4
 script = ExtResource("7_phrv1")
 floor_offset_px = 56.0
 
-[node name="Sprinkler" type="Node2D" parent="." unique_id=1427833463]
+[node name="Sprinkler" type="Node2D" parent="." unique_id=670038379]
 position = Vector2(1184, 300.8)
 script = ExtResource("8_t7pr7")
 size = Vector2(576, 339.2)
 powered = true
 start_full = true
 
-[node name="Cage" type="AnimatableBody2D" parent="." unique_id=1262343057]
+[node name="Cage" type="AnimatableBody2D" parent="." unique_id=202109697]
 position = Vector2(1536, 832)
 script = ExtResource("9_q5run")
 pulley_from_floor = Vector2(0, -665.6)
 
-[node name="WorldGround" type="Node2D" parent="." unique_id=320430066]
+[node name="WorldGround" type="Node2D" parent="." unique_id=1686878363]
 script = ExtResource("10_lbtiq")
 level_id = "level_03"
 
-[node name="WorldLight" type="Node2D" parent="." unique_id=971808093]
+[node name="WorldLight" type="Node2D" parent="." unique_id=831645336]
 script = ExtResource("11_bueam")
 level_id = "level_03"
 
-[node name="Exit" type="Area2D" parent="." unique_id=1641050482 instance=ExtResource("12_u6lkg")]
+[node name="Exit" type="Area2D" parent="." unique_id=333288367 instance=ExtResource("12_u6lkg")]
 position = Vector2(1792, 384)
 collision_layer = 0
 collision_mask = 2
@@ -125,20 +125,20 @@ monitorable = false
 script = ExtResource("13_vxifu")
 size = Vector2(128, 128)
 
-[node name="ExitDoor" type="Node2D" parent="Exit" unique_id=1890709457]
+[node name="ExitDoor" type="Node2D" parent="Exit" unique_id=1414235508]
 position = Vector2(0, 64)
 script = ExtResource("14_31vjw")
 
-[node name="Beacon" type="Node2D" parent="Exit" unique_id=2049719221]
+[node name="Beacon" type="Node2D" parent="Exit" unique_id=439592176]
 position = Vector2(-66, -54)
 script = ExtResource("15_84an3")
 
-[node name="Player" type="CharacterBody2D" parent="." unique_id=1338289978 instance=ExtResource("16_ff0h0")]
+[node name="Player" type="CharacterBody2D" parent="." unique_id=312252336 instance=ExtResource("16_ff0h0")]
 z_index = 2
 collision_layer = 2
 script = ExtResource("17_2nmhj")
 
-[node name="RoomTime" type="Node" parent="." unique_id=163749422]
+[node name="RoomTime" type="Node" parent="." unique_id=120054514]
 process_physics_priority = -50
 script = ExtResource("18_nag5p")
 player_path = NodePath("../Player")

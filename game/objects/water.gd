@@ -210,8 +210,9 @@ func simulate_tick(_tick: int) -> void:
 	if powered:
 		var direction := open_flow
 		if turn_after_ticks >= 0:
-			if not turned():
-				run += 1
+			# It keeps counting after the turn: the breakdown's smoke and
+			# sparks are drawn from how long ago it failed (FaultFx).
+			run += 1
 			if turned():
 				direction = -open_flow
 		var next := clampi(level + direction * _step, 0, LEVEL_MAX)
@@ -239,6 +240,15 @@ func blocks_player_at(state: Dictionary, player_rect: Rect2) -> bool:
 ## True once a failing pump has turned the flow (`turn_after_ticks`).
 func turned() -> bool:
 	return turn_after_ticks >= 0 and run > turn_after_ticks
+
+
+## Seconds of the world since the pump failed, from the recorded counter; -1
+## before that or without a failing pump. A pure function of the state, so
+## what the breakdown draws plays backwards under Shift.
+func fault_seconds() -> float:
+	if not turned():
+		return -1.0
+	return float(run - turn_after_ticks - 1) / maxf(_ticks, 1.0)
 
 
 ## Level units per simulated tick.

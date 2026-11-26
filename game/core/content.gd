@@ -18,7 +18,7 @@ const MENU_PATH := "res://data/menu.json"
 ## Texts of the menu buttons (`menu.json`, `buttons`).
 const MENU_BUTTONS: Array[String] = ["start", "continue", "levels", "quit", "back", "resume", "restart", "main_menu", "passed"]
 ## Numbers of `camera.json` (D83), each above 0.
-const CAMERA_KEYS := ["zoom", "zoom_max", "zoom_step", "zoom_speed", "lead_px", "lead_speed", "follow_speed", "overview_start_seconds", "overview_blend_seconds", "feet_screen_y"]
+const CAMERA_KEYS := ["zoom", "zoom_max", "zoom_step", "zoom_speed", "lead_px", "lead_speed", "follow_speed", "overview_start_seconds", "overview_blend_seconds", "feet_screen_y", "ride_lead_px", "ride_zoom"]
 ## Colour roles every palette in `art.json` must give, each as a ramp from dark to light.
 const ART_ROLES: Array[String] = ["background", "steel", "mechanism", "suit", "helmet", "rust", "time", "fire", "interact", "water", "wood", "lamp_light"]
 const ART_RAMP_SIZE := 5
@@ -68,8 +68,16 @@ const WATER_LOOK_KEYS: Array[String] = [
 const BUTTON_KEYS: Array[String] = ["interact_radius_px"]
 const SHUTTER_KEYS: Array[String] = ["move_seconds"]
 const TIME_PLATE_KEYS: Array[String] = ["contact_px"]
-## Where a shutter of a level starts (level 04).
-const SHUTTER_STARTS: Array[String] = ["open", "closed"]
+## Where a shutter of a level starts (level 04), and a rail switch (D168).
+const SHUTTER_STARTS: Array[String] = ["open", "closed", "down", "up"]
+## The rail switch of level 04 (D168).
+const RAIL_SWITCH_KEYS: Array[String] = ["move_seconds"]
+## The minecart of level 04 (D168), all above 0: speeds in px a second, the
+## brake and the start in px a second squared, its shape in px.
+const MINECART_KEYS: Array[String] = [
+	"speed_px", "accel_px", "brake_px", "creep_px", "launch_seconds", "bump_seconds", "bounce_px",
+	"shake_px", "hoist_speed_px", "length_px", "body_px", "platform_px", "platform_width_px", "seat_px", "board_px",
+]
 const LEVER_KEYS: Array[String] = ["interact_radius_px"]
 ## The plug of level 02's pipe (D164): an item, like the flamethrower; all above 0.
 const PIPE_PLUG_KEYS: Array[String] = ["interact_radius_px", "insert_radius_px", "gravity", "max_fall_speed", "friction_px", "follow_px"]
@@ -316,6 +324,8 @@ static func validate_camera(data: Variant) -> PackedStringArray:
 		errors.append("camera.json: 'zoom_max' must be at least 'zoom': the level starts no closer than the closest view")
 	if errors.is_empty() and (float(data["zoom_step"]) <= 1.0 or float(data["zoom_step"]) > 2.0):
 		errors.append("camera.json: 'zoom_step' must be above 1 and at most 2: one wheel step multiplies the zoom by it")
+	if errors.is_empty() and float(data["ride_zoom"]) > 1.0:
+		errors.append("camera.json: 'ride_zoom' must be at most 1: in the cart the camera pulls back, never closer")
 	if errors.is_empty() and (float(data["feet_screen_y"]) < 0.5 or float(data["feet_screen_y"]) > 0.95):
 		errors.append("camera.json: 'feet_screen_y' must be from 0.5 to 0.95: her feet stay in the lower half of the screen")
 	return errors
@@ -572,7 +582,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	# 10000 is Water.LEVEL_MAX (core/ does not refer to objects/).
 	if 10000.0 / (float(data["water"]["full_seconds"]) * ticks) > max_step:
 		errors.append("objects.json: 'water.full_seconds' is too short: the level would jump more than max_state_step per tick")
-	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["pipe_plug", PIPE_PLUG_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["rope", ROPE_KEYS], ["winch_ramp", WINCH_RAMP_KEYS], ["cage", CAGE_KEYS], ["ramp", RAMP_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS]]:
+	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["pipe_plug", PIPE_PLUG_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["rope", ROPE_KEYS], ["winch_ramp", WINCH_RAMP_KEYS], ["cage", CAGE_KEYS], ["ramp", RAMP_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS], ["rail_switch", RAIL_SWITCH_KEYS], ["minecart", MINECART_KEYS]]:
 		var isec := interact_section as Array
 		var isec_name: String = isec[0]
 		var ientry: Variant = data.get(isec_name)
@@ -585,6 +595,13 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	if errors.is_empty():
 		if 1000.0 / (float(data["shutter"]["move_seconds"]) * ticks) > max_step:
 			errors.append("objects.json: 'shutter.move_seconds' is too short: the shutter would jump more than max_state_step per tick")
+		if 1000.0 / (float(data["rail_switch"]["move_seconds"]) * ticks) > max_step:
+			errors.append("objects.json: 'rail_switch.move_seconds' is too short: the blade would jump more than max_state_step per tick")
+		var cart: Dictionary = data["minecart"]
+		if float(cart["seat_px"]) + float(cart["platform_width_px"]) / 2.0 > float(cart["length_px"]) / 2.0 + 0.5:
+			errors.append("objects.json: 'minecart.seat_px' puts the platform past the back of the cart")
+		if float(cart["creep_px"]) >= float(cart["speed_px"]):
+			errors.append("objects.json: 'minecart.creep_px' must be below 'speed_px': it is the last crawl to the station's buffer")
 		if float(data["lamp"]["break_seconds"]) < MIN_WINDOW_SECONDS:
 			errors.append("objects.json: 'lamp.break_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
 		var lamp: Dictionary = data["lamp"]
@@ -797,6 +814,7 @@ static func validate_time_hud(data: Variant) -> PackedStringArray:
 ## A number between `low` and `high` (`low` itself is allowed unless `above_low`).
 const LOOK_PIPE_COLORS: Array[String] = ["shell", "shell_light", "empty", "water", "dash"]
 const LOOK_KIT_OBJECTS := {
+	"fault": ["blink_hz", "blink_on_share", "blink_dark"],
 	"shutter": ["blade_region", "painted_blade_region", "stripe_region", "housing_frame_px", "brick_tint", "wheel_px", "wheel_turns", "gear_px"],
 	"picture_light": ["dark", "lit_color", "lit_gain", "haze_color", "haze", "soft_px", "yellow_keep"],
 	"platform": ["cap_px", "rack_px", "chain_px", "gear_px", "track_above_px", "track_below_px", "chain_below_px",
