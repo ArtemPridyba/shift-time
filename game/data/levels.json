@@ -329,5 +329,77 @@
 			}
 		},
 		"title": "06 Flow"
+	},
+	{
+		"id": "level_07",
+		"scene": "res://levels/level_07.tscn",
+		"prelude_seconds": 0.5,
+		"intro_seconds": 0.6,
+		"objects": {
+			"shutter_a": { "start": "closed" },
+			"switch_b": { "start": "down" },
+			"minecart": { "intro_ride": true }
+		},
+		"title": "07 Plates"
+	},
+	{
+		"id": "level_08",
+		"scene": "res://levels/level_08.tscn",
+		"prelude_seconds": 0.5,
+		"intro_seconds": 0.6,
+		"collapse": {
+			"_about": "Level 08 «Crane» on one screen (card docs/levels/08.md, D210): the collapse of level 05 as a puzzle. Act 1 counts from the room's start: the quake at quake_seconds, then the pieces fall 'second' after it: the bridge's slabs A and B onto their stubs, the heavy slab under the roof sinks evenly ('sink') three rows on its chain, and the yellow platform that hangs against it over two pulleys ('follow') rises as far, from the bridge's height to the top of the exit tower. Act 2 begins when the heroine steps onto the crane: the second quake; after crane.delay_seconds it rides down its rail at crane.speed px per world second and lamp crane.lamps falls as it comes within lamp_lead_px of it. Act 3 begins at the end of the rail: the third quake, the crane sags sag_px over sag_seconds and falls at fall_second for fall_seconds (her window to step off: ≥ 3 s). No chunks and no slow part in act 3 (slow.tempo 1). Seconds of the world clock (D96).",
+			"quake_seconds": 2.2,
+			"pieces": [
+				{ "act": 1, "second": 0.2, "fall_seconds": 0.7 },
+				{ "act": 1, "second": 0.5, "fall_seconds": 0.7 },
+				{ "act": 1, "second": 0.9, "fall_seconds": 1.6, "kind": "sink" },
+				{ "act": 1, "kind": "follow", "follow": 2 }
+			],
+			"lamps": [],
+			"crane": { "delay_seconds": 0.8, "speed": 140, "lamps": [1], "lamp_lead_px": 64, "lamp_to_row": 19.0, "sag_seconds": 1.2, "sag_px": 20, "tilt_degrees": 3, "fall_second": 4.4, "fall_seconds": 1.2 },
+			"slow": { "from_seconds": 0, "ease_seconds": 0.5, "tempo": 1.0, "hold_seconds": 0 }
+		},
+		"world": {
+			"_about": "Level 08 in the Night shop (same kit and scale as level 01, D112), one screen of 30x17 cells, the roof on rows 0-1. The entrance ledge (columns 0-6, row 9) with the crane waiting at its end; the pit (columns 7-24) open to the bottom, with the stubs of the bridge's slabs (columns 17 and 20, from row 14); the exit tower (columns 25-29 from row 5). Lamps: 0 over the entrance, 1 over the rail (falls as the crane passes), 2 low over the end of the rail and the stubs, 3 over the counterweight, 4 by the exit.",
+			"ceiling": 2,
+			"back": [
+				{ "kind": "truss", "rect": [1, 2, 28, 0.5] },
+				{ "kind": "window", "rect": [3.4, 3.4, 1.15, 2.6] },
+				{ "kind": "window", "rect": [12.2, 3.0, 1.15, 2.4] },
+				{ "kind": "column", "rect": [6.85, 2, 0.3, 7] },
+				{ "kind": "column", "rect": [24.55, 2, 0.3, 3] },
+				{ "kind": "soot", "rect": [9.6, 3.2, 1.6, 0.9] },
+				{ "kind": "rust", "rect": [2.2, 6.8, 1.3, 0.8] },
+				{ "kind": "cracks", "rect": [14.6, 12.2, 1.1, 0.8] },
+				{ "kind": "cracks", "rect": [22.8, 10.4, 1.1, 0.8] },
+				{ "kind": "stain", "rect": [10.4, 14.0, 1.3, 0.9] },
+				{ "kind": "plaster", "rect": [18.0, 3.2, 1.0, 0.7] },
+				{ "kind": "pipe", "rect": [23.9, 9.0, 0.18, 8] }
+			],
+			"front": [
+				{ "kind": "bricks", "rect": [2.6, 8.78, 1.2, 0.22] },
+				{ "kind": "beam", "rect": [26.4, 4.84, 1.5, 0.16] }
+			],
+			"lamps": [
+				{ "x": 3.5, "drop": 2.4, "radius_px": 340 },
+				{ "x": 11.0, "drop": 1.0, "radius_px": 320 },
+				{ "x": 15.6, "drop": 6.0, "radius_px": 620 },
+				{ "x": 22.4, "drop": 2.0, "radius_px": 420 },
+				{ "x": 27.6, "drop": 0.6, "radius_px": 280 }
+			],
+			"ground": {
+				"concrete": [
+					[0, 9, 7, 8],
+					[17, 14, 1, 3],
+					[20, 14, 1, 3],
+					[25, 5, 5, 12]
+				],
+				"roof": [
+					[0, 0, 30, 2]
+				]
+			}
+		},
+		"title": "08 Crane"
 	}
 ]
