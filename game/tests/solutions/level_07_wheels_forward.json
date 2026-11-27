@@ -5,10 +5,10 @@
 		{ "actions": [], "ticks": 40 },
 		{ "actions": ["move_right", "rewind"], "ticks": 70 },
 		{ "actions": [], "ticks": 70 },
-		{ "actions": ["move_right"], "ticks": 480 },
-		{ "actions": [], "ticks": 660 },
+		{ "actions": ["move_right"], "ticks": 660 },
+		{ "actions": [], "ticks": 870 },
 		{ "actions": ["jump"], "ticks": 6 },
-		{ "actions": [], "ticks": 480 },
+		{ "actions": [], "ticks": 720 },
 		{ "actions": ["jump", "move_left"], "ticks": 40 },
 		{ "actions": ["move_left"], "ticks": 90 }
 	]

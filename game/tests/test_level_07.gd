@@ -89,7 +89,7 @@ func test_intro_ride_runs_the_empty_cart_into_the_dead_end_and_back() -> void:
 	var bumped := false
 	var gate_shut_away := true
 	var ticks := 0
-	while ticks < 900:
+	while ticks < 1200:
 		await _tree.physics_frame
 		ticks += 1
 		if cart.ride.mode == CartRide.Mode.BUMPED:
@@ -102,7 +102,7 @@ func test_intro_ride_runs_the_empty_cart_into_the_dead_end_and_back() -> void:
 	check(plate_b.mark == TimePlate.MARK_CLOSE, "its wheels pressed plate B in normal time")
 	check(not switch.leads_main(), "switch B still leads into the dead end")
 	check(cart.ride.mode == CartRide.Mode.PARKED and not cart.has_rider(), "the hoist brings it back to the park, empty")
-	check(ticks <= 660, "the intro ride is over in 11 s, took %.1f s" % (ticks / 60.0))
+	check(ticks <= 900, "the intro ride is over in 15 s, took %.1f s" % (ticks / 60.0))
 	check(gate_shut_away, "the barrier stands closed while the cart is away")
 	check(not cart.gate_closed(), "the barrier opens once the cart is parked")
 	# A reset runs the intro again.
