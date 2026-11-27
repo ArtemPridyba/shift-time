@@ -40,8 +40,9 @@ const FULL_SCAN_TICKS := 600
 const EXAMPLES := 3
 ## Keys of states that count ticks, name a step or hold a goal, not what the
 ## player sees: they may start again from 0 (`quakes.since` when the next
-## quake begins) or flip at once (`shutter.target`; `closed` is the shutter).
-const COUNTER_KEYS: Array[String] = ["since", "index", "target"]
+## quake begins, `sprinkler.run` when the next rain begins) or flip at once
+## (`shutter.target`; `closed` is the shutter).
+const COUNTER_KEYS: Array[String] = ["since", "index", "target", "run"]
 ## Keys on a finer scale than the usual 0…1000, by how much: the water level
 ## runs 0…10000 (Water.LEVEL_MAX).
 const FINE_KEYS := {"level": 10.0}

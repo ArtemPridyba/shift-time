@@ -32,6 +32,7 @@ func test_jumps_are_found_but_counters_may_restart() -> void:
 	check(not Monkey.jump_problems({"crate": {"position": Vector2.ZERO}}, {"crate": {"position": Vector2(0, 300)}}, limit).is_empty(),
 		"a teleport of a body must be found")
 	check(Monkey.jump_problems({"quakes": {"since": 107}}, {"quakes": {"since": 0}}, limit).is_empty(), "a tick counter may start again")
+	check(Monkey.jump_problems({"sprinkler": {"run": 240}}, {"sprinkler": {"run": 0}}, limit).is_empty(), "the rain's tick counter may start again")
 	check(Monkey.jump_problems({"shutter": {"target": 0}}, {"shutter": {"target": 1000}}, limit).is_empty(), "a goal may flip")
 	check(Monkey.jump_problems({"pool": {"level": 0}}, {"pool": {"level": int(limit) * 10}}, limit).is_empty(),
 		"the water level is ten times finer")
