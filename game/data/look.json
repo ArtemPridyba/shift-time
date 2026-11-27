@@ -198,13 +198,13 @@
       "gear_px": 22
     },
     "picture_light": {
-      "_about": "Objects drawn by code over a painted room (world.backdrop) take the picture's light (24.11, level 01 notes): their colour times dark outside the lamps' cones, times lit_color and lit_gain in the middle of a cone; haze lifts their darkest parts towards haze_color (0: no haze, 1: nothing darker than it), like the hazy picture; soft_px blurs them by that many texels to match the soft picture (0: sharp). yellow_keep (0..1): how much the signal yellow (saturated, hue about 20-75 degrees) keeps its own hue in a cone instead of taking the warm lit_color, so the yellow edge under a lamp is brighter yellow, not orange (25.11, D165); 0: the old warm light for everything.",
+      "_about": "Objects drawn by code over a painted room (world.backdrop) take the picture's light (24.11, level 01 notes): their colour times dark outside the lamps' cones, times lit_color and lit_gain in the middle of a cone; haze lifts their darkest parts towards haze_color (0: no haze, 1: nothing darker than it), like the hazy picture; soft_px blurs them by that many texels to match the soft picture (0: sharp). 0.5 since the picture is upscaled x2 (27.11, D185; 1.5 before). yellow_keep (0..1): how much the signal yellow (saturated, hue about 20-75 degrees) keeps its own hue in a cone instead of taking the warm lit_color, so the yellow edge under a lamp is brighter yellow, not orange (25.11, D165); 0: the old warm light for everything.",
       "dark": 0.3,
       "lit_color": "#ffd6ad",
       "lit_gain": 0.68,
       "haze_color": "#3c2e2c",
       "haze": 0.35,
-      "soft_px": 1.5,
+      "soft_px": 0.5,
       "yellow_keep": 1.0
     },
     "platform": {
