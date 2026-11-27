@@ -1,20 +1,20 @@
 extends SceneTree
-## Builds level 04 `levels/level_04.tscn` (card docs/levels/04.md, D168): time
-## plates, then the minecart that rides through time. A room of 60x17 cells,
-## two screens wide, sized to the heroine (D112).
+## Builds level 04 `levels/level_04.tscn` (card docs/levels/04.md, D168, D216):
+## the minecart that rides through time, on one screen of 30x17 cells, sized
+## to the heroine (D112). A puzzle of one well-timed Shift.
 ##
-## Upper tier: the low corridor of the lesson (plate A and its open shutter A,
-## plate B and shutter B, closed from the start), then the open walkway over
-## the hall with plate 2 and plate 1, each right above its rail switch, and
-## the shaft at its right end where the cart waits at the top of the ramp.
+## Upper tier: the walkway from the doorway on the left to the shaft at the
+## right wall, with plate 2 and plate 1, each right above its rail switch; a
+## barrier at its end stands while the cart is away from the park.
 ## Lower tier: the rails on trestles over a pit open to the bottom (a fall is
 ## death, so the rails are walked only in the cart): the ramp down to switch 1
-## (its side way: dead end 1), switch 2 (dead end 2), and the main line into
-## the tunnel on the left, where the cart stops at the station and the exit
-## is a jump away. The hoist runs under the walkway back to the shaft.
+## (its side way: dead end 1), switch 2 (dead end 2), and the main line under
+## the hopper of pig iron into the tunnel on the left, where the cart stops at
+## the station and the exit is a jump away. The hoist runs under the walkway
+## back to the shaft.
 ##
-## Session 1 of the card: the bunker, shutter Z with plate K and the bricked
-## wall come in session 2 (the tunnel stands open until then).
+## Session 1 of the one-screen card: plate K, shutter Z, the bricked wall and
+## the intro ride come in session 2 (the tunnel stands open until then).
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
 ##   godot --headless --path game --script $PWD/tools/build_level_04.gd
@@ -27,70 +27,70 @@ const TILESET_RES := "res://levels/blockout/blockout_tileset.tres"
 const SCENE_PATH := "res://levels/level_04.tscn"
 
 const MAP := [
-	"############################################################",
-	"############################################################",
-	"#####################......................................#",
-	"#####################......................................#",
-	"#####################......................................#",
-	"#..........................................................#",
-	"#S.........................................................#",
-	"#########################################################..#",
-	"#######....................................................#",
-	"#..........................................................#",
-	"#..........................................................#",
-	"#EE........................................................#",
-	"#EE........................................................#",
-	"#######....................................................#",
-	"#######....................................................#",
-	"#######....................................................#",
-	"#######....................................................#",
+	"##############################",
+	"##############################",
+	"########....................##",
+	"########....................##",
+	"########....................##",
+	"#...........................##",
+	"#S..........................##",
+	"##########################..##",
+	"#######.....................##",
+	"#...........................##",
+	"#...........................##",
+	"#EE.........................##",
+	"#EE.........................##",
+	"#######.....................##",
+	"#######.....................##",
+	"#######.....................##",
+	"#######.....................##",
 ]
 
 ## The doorway the hero walks out of (decoration only), in cells.
 const ENTRANCE_CELLS := Rect2i(1, 5, 1, 2)
 
 ## Plates: the first cell and the width in cells, on the floor row whose top
-## they lie on. Three cells: wider than a jump under the low ceiling.
+## they lie on, each right above its switch.
 const PLATE_CELLS := 3
 const PLATES := [
-	{"id": "plate_a", "label": "A", "cell": Vector2i(5, 7), "targets": ["shutter_a"]},
-	{"id": "plate_b", "label": "B", "cell": Vector2i(13, 7), "targets": ["shutter_b"]},
-	{"id": "plate_2", "label": "2", "cell": Vector2i(36, 7), "targets": ["switch_2"]},
-	{"id": "plate_1", "label": "1", "cell": Vector2i(46, 7), "targets": ["switch_1"]},
-]
-
-## Shutters: the cells they close and where they go to open, in cells. They
-## rise into the corridor's ceiling.
-const SHUTTERS := [
-	{"id": "shutter_a", "label": "A", "cells": Rect2(11, 5, 0.5, 2), "travel": Vector2(0, -2)},
-	{"id": "shutter_b", "label": "B", "cells": Rect2(18, 5, 0.5, 2), "travel": Vector2(0, -2)},
+	{"id": "plate_2", "label": "2", "cell": Vector2i(16, 7), "targets": ["switch_2"]},
+	{"id": "plate_1", "label": "1", "cell": Vector2i(20, 7), "targets": ["switch_1"]},
 ]
 
 ## The rails, in cells: the main line lies on the top of row 13, the dead
 ## ends dip to row 15, the park is in the shaft just below the walkway.
 const MAIN_Y := 13.0
 const SPUR_Y := 15.0
-const PARK := Vector2(56.875, 8.375)
+const PARK := Vector2(25.875, 8.375)
+const SWITCH_1_X := 21.5
+const SWITCH_2_X := 17.5
+const STATION_X := 4.5
 const SEGMENTS := [
-	{"id": "ramp", "points": [PARK, Vector2(55.625, 8.375), Vector2(50.0, MAIN_Y), Vector2(47.5, MAIN_Y)],
+	{"id": "ramp", "points": [PARK, Vector2(24.625, 8.375), Vector2(SWITCH_1_X, MAIN_Y)],
 		"end": {"kind": "switch", "switch": "switch_1", "main": "main_1", "side": "spur_1"}},
-	{"id": "spur_1", "points": [Vector2(47.5, MAIN_Y), Vector2(44.5, SPUR_Y), Vector2(42.5, SPUR_Y)],
+	{"id": "spur_1", "points": [Vector2(SWITCH_1_X, MAIN_Y), Vector2(SWITCH_1_X - 2.0, SPUR_Y), Vector2(SWITCH_1_X - 3.0, SPUR_Y)],
 		"end": {"kind": "stop", "stop": "dead_end"}},
-	{"id": "main_1", "points": [Vector2(47.5, MAIN_Y), Vector2(37.5, MAIN_Y)],
+	{"id": "main_1", "points": [Vector2(SWITCH_1_X, MAIN_Y), Vector2(SWITCH_2_X, MAIN_Y)],
 		"end": {"kind": "switch", "switch": "switch_2", "main": "main_2", "side": "spur_2"}},
-	{"id": "spur_2", "points": [Vector2(37.5, MAIN_Y), Vector2(34.5, SPUR_Y), Vector2(32.5, SPUR_Y)],
+	{"id": "spur_2", "points": [Vector2(SWITCH_2_X, MAIN_Y), Vector2(SWITCH_2_X - 2.0, SPUR_Y), Vector2(SWITCH_2_X - 3.0, SPUR_Y)],
 		"end": {"kind": "stop", "stop": "dead_end"}},
-	{"id": "main_2", "points": [Vector2(37.5, MAIN_Y), Vector2(5.0, MAIN_Y)],
+	{"id": "main_2", "points": [Vector2(SWITCH_2_X, MAIN_Y), Vector2(STATION_X, MAIN_Y)],
 		"end": {"kind": "stop", "stop": "station"}},
 ]
 
 ## Switches under their plates: which way leads to the main line (card table).
 const SWITCHES := [
-	{"id": "switch_1", "label": "1", "at": Vector2(47.5, MAIN_Y), "main_when": "down", "side": Vector2(-3, 2)},
-	{"id": "switch_2", "label": "2", "at": Vector2(37.5, MAIN_Y), "main_when": "up", "side": Vector2(-3, 2)},
+	{"id": "switch_1", "label": "1", "at": Vector2(SWITCH_1_X, MAIN_Y), "main_when": "down", "side": Vector2(-1, 1)},
+	{"id": "switch_2", "label": "2", "at": Vector2(SWITCH_2_X, MAIN_Y), "main_when": "up", "side": Vector2(-1, 1)},
 ]
 ## The walkway's top, where the tie rods meet the plates, in cells.
 const WALKWAY_Y := 7.0
+## The hopper's gate (the middle of its bottom), in cells: under the walkway,
+## over the main line; the pigs fall from here to the bottom of the room.
+const HOPPER_AT := Vector2(11.5, 9.5)
+## The barrier at the end of the walkway over the park, in cells (D192): it
+## stands while the cart is away, so nobody steps into the empty shaft.
+const GATE_CELLS := Rect2(25.6, 4.5, 0.4, 2.5)
 ## The hoist: the hooked cart's wheels ride at HOIST_Y, the hoist's own rail
 ## hangs under the walkway at HOIST_RAIL_Y, from HOIST_FROM_X to the shaft.
 const HOIST_Y := 10.625
@@ -160,17 +160,6 @@ func _initialize() -> void:
 		switch.rod_top = Vector2(0, (WALKWAY_Y - at.y) * CELL)
 		_own(root, switch)
 
-	for one: Dictionary in SHUTTERS:
-		var shutter := Shutter.new()
-		shutter.object_id = one["id"]
-		shutter.name = str(one["id"]).to_pascal_case()
-		shutter.label = one["label"]
-		var cells: Rect2 = one["cells"]
-		shutter.size = cells.size * CELL
-		shutter.travel = (one["travel"] as Vector2) * CELL
-		shutter.position = (cells.position + cells.size / 2.0) * CELL
-		_own(root, shutter)
-
 	for one: Dictionary in PLATES:
 		var plate := TimePlate.new()
 		plate.object_id = one["id"]
@@ -182,11 +171,19 @@ func _initialize() -> void:
 		plate.position = Vector2((cell.x + PLATE_CELLS / 2.0) * CELL, cell.y * CELL)
 		_own(root, plate)
 
+	var hopper := Hopper.new()
+	hopper.name = "Hopper"
+	hopper.position = HOPPER_AT * CELL
+	hopper.fall_px = (MAP.size() - HOPPER_AT.y) * CELL
+	hopper.box = Vector2(2.0, (HOPPER_AT.y - 8.0)) * CELL
+	_own(root, hopper)
+
 	var cart := Minecart.new()
 	cart.name = "Minecart"
 	cart.rails_path = NodePath("../Rails")
 	cart.park_segment = "ramp"
 	cart.position = PARK * CELL
+	cart.gate_rect = Rect2(GATE_CELLS.position * CELL, GATE_CELLS.size * CELL)
 	_own(root, cart)
 
 	var exit: ExitZone = (load("res://objects/exit_zone.tscn") as PackedScene).instantiate()
