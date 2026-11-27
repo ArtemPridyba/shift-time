@@ -191,20 +191,21 @@
 	{
 		"id": "level_05",
 		"scene": "res://levels/level_05.tscn",
-		"prelude_seconds": 0.5,
+		"prelude_seconds": 9.0,
 		"intro_seconds": 0.6,
 		"collapse": {
-			"_about": "The collapse of level 05, one screen (card docs/levels/05.md, D176, D215; CollapsePlan). The hall shakes at quake_seconds after the room's start. Her step onto the crane: the second quake; after crane.delay_seconds it rides down its rail at crane.speed px per second and each of crane.lamps falls when it comes within lamp_lead_px of it. At crane.blast_way of its ride (0 … 1) the third quake and the explosion (blast: at [x, row] in cells, burning 'seconds', look only); the crane rides on to the end of the rail, sags sag_px over sag_seconds (tilting tilt_degrees) and stays there by the floor for good (falls: false). Each piece is a chunk of the ceiling over the rail: it breaks off 'second' after the third quake, once the crane has passed under it, and 'sink's to the floor in fall_seconds; under Shift it rises again. gate: 'second' after the third quake the left chain of the slab over the exit door tears and the slab swings aside in swing_seconds: from then the exit is open. The lamps of act 3 fall among the chunks for their own fall_seconds, lit all the way down. slow: the world keeps its tempo (1, no slow part in this version). Seconds of the world clock (D96).",
+			"_about": "The collapse of level 05, one screen (card docs/levels/05.md, D176, D215; CollapsePlan). The hall shakes at quake_seconds after the room's start. crane.start_seconds after the start the empty crane sets off by itself (it all happens in the prelude, before she comes in): the second quake; after crane.delay_seconds it rides down its rail at crane.speed px per second and each of crane.lamps falls when it comes within lamp_lead_px of it. At crane.blast_way of its ride (0 … 1) the third quake and the explosion (blast: at [x, row] in cells, burning 'seconds', look only); the crane rides on to the end of the rail, sags sag_px over sag_seconds (tilting tilt_degrees) and stays there by the floor for good (falls: false). Each piece is a chunk of the ceiling over the rail: it breaks off 'second' after the third quake, once the crane has passed under it, and 'sink's to the floor in fall_seconds; under Shift it rises again. gate: 'second' after the third quake the left chain of the slab over the exit door tears and the slab swings aside in swing_seconds: from then the exit is open. The lamps of act 3 fall among the chunks for their own fall_seconds, lit all the way down. slow: the world keeps its tempo (1, no slow part in this version). Seconds of the world clock (D96).",
 			"quake_seconds": 1.0,
 			"pieces": [
-				{ "act": 3, "second": 0.9, "fall_seconds": 3.0, "kind": "sink" },
-				{ "act": 3, "second": 2.0, "fall_seconds": 3.0, "kind": "sink" },
-				{ "act": 3, "second": 3.6, "fall_seconds": 3.0, "kind": "sink" }
+				{ "act": 3, "second": 0.9, "fall_seconds": 2.5, "kind": "sink" },
+				{ "act": 3, "second": 0.1, "fall_seconds": 2.5, "kind": "sink" },
+				{ "act": 3, "second": 0.0, "fall_seconds": 0.8, "kind": "sink" }
 			],
 			"lamps": [
 				{ "lamp": 3, "act": 3, "second": 1.6, "to_row": 15.0, "fall_seconds": 2.5, "lit": true }
 			],
 			"crane": {
+				"start_seconds": 0.5,
 				"delay_seconds": 0.5,
 				"speed": 220,
 				"blast_way": 0.45,
@@ -223,33 +224,33 @@
 			"gate": { "second": 0.2, "swing_seconds": 0.8 }
 		},
 		"world": {
-			"_about": "Level 05 in the Night shop (same kit and scale as level 01, D112), one screen of 30x17 cells, the roof down to row 2: the start ledge at the upper left on row 6, the crane's rail sloping down to the right, the exit door in the back wall by the rail, the floor on row 15. Lamps: 0 over the start, 1 by the door, 2 over the rail (it falls as the crane passes), 3 among the chunks (it falls among them, shining), 4 over the bottom. darkness: this room is darker than the kit.",
+			"_about": "Level 05 in the Night shop (same kit and scale as level 01, D112), one screen of 30x17 cells, the roof down to row 2: the crane's ledge at the upper left on row 6, its rail sloping down to the right, the exit door in the back wall by the rail, the pit open to the bottom under the rail, the floor with the entrance at the lower right on row 15. Lamps: 0 over the crane's ledge, 1 by the door, 2 over the rail (it falls as the crane passes), 3 among the chunks (it falls among them, shining), 4 over the entrance. darkness: this room is darker than the kit.",
 			"ceiling": 2,
 			"darkness": "#17171e",
 			"back": [
 				{ "kind": "window", "rect": [3.0, 9.5, 1.15, 3] },
-				{ "kind": "window", "rect": [14.0, 11.5, 1.15, 2.6] },
+				{ "kind": "window", "rect": [14.0, 10.5, 1.15, 2.6] },
 				{ "kind": "window", "rect": [24.0, 4.0, 1.15, 2.6] },
 				{ "kind": "column", "rect": [8.0, 2, 0.3, 13] },
 				{ "kind": "column", "rect": [20.6, 2, 0.3, 13] },
 				{ "kind": "soot", "rect": [11.0, 2.5, 1.8, 0.9] },
-				{ "kind": "rust", "rect": [18.0, 13.4, 1.3, 0.8] },
+				{ "kind": "rust", "rect": [23.0, 12.6, 1.3, 0.8] },
 				{ "kind": "cracks", "rect": [3.5, 7.2, 1.1, 0.8] },
 				{ "kind": "cracks", "rect": [16.0, 2.2, 1.1, 0.8] },
 				{ "kind": "stain", "rect": [26.6, 10.6, 1.3, 0.9] },
 				{ "kind": "pipe", "rect": [2.4, 2, 0.18, 4] },
 				{ "kind": "pipe", "rect": [27.6, 2, 0.18, 6] }
 			],
-			"front": [{ "kind": "bricks", "rect": [3.2, 5.78, 1.2, 0.22] }],
+			"front": [{ "kind": "bricks", "rect": [24.2, 14.78, 1.2, 0.22] }],
 			"lamps": [
 				{ "x": 3.0, "drop": 1.6, "radius_px": 340 },
 				{ "x": 11.6, "drop": 1.0, "radius_px": 300 },
 				{ "x": 16.0, "drop": 0.8, "radius_px": 300 },
 				{ "x": 21.2, "drop": 1.0, "radius_px": 340 },
-				{ "x": 25.5, "drop": 3.5, "radius_px": 420 }
+				{ "x": 27.3, "drop": 6.0, "radius_px": 480 }
 			],
 			"ground": {
-				"concrete": [[1, 6, 5, 11], [1, 15, 28, 2]],
+				"concrete": [[1, 6, 5, 2], [20, 15, 9, 2]],
 				"roof": [[0, 0, 30, 2]]
 			}
 		},

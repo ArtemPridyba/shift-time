@@ -224,6 +224,9 @@ func simulate_tick(_tick: int) -> void:
 	clock = mini(clock + 1, plan.clock_end)
 	if ride >= 0:
 		ride = mini(ride + 1, plan.ride_end)
+	elif plan.ride_start >= 0 and clock >= plan.ride_start:
+		# The crane sets off by itself (D215), as if she had stepped on.
+		ride = 0
 	_show()
 
 

@@ -37,7 +37,8 @@ extends RefCounted
 ##   "lamps": [{"lamp", "act": 1 or 3, "second" after the act's quake,
 ##       "to_row", "fall_seconds" (absent: the kit's), "lit": shines on its
 ##       way down}] lamps that fall on their own;
-##   "crane": {"delay_seconds" from the step to setting off, "speed" px per
+##   "crane": {"start_seconds": when it sets off by itself after the room's
+##       start (absent: on her step, D215), "delay_seconds" from the step to setting off, "speed" px per
 ##       world second, "blast_way": where along its rail (0 … 1, default 1,
 ##       its arrival) act 3 begins, "lamps": [lamps over the rail], "lamp_lead_px",
 ##       "lamp_to_row", "sag_seconds", "sag_px", "tilt_degrees",
@@ -70,6 +71,8 @@ var pieces: Array[Dictionary] = []
 ## Lamps falling on their own: {"lamp", "act", "at", "to_row", "fall", "lit"}.
 var lamps: Array[Dictionary] = []
 var ride_delay := 1
+## The clock tick on which the crane sets off by itself (D215); -1: on her step.
+var ride_start := -1
 ## Pixels per tick the crane rides; ticks it takes (set by `aim`).
 var ride_step := 1.0
 var ride_ticks := 1
@@ -143,6 +146,7 @@ static func from_data(data: Variant, ticks_per_second: float, quake: Dictionary,
 			"to_row": float(l.get("to_row", 20.0)), "fall": fall, "lit": bool(l.get("lit", false))})
 	var crane: Dictionary = d.get("crane", {}) if d.get("crane", {}) is Dictionary else {}
 	plan.ride_delay = ticks.call(crane.get("delay_seconds", 1.0))
+	plan.ride_start = ticks.call(crane["start_seconds"]) if crane.has("start_seconds") else -1
 	plan.ride_step = maxf(float(crane.get("speed", 100.0)), 1.0) / ticks_per_second
 	for lamp: Variant in crane.get("lamps", []):
 		plan.crane_lamps.append(int(lamp))
@@ -175,7 +179,7 @@ static func from_data(data: Variant, ticks_per_second: float, quake: Dictionary,
 		plan.gate_swing = maxi(ticks.call((gate as Dictionary).get("swing_seconds", 0.6)), 1)
 	plan.shatter_ticks = maxi(ticks.call(quake.get("shatter_seconds", 0.6)), 1)
 	plan.shake_ticks = maxi(ticks.call(look.get("shake_seconds", 1.2)), 1)
-	plan.clock_end = plan.quake_tick + plan.shake_ticks
+	plan.clock_end = maxi(plan.quake_tick + plan.shake_ticks, plan.ride_start + 1)
 	for p in plan.pieces:
 		if int(p["act"]) == 1:
 			var crumble := int(p["crumble"]) + int(p["fall"]) if int(p["crumble"]) > 0 else 0
@@ -588,6 +592,8 @@ static func problems(data: Variant, where: String, lamp_count: int) -> PackedStr
 				errors.append("%s: 'collapse.crane.%s' must be a number from 0" % [where, key])
 		if c.has("falls") and not c.get("falls") is bool:
 			errors.append("%s: 'collapse.crane.falls' must be true or false" % where)
+		if c.has("start_seconds") and not not_negative.call(c.get("start_seconds")):
+			errors.append("%s: 'collapse.crane.start_seconds' must be a number from 0" % where)
 		var w: Variant = c.get("blast_way", 1.0)
 		if not (w is float or w is int) or float(w) < 0.0 or float(w) > 1.0:
 			errors.append("%s: 'collapse.crane.blast_way' must be from 0 to 1" % where)

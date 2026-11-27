@@ -12,8 +12,12 @@ extends RefCounted
 
 const LEVEL_PATH := "res://levels/level_05.tscn"
 const CELL := 64.0
-## The chunks of the ceiling, in the order they fall.
-const CHUNKS: Array[int] = [0, 1, 2]
+## The chunks of the ceiling: the top one she drops from into the crane, the
+## step to it (both fall into the pit) and the lift from the floor.
+const BOARD := 0
+const STEP := 1
+const LIFT := 2
+const CHUNKS: Array[int] = [BOARD, STEP, LIFT]
 ## The heroine's height (D112).
 const HEIGHT := 92.0
 ## The heroine's jump (D112): about her height up, about 2.3 cells across;
@@ -276,17 +280,20 @@ func test_level_05_is_one_screen() -> void:
 	await _free(room)
 
 
-func test_level_05_the_crane_goes_only_when_she_stands_on_it_in_normal_time() -> void:
+func test_level_05_starts_from_the_effect() -> void:
+	# The prelude (D215): the empty crane has ridden down by itself, the
+	# explosion has opened the door, the chunks lie where they fell.
 	var room := await _load()
 	var collapse := room.get_node("Collapse") as Collapse
-	await _ticks(2 * TICKS_PER_SECOND)
-	check(collapse.ride < 0 and collapse.crane_waits(), "the crane waits while she stands on the ledge")
-	Input.action_press("move_right")
-	await _ticks(50)
-	Input.action_release("move_right")
-	await _ticks(10)
-	check(collapse.ride >= 0, "her step onto it sets it going")
-	check(collapse.stands_on_crane((room.get_node("Player") as Player).body_rect()), "she rides it")
+	var plan := collapse.plan
+	check(plan.ride_start >= 0, "the crane sets off by itself")
+	check(collapse.ride >= plan.arrival() and collapse.is_open(), "when she comes in the crane is down and the door open, ride %d" % collapse.ride)
+	for k in CHUNKS:
+		check(collapse.piece_lies(k), "chunk %d lies where it fell" % k)
+	check(not collapse.piece_holds(BOARD) and not collapse.piece_holds(STEP), "the two chunks in the pit are out of play")
+	check(collapse.piece_holds(LIFT), "the one by the entrance lies on the floor")
+	var spawn := (room.get_node("SpawnPoint") as Node2D).position
+	check(spawn.x > collapse.rests[LIFT].end.x and spawn.x - collapse.rests[LIFT].end.x < 6.0 * CELL, "she comes in by it")
 	await _free(room)
 
 
@@ -296,7 +303,7 @@ func test_level_05_the_door_is_out_of_reach_but_by_the_rail() -> void:
 	var exit := room.get_node("Exit") as ExitZone
 	var zone := exit.rect()
 	var spawn := (room.get_node("SpawnPoint") as Node2D).position
-	check(zone.position.x - spawn.x > OUT_ACROSS, "the start ledge is far from the door")
+	check(spawn.y - zone.end.y > OUT_UP and absf(spawn.x - zone.get_center().x) > OUT_ACROSS, "the entrance is far from the door")
 	for k in CHUNKS:
 		var hang := collapse.pieces[k]
 		check(hang.position.x - zone.end.x > OUT_ACROSS or zone.position.x - hang.end.x > OUT_ACROSS,
@@ -334,44 +341,64 @@ func test_level_05_the_door_opens_only_after_the_crane_has_passed_it() -> void:
 	await _free(room)
 
 
-func test_level_05_chunks_hang_out_of_reach_of_the_crane_and_fall_behind_it() -> void:
+func test_level_05_the_top_chunk_hangs_out_of_reach_of_the_crane_and_falls_behind_it() -> void:
 	var room := await _load()
 	var collapse := room.get_node("Collapse") as Collapse
 	var plan := collapse.plan
 	for k in CHUNKS:
 		var hang := collapse.pieces[k]
 		var falls := plan.act3_at + int(plan.pieces[k]["at"])
+		var passes_under := false
 		for r in range(plan.ride_delay, plan.arrival() + 1):
-			var crane := collapse.plan.crane_pose(r, collapse.crane_travel, 0.0)
+			var crane := plan.crane_pose(r, collapse.crane_travel, 0.0)
 			var load_rect := Rect2(collapse.crane_rect.position + (crane["at"] as Vector2), collapse.crane_rect.size)
 			var gap := maxf(hang.position.x - load_rect.end.x, load_rect.position.x - hang.end.x)
 			if gap < JUMP_ACROSS:
 				check(load_rect.position.y - hang.position.y > OUT_UP,
-					"chunk %d hangs out of reach from the crane (ride %d)" % [k, r])
+					"hanging chunk %d is out of reach from the crane (ride %d)" % [k, r])
 			if gap < 0.0:
 				check(load_rect.position.y - hang.end.y > HEIGHT + 8.0,
-					"she has room to ride under chunk %d (ride %d)" % [k, r])
-				check(r < falls, "chunk %d hangs while the crane passes under it" % k)
-		check(k == 0 or int(plan.pieces[k]["at"]) > int(plan.pieces[k - 1]["at"]), "the chunks fall one after another")
+					"she has room to ride under hanging chunk %d (ride %d)" % [k, r])
+				passes_under = passes_under or r < falls
+		check(passes_under == (k == BOARD), "only the top chunk still hangs when the crane passes under it (chunk %d)" % k)
 	await _free(room)
 
 
-func test_level_05_once_off_the_crane_only_a_rising_chunk_gets_her_back() -> void:
+func test_level_05_the_chunks_are_a_stair_from_the_floor_to_the_top_one() -> void:
+	var room := await _load()
+	var collapse := room.get_node("Collapse") as Collapse
+	var plan := collapse.plan
+	var order: Array[int] = [LIFT, STEP, BOARD]
+	for i in range(1, order.size()):
+		var from := collapse.pieces[order[i - 1]]
+		var to := collapse.pieces[order[i]]
+		check(from.position.x - to.end.x <= JUMP_ACROSS and from.position.y - to.position.y < JUMP_UP,
+			"from hanging chunk %d she jumps onto %d" % [order[i - 1], order[i]])
+	# The lift lies before the crane comes over it, and rises after it has
+	# gone: it never takes her to the crane itself.
+	var hang := collapse.pieces[LIFT]
+	var rest := collapse.rests[LIFT]
+	for r in range(plan.act3_at, plan.arrival() + 1):
+		var crane := plan.crane_pose(r, collapse.crane_travel, 0.0)
+		var load_rect := Rect2(collapse.crane_rect.position + (crane["at"] as Vector2), collapse.crane_rect.size)
+		var lift_top := lerpf(hang.position.y, rest.position.y, plan.way(LIFT, plan.clock_end, r))
+		if hang.position.x - load_rect.end.x < OUT_ACROSS:
+			check(lift_top - load_rect.position.y > OUT_UP,
+				"when the crane comes near the lift, the lift is far below it (ride %d)" % r)
+	# The top chunk is far from the door: the only way out is the crane.
+	var zone := (room.get_node("Exit") as ExitZone).rect()
+	check(collapse.pieces[BOARD].position.x - zone.end.x > OUT_ACROSS, "the top chunk is far from the door")
+	await _free(room)
+
+
+func test_level_05_from_the_floor_the_crane_is_out_of_reach() -> void:
 	var room := await _load()
 	var collapse := room.get_node("Collapse") as Collapse
 	var end := Rect2(collapse.crane_rect.position + collapse.crane_travel, collapse.crane_rect.size)
-	var blocks := room.get_node("Blocks") as TileMapLayer
-	var floor_y := float(blocks.get_used_rect().end.y - 2) * CELL
+	var floor_y := (room.get_node("SpawnPoint") as Node2D).position.y
 	check(floor_y - end.position.y > OUT_UP, "from the floor the crane at the end of its rail is out of reach")
-	var near := false
-	for k in CHUNKS:
-		var rest := collapse.rests[k]
-		check(rest.position.y - end.position.y > OUT_UP or end.position.x - rest.end.x > OUT_ACROSS,
-			"from fallen chunk %d too" % k)
-		var hang := collapse.pieces[k]
-		if end.position.x - rest.end.x <= JUMP_ACROSS and hang.position.y < end.position.y:
-			near = true
-	check(near, "a chunk lies by the end of the rail and rises past the crane's height")
+	check(collapse.rests[LIFT].position.y - end.position.y > OUT_UP, "from the fallen chunk too")
+	check(end.position.x - collapse.rests[LIFT].end.x > 0.5 * CELL, "and she can jump onto the chunk clear of the crane over her head")
 	await _free(room)
 
 

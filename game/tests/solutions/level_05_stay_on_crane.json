@@ -1,9 +1,0 @@
-{
-	"level": "level_05",
-	"expect": "no_exit",
-	"segments": [
-		{ "actions": [], "ticks": 120 },
-		{ "actions": ["move_right"], "ticks": 50 },
-		{ "actions": [], "ticks": 900 }
-	]
-}

@@ -1,0 +1,25 @@
+{
+	"level": "level_05",
+	"expect": "no_exit",
+	"segments": [
+		{ "actions": [], "ticks": 60 },
+		{ "actions": ["move_left"], "ticks": 60 },
+		{ "actions": ["move_left", "jump"], "ticks": 16 },
+		{ "actions": ["move_left"], "ticks": 4 },
+		{ "actions": [], "ticks": 30 },
+		{ "actions": ["rewind"], "ticks": 150 },
+		{ "actions": ["rewind", "move_left", "jump"], "ticks": 16 },
+		{ "actions": ["rewind", "move_left"], "ticks": 14 },
+		{ "actions": ["rewind", "move_left", "jump"], "ticks": 18 },
+		{ "actions": ["rewind", "move_left"], "ticks": 28 },
+		{ "actions": ["rewind", "move_left", "jump"], "ticks": 18 },
+		{ "actions": ["rewind", "move_left"], "ticks": 6 },
+		{ "actions": ["rewind"], "ticks": 20 },
+		{ "actions": [], "ticks": 150 },
+		{ "actions": ["move_right"], "ticks": 10 },
+		{ "actions": [], "ticks": 30 },
+		{ "actions": ["rewind"], "ticks": 45 },
+		{ "actions": ["move_left"], "ticks": 30 },
+		{ "actions": [], "ticks": 250 }
+	]
+}
