@@ -68,7 +68,8 @@ const LIFT_PULLEY_Y := 2.6 * 64
 ## lift's floor. Lit there, the fire runs to the lift and the lift goes.
 const LIFT_ROPE := [Vector2(23.45 * 64, 11.8 * 64), Vector2(23.45 * 64, 12.88 * 64),
 	Vector2(16.9 * 64, 12.94 * 64)]
-## The torch's gas burner on the lower floor, between the lift and the cleat.
+## The torch's gas burner on the lower floor, between the lift and the cleat;
+## it gives the torch and does not light it again (D220).
 const LOW_BURNER_X := 19.5 * 64
 ## The winch under the roof: the chain's pulley over the pit and the drum
 ## over the entrance floor.
@@ -193,6 +194,8 @@ func _initialize() -> void:
 	torch.mounted = true
 	torch.lit = true
 	torch.burner = true
+	# It only gives the torch: a torch out stays out past it (D220).
+	torch.relights = false
 	torch.position = Vector2(LOW_BURNER_X, floor_y - STAND_PX)
 	torch.floor_offset_px = STAND_PX
 	_own(root, torch)
