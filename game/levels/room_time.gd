@@ -256,6 +256,10 @@ func reset() -> void:
 	for node in get_tree().get_nodes_in_group("minecart"):
 		if room != null and room.is_ancestor_of(node) and node.has_method("reset_ride"):
 			node.call("reset_ride")
+	# Pigs the cart took are out of time with it (D216): a reset gives them back.
+	for node in get_tree().get_nodes_in_group("hopper"):
+		if room != null and room.is_ancestor_of(node) and node.has_method("forget_taken"):
+			node.call("forget_taken")
 	var objects := temporal_objects()
 	_recorder.restore(_initial, objects)
 	world.start(objects)
@@ -284,6 +288,10 @@ func _read_prelude() -> void:
 	prelude_seconds = float(entry.get("prelude_seconds", time_data.get("default_prelude_seconds", 0)))
 	_prelude_ticks = int(round(prelude_seconds * per_second))
 	_prelude_events = TimeWorld.prelude_events_from_data(entry.get("prelude_events", []), per_second)
+	# A level may cap the rewind speed of a long hold (D217).
+	var manager := get_node_or_null("/root/TimeManager")
+	if manager != null and manager.has_method("use_rewind_speed_max"):
+		manager.call("use_rewind_speed_max", float(entry.get("rewind_speed_max", 0.0)))
 
 
 func _player_rect() -> Rect2:
