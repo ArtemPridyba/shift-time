@@ -135,7 +135,12 @@ async function main() {
 	const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
 	const page = await browser.newPage({ viewport: { width: Number(arg('--width', '1280')), height: Number(arg('--height', '720')) } });
 	const consoleLines = [];
-	page.on('console', (m) => consoleLines.push(`[${m.type()}] ${m.text()}`));
+	const opened = Date.now();
+	page.on('console', (m) => {
+		const text = m.text();
+		// The replay's results with the time since the page opened.
+		consoleLines.push(text.startsWith('SOLUTION ') ? `[${m.type()}] ${text} (${((Date.now() - opened) / 1000).toFixed(0)} s)` : `[${m.type()}] ${text}`);
+	});
 	page.on('pageerror', (e) => consoleLines.push(`[pageerror] ${e.message}`));
 	page.on('requestfailed', (r) => consoleLines.push(`[requestfailed] ${r.url()} ${r.failure() && r.failure().errorText}`));
 

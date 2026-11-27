@@ -128,6 +128,7 @@ func _done(id: String, reached: bool) -> void:
 		_log("done: %d of %d levels reached the exit" % [
 			results.filter(func(r: Dictionary) -> bool: return r["reached"]).size(), results.size()])
 		set_physics_process(false)
+		_publish()
 		finished.emit(results)
 		return
 	# A passed level fades into the next one by itself; otherwise open it.
