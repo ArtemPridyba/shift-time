@@ -137,11 +137,12 @@
 		"intro_seconds": 0.6,
 		"objects": {
 			"ramp": { "keys": [[0, "flat"], [11, "flat"], [12, "up"]] },
-			"lift": { "cycle": "once", "speed": 128, "delay_seconds": 11.5 },
+			"lift_rope": { "burn_seconds": 0.6 },
+			"lift": { "rise_seconds": 1.0 },
 			"sprinkler": { "rain_seconds": 4, "spin_up_seconds": 0.42 }
 		},
 		"world": {
-			"_about": "Level 03 «Нить» in the Night shop (same kit and scale as level 01, D112), one screen of 30x17 cells, the roof on rows 0-1. The entrance floor (columns 0-8) with the winch over it; the pit (columns 9-13); the lower floor right of it with the lift (columns 15-16) and the steel mezzanine over it (row 10, columns 17-24, drawn by the level), closed by a wall at column 24; the cage's shaft (columns 25-26); the gallery with the exit (columns 27-29 from row 7). Lamps: 0 over the winch, 1 over the pit, 2 over the lift and the burner, 3 over the fire detector, 4 over the shaft, 5 by the exit. Objects (D178): ramp.keys: the winch's schedule, [world seconds, pose] (flat: a bridge over the pit; up: closed), the board turns smoothly between keys. lift: a once platform, waits delay_seconds (world seconds) at the floor, then rides up to the mezzanine at speed (px a world second) and stays. sprinkler: the fire detector's rain; rain_seconds (real seconds) it runs once a burning torch has come under the detector, spin_up_seconds to full rain.",
+			"_about": "Level 03 «Нить» in the Night shop (same kit and scale as level 01, D112), one screen of 30x17 cells, the roof on rows 0-1. The entrance floor (columns 0-8) with the winch over it; the pit (columns 9-13); the lower floor right of it with the lift (columns 15-16), the torch's burner and the lift rope's cleat by the wall, and the steel mezzanine over it (row 10, columns 17-24, drawn by the level) with the second burner, closed by a wall at column 24; the cage's shaft (columns 25-26); the gallery with the exit (columns 27-29 from row 7). Lamps: 0 over the winch, 1 over the pit, 2 over the lift and the second burner, 3 over the fire detector and the lower floor, 4 over the shaft, 5 by the exit. Objects (D178, D193): ramp.keys: the winch's schedule, [world seconds, pose] (flat: a bridge over the pit; up: closed), the board turns smoothly between keys. lift_rope: the rope that ties the lift down; burn_seconds (real seconds) from its cleat to the lift once a torch has lit it. lift: a counterweight cage; rise_seconds (world seconds) from the floor to the mezzanine once its rope has burnt through. sprinkler: the fire detector's rain; rain_seconds (real seconds) it runs once a burning torch has come under the detector, spin_up_seconds to full rain.",
 			"ceiling": 2,
 			"back": [
 				{ "kind": "truss", "rect": [1, 2, 28, 0.5] },
@@ -164,8 +165,8 @@
 				{ "x": 4.0, "drop": 3.0, "radius_px": 340 },
 				{ "x": 12.0, "drop": 6.0, "radius_px": 400 },
 				{ "x": 16.6, "drop": 3.2, "radius_px": 360 },
-				{ "x": 20.5, "drop": 1.0, "radius_px": 360 },
-				{ "x": 25.0, "drop": 4.0, "radius_px": 320 },
+				{ "x": 20.5, "drop": 1.0, "radius_px": 540 },
+				{ "x": 25.0, "drop": 4.0, "radius_px": 430 },
 				{ "x": 28.0, "drop": 2.0, "radius_px": 260 }
 			],
 			"ground": {
@@ -278,5 +279,55 @@
 			}
 		},
 		"title": "05 Crane"
+	},
+	{
+		"id": "level_06",
+		"scene": "res://levels/level_06.tscn",
+		"prelude_seconds": 0.5,
+		"prelude_events": [
+			{ "second": 0.4, "id": "sluice", "state": { "powered": true } },
+			{ "second": 0.4, "id": "tank_a", "state": { "powered": true } },
+			{ "second": 0.4, "id": "tank_b", "state": { "powered": true } }
+		],
+		"intro_seconds": 0.6,
+		"objects": {
+			"tank_a": { "full_seconds": 3.5, "outlet_inset_px": 24, "lifts_player": false },
+			"tank_b": { "full_seconds": 3.5, "outlet_inset_px": 0, "lifts_player": false },
+			"sluice": { "open_seconds": 0.6, "close_seconds": 0.6 }
+		},
+		"world": {
+			"_about": "Level 06 «Поток» in the Night shop (same kit and scale as levels 01 and 03, D112), one screen of 30x17 cells, the roof on rows 0-1 (D187). The high entrance floor (columns 0-5, top on row 8); tank A (columns 6-13, water rows 8-11, its float by the far wall); the wall between the tanks (columns 14-15, top on row 8) with the sluice at the bottom of A; tank B (columns 16-23, water rows 12-15, as wide and as deep as A, its float by the far wall); the exit floor on B's brim (columns 24-28, top on row 12). Lamps: 0 over the entrance, 1 over A's float, 2 over the sluice, 3 over B's float, 4 by the exit. The prelude's events open the sluice and run both tanks at 0.4 world seconds, so A runs into B on screen; tank_a/tank_b: full_seconds (world seconds) for the whole tank, lifts_player false (only a float carries her).",
+			"ceiling": 2,
+			"back": [
+				{ "kind": "truss", "rect": [1, 2, 28, 0.5] },
+				{ "kind": "window", "rect": [4.4, 3.4, 1.15, 2.6] },
+				{ "kind": "window", "rect": [18.4, 3.0, 1.15, 2.6] },
+				{ "kind": "window", "rect": [25.4, 3.4, 1.15, 2.6] },
+				{ "kind": "column", "rect": [14.85, 2, 0.3, 6] },
+				{ "kind": "pipe", "rect": [6.6, 2, 0.18, 6] },
+				{ "kind": "rust", "rect": [10.2, 5.0, 1.3, 0.8] },
+				{ "kind": "soot", "rect": [2.2, 4.0, 1.6, 0.9] },
+				{ "kind": "cracks", "rect": [21.0, 9.4, 1.1, 0.8] },
+				{ "kind": "stain", "rect": [8.2, 9.6, 1.3, 0.9] },
+				{ "kind": "stain", "rect": [18.0, 13.2, 1.3, 0.9] },
+				{ "kind": "plaster", "rect": [27.6, 7.0, 1.0, 0.7] }
+			],
+			"front": [
+				{ "kind": "bricks", "rect": [3.0, 7.78, 1.2, 0.22] },
+				{ "kind": "bricks", "rect": [27.9, 11.78, 1.0, 0.22] }
+			],
+			"lamps": [
+				{ "x": 3.5, "drop": 3.0, "radius_px": 340 },
+				{ "x": 12.0, "drop": 3.6, "radius_px": 400 },
+				{ "x": 15.0, "drop": 5.6, "radius_px": 340 },
+				{ "x": 22.0, "drop": 6.4, "radius_px": 420 },
+				{ "x": 26.6, "drop": 4.4, "radius_px": 300 }
+			],
+			"ground": {
+				"concrete": [[0, 8, 6, 9], [14, 8, 2, 9], [24, 12, 6, 5]],
+				"roof": [[0, 0, 30, 2]]
+			}
+		},
+		"title": "06 Flow"
 	}
 ]
