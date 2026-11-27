@@ -35,6 +35,7 @@ func _run() -> void:
 		_check_main_menu(main)
 		main.queue_free()
 		await process_frame
+	_check_pause()
 	var list: Node = (load("res://ui/level_select.tscn") as PackedScene).instantiate()
 	root.add_child(list)
 	for i in 5:
@@ -75,6 +76,7 @@ func _run() -> void:
 		_failed += 1
 		print("FAIL SCRIPT ERROR ", message)
 	print("UI smoke test: %d failed" % _failed)
+	_silence()
 	quit(1 if _failed > 0 else 0)
 
 
@@ -86,6 +88,44 @@ func _check_main_menu(main: Node) -> void:
 	if start != null:
 		_check(start.has_focus(), "Start must have the focus at the start")
 	_check(main.get_node_or_null("Center/Box/Levels") is Button, "no Levels button on the main menu")
+	var keys := main.get_node_or_null("Keys") as Label
+	_check(keys != null, "no line of keys at the bottom of the main menu")
+	if keys != null:
+		_check(keys.text.contains("Shift") and keys.text.contains("Esc") and not keys.text.contains("{"), "the line of keys must name Shift and Esc, got '%s'" % keys.text)
+
+
+## The pause lists every key and its slider sets the Master volume (task 4.3).
+func _check_pause() -> void:
+	var loader := root.get_node_or_null("LevelLoader")
+	_check(loader != null, "no LevelLoader autoload")
+	if loader == null:
+		return
+	var pause := loader.call("pause_menu") as PauseMenu
+	var rows: Array = pause.control_rows()
+	var data := ControlsData.load_data()
+	_check(rows.size() == (data.get("controls", []) as Array).size(), "the pause must list one row per entry of controls.json, got %d" % rows.size())
+	var all_keys := ""
+	for row: Variant in rows:
+		all_keys += str((row as Array)[0]) + " "
+		_check(not str((row as Array)[0]).is_empty(), "the row '%s' shows no key" % (row as Array)[1])
+	for key in ["A", "D", "Space", "Shift", "Q", "E", "F", "R", "Tab", "Esc"]:
+		_check(all_keys.contains(key), "the pause must show the key %s, got '%s'" % [key, all_keys])
+	var saved_path := str(loader.get("settings_path"))
+	var settings := loader.get("settings") as GameSettings
+	var before := settings.volume
+	loader.set("settings_path", "")
+	var bus := AudioServer.get_bus_index("Master")
+	var slider := pause.volume_slider()
+	_check(slider != null and slider.focus_mode != Control.FOCUS_NONE, "the pause needs a focusable volume slider")
+	_check(is_equal_approx(slider.value, before), "the slider must show the saved volume")
+	slider.value = 0.5
+	_check(is_equal_approx(settings.volume, 0.5), "the slider must set the volume setting")
+	_check(is_equal_approx(AudioServer.get_bus_volume_db(bus), linear_to_db(0.5)), "the slider must set the Master bus, got %.2f dB" % AudioServer.get_bus_volume_db(bus))
+	slider.value = 0.0
+	_check(AudioServer.is_bus_mute(bus), "the slider at 0 must mute Master")
+	slider.value = before
+	_check(not AudioServer.is_bus_mute(bus) or before <= 0.001, "the slider back up must unmute Master")
+	loader.set("settings_path", saved_path)
 
 
 ## The list shows one focusable button per level, titled from levels.json.
@@ -129,3 +169,12 @@ func _check_time_indicator(main: Node) -> void:
 	for i in 3:
 		await physics_frame
 	_check(hud.state.glyph() == ">>", "the device must return to forward arrows after the release, got '%s'" % hud.state.glyph())
+
+
+## Stops every sound and lets the audio thread drop them before quitting, so no
+## playback is left in use at exit (the sound, D183).
+func _silence() -> void:
+	for kind in ["AudioStreamPlayer", "AudioStreamPlayer2D"]:
+		for node in root.find_children("*", kind, true, false):
+			node.call("stop")
+	OS.delay_msec(150)

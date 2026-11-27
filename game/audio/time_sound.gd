@@ -32,7 +32,8 @@ func play_for(direction: int) -> bool:
 	for key: Variant in _players:
 		(_players[key] as AudioStreamPlayer).stop()
 	var player := _players.get(direction) as AudioStreamPlayer
-	if player == null:
+	# A room that is leaving the tree (a level change resets time) stays silent.
+	if player == null or not player.is_inside_tree():
 		return false
 	player.play()
 	return true

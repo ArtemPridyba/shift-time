@@ -230,6 +230,45 @@ func _door_step() -> int:
 	return int(round(float(Door.OPEN_MAX) / float(open_ticks)))
 
 
+## The key hint (task 4.3): «E» comes up over the lever when the heroine
+## stands at it and fades when she walks off; a pressed one-way button gets none.
+func test_key_hint_comes_up_at_the_lever_and_fades_far_away() -> void:
+	var room := await _load_room()
+	var hints := room.get_node_or_null("RoomTime/KeyHints") as KeyHints
+	check(hints != null, "RoomTime must add the key hints to a room with a player")
+	if hints == null:
+		await _free_room(room)
+		return
+	var lever: Lever = room.get_node("Lever")
+	var button: PushButton = room.get_node("PushButton")
+	var player: Player = room.get_node("Player")
+	var cap := hints.get_node("KeyCap") as KeyHints.KeyCap
+	await _ticks(5)
+	player.respawn(Vector2(300, lever.global_position.y))
+	await _ticks(30)
+	check(hints.alpha == 0.0 and hints.shown_action == "", "far from every point no key must show")
+	player.respawn(lever.global_position)
+	await _ticks(30)
+	check(hints.shown_action == "interact" and hints.alpha > 0.9, "at the lever the key must come up, got '%s' %.2f" % [hints.shown_action, hints.alpha])
+	check(cap.label == KeyNames.primary("interact") and cap.label == "E", "the cap must show the key of interact, got '%s'" % cap.label)
+	check(cap.global_position.distance_to(lever.global_position) < 120.0, "the cap must stand over the lever, got %s" % cap.global_position)
+	check(cap.global_position.y < lever.global_position.y, "the cap must be above the lever")
+	player.respawn(Vector2(300, lever.global_position.y))
+	await _ticks(60)
+	check(hints.alpha == 0.0 and hints.shown_action == "", "walking off the key must fade, got %.2f" % hints.alpha)
+	player.respawn(button.global_position + Vector2(0, 12))
+	_press_at(room)
+	await _ticks(40)
+	check(button.pressed, "the button must be pressed for the check")
+	check(hints.alpha == 0.0, "a pressed one-way button must get no key, got %.2f" % hints.alpha)
+	await _free_room(room)
+
+
+func _press_at(room: Node) -> void:
+	var time: RoomTime = room.get_node("RoomTime")
+	time.player_interact((room.get_node("Player") as Player).global_position)
+
+
 func _load_room() -> Node:
 	Input.action_release("rewind")
 	var room: Node = (load(ROOM_PATH) as PackedScene).instantiate()
