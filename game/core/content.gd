@@ -77,7 +77,10 @@ const RAIL_SWITCH_KEYS: Array[String] = ["move_seconds"]
 const MINECART_KEYS: Array[String] = [
 	"speed_px", "accel_px", "brake_px", "creep_px", "launch_seconds", "bump_seconds", "bounce_px",
 	"shake_px", "hoist_speed_px", "length_px", "body_px", "platform_px", "platform_width_px", "seat_px", "board_px",
+	"loaded_speed_px", "break_load",
 ]
+## The hopper of pig iron of level 04 (D216), all above 0: world seconds, px.
+const HOPPER_KEYS: Array[String] = ["count", "delay_seconds", "pour_seconds", "gravity_px", "spread_px", "pig_px"]
 const LEVER_KEYS: Array[String] = ["interact_radius_px"]
 ## The plug of level 02's pipe (D164): an item, like the flamethrower; all above 0.
 const PIPE_PLUG_KEYS: Array[String] = ["interact_radius_px", "insert_radius_px", "gravity", "max_fall_speed", "friction_px", "follow_px"]
@@ -436,6 +439,8 @@ static func validate_levels(data: Variant, history_seconds: float, file := "leve
 			errors.append("%s: 'prelude_seconds' must be between 0 and the history length" % where)
 		if not entry["title"] is String:
 			errors.append("%s: 'title' must be a string" % where)
+		if entry.has("rewind_speed_max") and (not _is_number(entry["rewind_speed_max"]) or float(entry["rewind_speed_max"]) < 1.0):
+			errors.append("%s: 'rewind_speed_max' must be a number, 1 or more" % where)
 		if entry.has("intro_seconds") and (not _is_number(entry["intro_seconds"]) \
 				or float(entry["intro_seconds"]) < 0.0 or float(entry["intro_seconds"]) > 10.0):
 			errors.append("%s: 'intro_seconds' must be a number from 0 to 10" % where)
@@ -476,6 +481,8 @@ static func _object_settings_problems(settings: Variant, where: String) -> Packe
 				errors.append("%s: 'objects.%s.speed' must be a number above 0" % [where, id])
 			elif str(key) == "lifts_player" and not value is bool:
 				errors.append("%s: 'objects.%s.lifts_player' must be true or false" % [where, id])
+			elif str(key) == "intro_ride" and not value is bool:
+				errors.append("%s: 'objects.%s.intro_ride' must be true or false" % [where, id])
 			elif str(key) == "outlet_inset_px" and (not _is_number(value) or float(value) < 0.0):
 				errors.append("%s: 'objects.%s.outlet_inset_px' must be a number, 0 or more" % [where, id])
 			elif str(key).ends_with("_level") and (not _is_number(value) or float(value) < 0.0 or float(value) > 10000.0):
@@ -584,7 +591,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	# 10000 is Water.LEVEL_MAX (core/ does not refer to objects/).
 	if 10000.0 / (float(data["water"]["full_seconds"]) * ticks) > max_step:
 		errors.append("objects.json: 'water.full_seconds' is too short: the level would jump more than max_state_step per tick")
-	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["pipe_plug", PIPE_PLUG_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["rope", ROPE_KEYS], ["winch_ramp", WINCH_RAMP_KEYS], ["cage", CAGE_KEYS], ["ramp", RAMP_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS], ["rail_switch", RAIL_SWITCH_KEYS], ["minecart", MINECART_KEYS]]:
+	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["pipe_plug", PIPE_PLUG_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["rope", ROPE_KEYS], ["winch_ramp", WINCH_RAMP_KEYS], ["cage", CAGE_KEYS], ["ramp", RAMP_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS], ["rail_switch", RAIL_SWITCH_KEYS], ["minecart", MINECART_KEYS], ["hopper", HOPPER_KEYS]]:
 		var isec := interact_section as Array
 		var isec_name: String = isec[0]
 		var ientry: Variant = data.get(isec_name)
@@ -604,6 +611,10 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 			errors.append("objects.json: 'minecart.seat_px' puts the platform past the back of the cart")
 		if float(cart["creep_px"]) >= float(cart["speed_px"]):
 			errors.append("objects.json: 'minecart.creep_px' must be below 'speed_px': it is the last crawl to the station's buffer")
+		if float(cart["loaded_speed_px"]) >= float(cart["speed_px"]) or float(cart["loaded_speed_px"]) <= float(cart["creep_px"]):
+			errors.append("objects.json: 'minecart.loaded_speed_px' must lie between 'creep_px' and 'speed_px': loaded it is slower")
+		if int(cart["break_load"]) > int(data["hopper"]["count"]):
+			errors.append("objects.json: 'minecart.break_load' is more pigs than one pour of the hopper ('hopper.count')")
 		if float(data["lamp"]["break_seconds"]) < MIN_WINDOW_SECONDS:
 			errors.append("objects.json: 'lamp.break_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
 		var lamp: Dictionary = data["lamp"]
