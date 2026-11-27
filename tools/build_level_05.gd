@@ -4,20 +4,20 @@ extends SceneTree
 ## starts from its effect.
 ##
 ## Before she comes in, the empty crane has ridden down its rail from the
-## upper left to the lower right. On the way it passed the exit door in the
-## back wall, shut by a slab on two chains; a little further the explosion
-## tore the slab's left chain and it swung aside: the door is open, high up
-## and out of reach. Chunks of the ceiling fell behind the crane, two into
+## ledge at the upper left, where the exit door in the back wall is shut by a
+## slab on two chains, to the lower right. On the way the explosion tore the
+## slab's left chain and it swung aside: the door is open, high up and out of
+## reach. Chunks of the ceiling fell behind the crane, two into
 ## the pit, one onto the floor by the entrance. The crane hangs at the end of
 ## its rail over that floor, out of reach.
 ##
 ## Under Shift everything goes back: the chunks rise, the crane rides back up,
 ## the slab shuts the door. The chunk by the entrance lifts her; from it she
-## climbs over the two that come back up out of the pit, and from the last one
-## she drops into the crane as it passes under (the pedal: a jump into it under
-## Shift makes it hers). Shift carries it to the door; she lets go: the crane
-## is on its brake, the world runs on, the explosion comes again, the slab
-## swings aside.
+## climbs over the two that come back up out of the pit; she lets go, the
+## crane rides down again and passes under the last one, she drops into it.
+## Shift carries the crane back up to its ledge; she steps off and lets go:
+## the crane rides away, the explosion comes again, the slab swings aside and
+## she walks in. The crane has no brake here (`crane.pedal` false, D215).
 ##
 ## The pit is open to the bottom: a fall is death. Timing: `collapse` of the
 ## level's entry in data/levels.json.
@@ -74,13 +74,12 @@ const CRANE := Rect2(6.0, 6.0, 3.0, 0.4)
 const CRANE_TRAVEL := Vector2(19.0, 5.5)
 const SLING_CELLS := 2.0
 const CRANE_FALL_CELLS := 0.0
-## The exit door in the back wall by the rail (cells): the crane's floor is
-## at its sill a fifth of the way down. The slab hangs over it on two chains;
-## the exit zone is the lower part of the doorway, where her body is when she
-## stands on the crane there.
-const DOOR := Rect2(10.2, 5.3, 1.4, 1.9)
-const GATE := Rect2(9.8, 5.0, 2.8, 2.4)
-const EXIT := Rect2(10.2, 6.3, 1.4, 0.9)
+## The exit door in the back wall of the crane's ledge (cells), its sill the
+## ledge's floor. The slab hangs over it on two chains; the exit zone is the
+## lower part of the doorway, where her body is when she stands in it.
+const DOOR := Rect2(2.3, 4.1, 1.4, 1.9)
+const GATE := Rect2(1.9, 3.8, 2.6, 2.4)
+const EXIT := Rect2(2.3, 4.6, 1.4, 1.4)
 
 
 func _initialize() -> void:

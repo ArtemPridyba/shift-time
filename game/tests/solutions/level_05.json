@@ -15,12 +15,12 @@
 		{ "actions": ["rewind", "move_left", "jump"], "ticks": 18 },
 		{ "actions": ["rewind", "move_left"], "ticks": 6 },
 		{ "actions": ["rewind"], "ticks": 20 },
-		{ "actions": [], "ticks": 130 },
-		{ "actions": ["move_left"], "ticks": 20 },
-		{ "actions": [], "ticks": 24 },
-		{ "actions": ["rewind", "move_left"], "ticks": 30 },
-		{ "actions": ["rewind"], "ticks": 14 },
-		{ "actions": ["move_left"], "ticks": 30 },
-		{ "actions": [], "ticks": 250 }
+		{ "actions": [], "ticks": 150 },
+		{ "actions": ["move_right"], "ticks": 10 },
+		{ "actions": [], "ticks": 14 },
+		{ "actions": ["move_left"], "ticks": 12 },
+		{ "actions": ["rewind"], "ticks": 200 },
+		{ "actions": ["rewind", "move_left"], "ticks": 80 },
+		{ "actions": [], "ticks": 400 }
 	]
 }

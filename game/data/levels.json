@@ -193,11 +193,11 @@
 		"prelude_seconds": 9.0,
 		"intro_seconds": 0.6,
 		"collapse": {
-			"_about": "The collapse of level 05, one screen (card docs/levels/05.md, D176, D215; CollapsePlan). The hall shakes at quake_seconds after the room's start. crane.start_seconds after the start the empty crane sets off by itself (it all happens in the prelude, before she comes in): the second quake; after crane.delay_seconds it rides down its rail at crane.speed px per second and each of crane.lamps falls when it comes within lamp_lead_px of it. At crane.blast_way of its ride (0 … 1) the third quake and the explosion (blast: at [x, row] in cells, burning 'seconds', look only); the crane rides on to the end of the rail, sags sag_px over sag_seconds (tilting tilt_degrees) and stays there by the floor for good (falls: false). Each piece is a chunk of the ceiling over the rail: it breaks off 'second' after the third quake, once the crane has passed under it, and 'sink's to the floor in fall_seconds; under Shift it rises again. gate: 'second' after the third quake the left chain of the slab over the exit door tears and the slab swings aside in swing_seconds: from then the exit is open. The lamps of act 3 fall among the chunks for their own fall_seconds, lit all the way down. slow: the world keeps its tempo (1, no slow part in this version). Seconds of the world clock (D96).",
+			"_about": "The collapse of level 05, one screen (card docs/levels/05.md, D176, D215; CollapsePlan). The hall shakes at quake_seconds after the room's start. crane.start_seconds after the start the empty crane sets off by itself from the ledge with the exit door (it all happens in the prelude, before she comes in): the second quake; crane.pedal false: she only rides it, it never goes onto a brake; after crane.delay_seconds it rides down its rail at crane.speed px per second and each of crane.lamps falls when it comes within lamp_lead_px of it. At crane.blast_way of its ride (0 … 1) the third quake and the explosion (blast: at [x, row] in cells, burning 'seconds', look only); the crane rides on to the end of the rail, sags sag_px over sag_seconds (tilting tilt_degrees) and stays there by the floor for good (falls: false). Each piece is a chunk of the ceiling over the rail: it breaks off 'second' after the third quake, once the crane has passed under it, and 'sink's to the floor in fall_seconds; under Shift it rises again. gate: 'second' after the third quake the left chain of the slab over the exit door tears and the slab swings aside in swing_seconds: from then the exit is open. The lamps of act 3 fall among the chunks for their own fall_seconds, lit all the way down. slow: the world keeps its tempo (1, no slow part in this version). Seconds of the world clock (D96).",
 			"quake_seconds": 1.0,
 			"pieces": [
 				{ "act": 3, "second": 0.9, "fall_seconds": 2.5, "kind": "sink" },
-				{ "act": 3, "second": 0.1, "fall_seconds": 2.5, "kind": "sink" },
+				{ "act": 3, "second": 1.9, "fall_seconds": 2.5, "kind": "sink" },
 				{ "act": 3, "second": 0.0, "fall_seconds": 0.8, "kind": "sink" }
 			],
 			"lamps": [
@@ -205,6 +205,7 @@
 			],
 			"crane": {
 				"start_seconds": 0.5,
+				"pedal": false,
 				"delay_seconds": 0.5,
 				"speed": 220,
 				"blast_way": 0.45,
@@ -223,7 +224,7 @@
 			"gate": { "second": 0.2, "swing_seconds": 0.8 }
 		},
 		"world": {
-			"_about": "Level 05 in the Night shop (same kit and scale as level 01, D112), one screen of 30x17 cells, the roof down to row 2: the crane's ledge at the upper left on row 6, its rail sloping down to the right, the exit door in the back wall by the rail, the pit open to the bottom under the rail, the floor with the entrance at the lower right on row 15. Lamps: 0 over the crane's ledge, 1 by the door, 2 over the rail (it falls as the crane passes), 3 among the chunks (it falls among them, shining), 4 over the entrance. darkness: this room is darker than the kit.",
+			"_about": "Level 05 in the Night shop (same kit and scale as level 01, D112), one screen of 30x17 cells, the roof down to row 2: the crane's ledge at the upper left on row 6, its rail sloping down to the right, the exit door in the back wall of that ledge, the pit open to the bottom under the rail, the floor with the entrance at the lower right on row 15. Lamps: 0 over the crane's ledge and the exit door, 1 over the rail near it, 2 over the rail (it falls as the crane passes), 3 among the chunks (it falls among them, shining), 4 over the entrance. darkness: this room is darker than the kit.",
 			"ceiling": 2,
 			"darkness": "#17171e",
 			"back": [

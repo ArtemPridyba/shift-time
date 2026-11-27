@@ -38,7 +38,8 @@ extends RefCounted
 ##       "to_row", "fall_seconds" (absent: the kit's), "lit": shines on its
 ##       way down}] lamps that fall on their own;
 ##   "crane": {"start_seconds": when it sets off by itself after the room's
-##       start (absent: on her step, D215), "delay_seconds" from the step to setting off, "speed" px per
+##       start (absent: on her step, D215), "pedal": false — no pedal, the
+##       crane only replays its ride (default true, D176), "delay_seconds" from the step to setting off, "speed" px per
 ##       world second, "blast_way": where along its rail (0 … 1, default 1,
 ##       its arrival) act 3 begins, "lamps": [lamps over the rail], "lamp_lead_px",
 ##       "lamp_to_row", "sag_seconds", "sag_px", "tilt_degrees",
@@ -73,6 +74,8 @@ var lamps: Array[Dictionary] = []
 var ride_delay := 1
 ## The clock tick on which the crane sets off by itself (D215); -1: on her step.
 var ride_start := -1
+## False: a jump into the crane under Shift does not make it hers (D215).
+var pedal := true
 ## Pixels per tick the crane rides; ticks it takes (set by `aim`).
 var ride_step := 1.0
 var ride_ticks := 1
@@ -147,6 +150,7 @@ static func from_data(data: Variant, ticks_per_second: float, quake: Dictionary,
 	var crane: Dictionary = d.get("crane", {}) if d.get("crane", {}) is Dictionary else {}
 	plan.ride_delay = ticks.call(crane.get("delay_seconds", 1.0))
 	plan.ride_start = ticks.call(crane["start_seconds"]) if crane.has("start_seconds") else -1
+	plan.pedal = bool(crane.get("pedal", true))
 	plan.ride_step = maxf(float(crane.get("speed", 100.0)), 1.0) / ticks_per_second
 	for lamp: Variant in crane.get("lamps", []):
 		plan.crane_lamps.append(int(lamp))
@@ -590,6 +594,8 @@ static func problems(data: Variant, where: String, lamp_count: int) -> PackedStr
 		for key: String in ["delay_seconds", "fall_second", "sag_px", "lamp_lead_px", "tilt_degrees"]:
 			if not not_negative.call(c.get(key)):
 				errors.append("%s: 'collapse.crane.%s' must be a number from 0" % [where, key])
+		if c.has("pedal") and not c.get("pedal") is bool:
+			errors.append("%s: 'collapse.crane.pedal' must be true or false" % where)
 		if c.has("falls") and not c.get("falls") is bool:
 			errors.append("%s: 'collapse.crane.falls' must be true or false" % where)
 		if c.has("start_seconds") and not not_negative.call(c.get("start_seconds")):

@@ -244,7 +244,7 @@ func sense(room: Object, direction: int, player_rect: Rect2) -> void:
 		_from_piece = true
 		_armed = false
 	elif on_crane:
-		if _from_piece and direction < 0 and ride >= plan.ride_delay:
+		if _from_piece and direction < 0 and ride >= plan.ride_delay and plan.pedal:
 			_armed = true
 		_from_piece = false
 	if direction > 0 and ride < 0 and on_crane:

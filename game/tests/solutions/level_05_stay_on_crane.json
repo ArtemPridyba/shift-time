@@ -17,9 +17,9 @@
 		{ "actions": ["rewind"], "ticks": 20 },
 		{ "actions": [], "ticks": 150 },
 		{ "actions": ["move_right"], "ticks": 10 },
-		{ "actions": [], "ticks": 30 },
-		{ "actions": ["rewind"], "ticks": 45 },
-		{ "actions": ["move_left"], "ticks": 30 },
-		{ "actions": [], "ticks": 250 }
+		{ "actions": [], "ticks": 14 },
+		{ "actions": ["move_left"], "ticks": 12 },
+		{ "actions": ["rewind"], "ticks": 200 },
+		{ "actions": [], "ticks": 500 }
 	]
 }

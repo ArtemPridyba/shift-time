@@ -199,6 +199,25 @@ func test_collapse_pedal_brakes_the_crane_she_jumped_into_from_a_piece_under_shi
 	collapse.free()
 
 
+func test_collapse_without_a_pedal_a_jump_under_shift_does_not_make_the_crane_hers() -> void:
+	var collapse := Collapse.new()
+	collapse.plan = _mid_ride_plan()
+	collapse.plan.pedal = false
+	collapse.pieces = [Rect2(0, -200, 64, 16)]
+	collapse.rests = [Rect2(0, 400, 64, 16)]
+	collapse.crane_rect = Rect2(100, 0, 96, 16)
+	collapse.crane_travel = Vector2(100.0, 0.0)
+	_tree.root.add_child(collapse)
+	collapse.restore_state({"clock": 0, "ride": collapse.plan.act3_at + 3, "calm": -1, "brake": -1})
+	var room := FakeRoom.new()
+	var crane := _standing_on(collapse.crane_load_rect())
+	collapse.sense(room, -1, _standing_on(collapse.piece_rect(0)))
+	collapse.sense(room, -1, crane)
+	collapse.sense(room, 1, crane)
+	check(not collapse.pedal_armed() and room.changes.is_empty(), "no pedal: letting go of Shift in the crane changes nothing")
+	collapse.free()
+
+
 func test_collapse_data_is_checked() -> void:
 	var entry := Content.level_for_scene(LEVEL_PATH)
 	var lamps: Array = (entry["world"] as Dictionary)["lamps"]
@@ -297,33 +316,34 @@ func test_level_05_starts_from_the_effect() -> void:
 	await _free(room)
 
 
-func test_level_05_the_door_is_out_of_reach_but_by_the_rail() -> void:
+func test_level_05_the_door_is_on_the_crane_ledge_and_out_of_reach_otherwise() -> void:
 	var room := await _load()
 	var collapse := room.get_node("Collapse") as Collapse
-	var exit := room.get_node("Exit") as ExitZone
-	var zone := exit.rect()
+	var blocks := room.get_node("Blocks") as TileMapLayer
+	var zone := (room.get_node("Exit") as ExitZone).rect()
+	var solid := func(x: float, y: float) -> bool:
+		return blocks.get_cell_source_id(Vector2i(int(floor(x / CELL)), int(floor(y / CELL)))) != -1
+	# The doorway stands on the ledge: she walks in on its floor.
+	check(solid.call(zone.get_center().x, zone.end.y + 4.0) and not solid.call(zone.get_center().x, zone.end.y - 4.0),
+		"the door's sill is the ledge's floor")
+	# The crane waits flush with the ledge, by its end.
+	var crane := collapse.crane_rect
+	check(solid.call(crane.position.x - 4.0, crane.position.y + 4.0) and not solid.call(crane.position.x - 4.0, crane.position.y - 4.0),
+		"the crane waits level with the ledge, by its end")
 	var spawn := (room.get_node("SpawnPoint") as Node2D).position
 	check(spawn.y - zone.end.y > OUT_UP and absf(spawn.x - zone.get_center().x) > OUT_ACROSS, "the entrance is far from the door")
 	for k in CHUNKS:
 		var hang := collapse.pieces[k]
-		check(hang.position.x - zone.end.x > OUT_ACROSS or zone.position.x - hang.end.x > OUT_ACROSS,
-			"hanging chunk %d is far from the door" % k)
-	# Somewhere on its way the crane's floor is the door's sill.
-	var best := INF
-	for i in 101:
-		var load_rect := Rect2(collapse.crane_rect.position + collapse.crane_travel * (float(i) / 100.0), collapse.crane_rect.size)
-		if load_rect.position.x < zone.end.x and load_rect.end.x > zone.position.x:
-			best = minf(best, absf(load_rect.position.y - zone.end.y))
-	check(best < 0.2 * CELL, "the crane passes the door with its floor at the sill, %.0f px" % best)
+		check(hang.position.x - crane.position.x > OUT_ACROSS, "hanging chunk %d is far from the ledge" % k)
 	await _free(room)
 
 
-func test_level_05_the_door_opens_only_after_the_crane_has_passed_it() -> void:
+func test_level_05_the_door_opens_only_when_the_crane_is_far_from_its_ledge() -> void:
 	var room := await _load()
 	var collapse := room.get_node("Collapse") as Collapse
 	var plan := collapse.plan
-	var zone := (room.get_node("Exit") as ExitZone).rect()
 	check((room.get_node("Exit") as ExitZone).get("_door") == collapse, "the slab locks the exit")
+	check(not plan.pedal, "the crane has no brake here: she only rides it")
 	var first_open := -1
 	for r in plan.ride_end:
 		if plan.gate_open(r) >= 1.0:
@@ -333,9 +353,8 @@ func test_level_05_the_door_opens_only_after_the_crane_has_passed_it() -> void:
 	collapse.restore_state({"clock": plan.clock_end, "ride": first_open - 1, "calm": -1, "brake": -1})
 	check(not collapse.is_open(), "the door is shut a tick before")
 	var load_rect := collapse.crane_load_rect()
-	# By then the crane is below and past the door: no jump from it gets there.
-	check(load_rect.position.y - zone.end.y > OUT_UP or load_rect.position.x - zone.end.x > OUT_ACROSS,
-		"when the door opens the crane is out of reach of it: crane %s, door %s" % [load_rect, zone])
+	check(load_rect.position.x - collapse.crane_rect.end.x > OUT_ACROSS,
+		"when the door opens the crane is far from the ledge: whoever rides it is carried away")
 	collapse.restore_state({"clock": plan.clock_end, "ride": first_open, "calm": -1, "brake": -1})
 	check(collapse.is_open(), "then it is open")
 	await _free(room)
@@ -360,7 +379,15 @@ func test_level_05_the_top_chunk_hangs_out_of_reach_of_the_crane_and_falls_behin
 				check(load_rect.position.y - hang.end.y > HEIGHT + 8.0,
 					"she has room to ride under hanging chunk %d (ride %d)" % [k, r])
 				passes_under = passes_under or r < falls
-		check(passes_under == (k == BOARD), "only the top chunk still hangs when the crane passes under it (chunk %d)" % k)
+		check(passes_under == (k != LIFT), "the chunks over the rail still hang when the crane passes under them, the lift does not (chunk %d)" % k)
+		# Nothing falls onto the crane on its way: whoever rides it is never stopped.
+		for r in range(falls, plan.ride_end + 1):
+			var crane := plan.crane_pose(r, collapse.crane_travel, 0.0)
+			var load_rect := Rect2(collapse.crane_rect.position + (crane["at"] as Vector2), collapse.crane_rect.size)
+			var y := lerpf(hang.position.y, collapse.rests[k].position.y, plan.way(k, plan.clock_end, r))
+			var body := Rect2(load_rect.position - Vector2(0.0, HEIGHT), Vector2(load_rect.size.x, HEIGHT))
+			check(not Rect2(Vector2(hang.position.x, y), hang.size).intersects(body),
+				"falling chunk %d misses the crane and whoever rides it (ride %d)" % [k, r])
 	await _free(room)
 
 
@@ -385,9 +412,6 @@ func test_level_05_the_chunks_are_a_stair_from_the_floor_to_the_top_one() -> voi
 		if hang.position.x - load_rect.end.x < OUT_ACROSS:
 			check(lift_top - load_rect.position.y > OUT_UP,
 				"when the crane comes near the lift, the lift is far below it (ride %d)" % r)
-	# The top chunk is far from the door: the only way out is the crane.
-	var zone := (room.get_node("Exit") as ExitZone).rect()
-	check(collapse.pieces[BOARD].position.x - zone.end.x > OUT_ACROSS, "the top chunk is far from the door")
 	await _free(room)
 
 
