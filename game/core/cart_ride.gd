@@ -16,6 +16,15 @@ extends RefCounted
 ## along under the walkway and up the shaft back to the park, with the heroine.
 ## At the station it brakes to a stop and lets her off.
 ##
+## Barriers on the rails (level 04, session 2): `step` asks a callable with
+## the front of the cart before and after the move whether something stands
+## there. "bounce": a closed shutter or a wall it cannot break, and it bumps
+## as at a dead end; "break": it broke through a wall and rolls on, jolting
+## for `break_jolt_seconds`.
+##
+## The intro ride may start on the hoist (`drop_from_hoist`): from the park
+## along the hoist to a point of the rails, where the hook lets it go.
+##
 ## Its load (level 04, D216): pigs of iron it caught out of the hopper's
 ## stream. Loaded it rolls at `loaded_speed_px`, slower; the hoist tips the
 ## load into the pit, so every ride starts empty.
@@ -42,6 +51,10 @@ var _route := PackedVector2Array()
 var _route_marks := PackedFloat32Array()
 var _route_d := 0.0
 var _last_move := Vector2.LEFT
+var _jolt := 0.0
+## Where the hoist lets the cart down onto the rails; "" to the park.
+var _drop_segment := ""
+var _drop_distance := 0.0
 
 
 func _init(rails: RailTrack, params: Dictionary, park_segment: String, hoist_y: float) -> void:
@@ -60,6 +73,8 @@ func park() -> void:
 	mode = Mode.PARKED
 	load = 0
 	_timer = 0.0
+	_jolt = 0.0
+	_drop_segment = ""
 	_route = PackedVector2Array()
 	_last_move = track.direction_at(segment, 0.0) if track != null else Vector2.LEFT
 
@@ -72,6 +87,27 @@ func board() -> bool:
 	mode = Mode.LAUNCHING
 	_timer = _number("launch_seconds")
 	return true
+
+
+## The intro ride from the hoist: from the park along the hoist and down onto
+## `drop_segment` at `drop_distance`, where the hook lets it roll. False if
+## the cart is not parked or the place is not on the rails.
+func drop_from_hoist(drop_segment: String, drop_distance: float) -> bool:
+	if mode != Mode.PARKED or not track.has(drop_segment):
+		return false
+	var park_at := track.point_at(_park_segment, 0.0)
+	var drop_at := track.point_at(drop_segment, drop_distance)
+	_set_route([park_at, Vector2(park_at.x, _hoist_y), Vector2(drop_at.x, _hoist_y), drop_at])
+	_drop_segment = drop_segment
+	_drop_distance = drop_distance
+	speed = 0.0
+	mode = Mode.HOISTED
+	return true
+
+
+## The front of the cart on the rails, `length_px` / 2 ahead of its middle.
+func nose() -> Vector2:
+	return position() + facing() * _number("length_px") / 2.0
 
 
 ## True where the heroine may get off: parked at the ramp or at the station.
@@ -101,15 +137,29 @@ func on_rails() -> bool:
 
 ## One tick of the player's clock. `leads_main` answers for a switch id
 ## whether its blade leads to the main segment now.
-func step(delta: float, leads_main: Callable) -> void:
+## `barrier` answers for the front before and after this tick's move and the
+## load: "bounce", "break" or "" (see above).
+func step(delta: float, leads_main: Callable, barrier: Callable = Callable()) -> void:
 	var before := position()
+	_jolt = maxf(_jolt - delta, 0.0)
 	match mode:
 		Mode.LAUNCHING:
 			_timer -= delta
 			if _timer <= 0.0:
 				mode = Mode.ROLLING
 		Mode.ROLLING:
+			var was_segment := segment
+			var was_distance := distance
+			var was_nose := nose()
 			_roll(delta, leads_main)
+			if mode == Mode.ROLLING and barrier.is_valid():
+				var verdict := str(barrier.call(was_nose, nose(), load))
+				if verdict == "bounce":
+					segment = was_segment
+					distance = was_distance
+					_bump()
+				elif verdict == "break":
+					_jolt = _number("break_jolt_seconds")
 		Mode.BUMPED:
 			_timer -= delta
 			var total := _number("bump_seconds")
@@ -120,7 +170,14 @@ func step(delta: float, leads_main: Callable) -> void:
 		Mode.HOISTED:
 			_route_d += _number("hoist_speed_px") * delta
 			if _route_d >= _route_marks[_route_marks.size() - 1]:
-				park()
+				if _drop_segment != "":
+					segment = _drop_segment
+					distance = _drop_distance
+					_drop_segment = ""
+					speed = 0.0
+					mode = Mode.ROLLING
+				else:
+					park()
 	var moved := position() - before
 	if moved.length() > 0.01:
 		_last_move = moved.normalized()
@@ -149,7 +206,8 @@ func motion() -> Vector2:
 ## How hard the cart shakes after hitting a buffer, in pixels; 0 otherwise.
 func shake_px() -> float:
 	if mode != Mode.BUMPED:
-		return 0.0
+		var jolt_total := _number("break_jolt_seconds")
+		return _number("shake_px") * clampf(_jolt / jolt_total, 0.0, 1.0) if _jolt > 0.0 and jolt_total > 0.0 else 0.0
 	var total := _number("bump_seconds")
 	return _number("shake_px") * clampf(_timer / total, 0.0, 1.0) if total > 0.0 else 0.0
 
@@ -186,12 +244,18 @@ func _roll(delta: float, leads_main: Callable) -> void:
 			distance = track.length(segment)
 			speed = 0.0
 			if str(end.get("stop", "")) == RailTrack.STOP_DEAD_END:
-				mode = Mode.BUMPED
-				_timer = _number("bump_seconds")
-				_bump_at = distance
+				_bump()
 			else:
 				mode = Mode.STOPPED
 			break
+
+
+## It hit a buffer or a barrier: it bounces back from here and shakes.
+func _bump() -> void:
+	speed = 0.0
+	mode = Mode.BUMPED
+	_timer = _number("bump_seconds")
+	_bump_at = distance
 
 
 ## Up from where the cart rests to the hoist line, along it to the park, and
@@ -199,14 +263,19 @@ func _roll(delta: float, leads_main: Callable) -> void:
 func _start_hoist() -> void:
 	var from := track.point_at(segment, distance)
 	var park_at := track.point_at(_park_segment, 0.0)
-	_route = PackedVector2Array([from, Vector2(from.x, _hoist_y), Vector2(park_at.x, _hoist_y), park_at])
+	_set_route([from, Vector2(from.x, _hoist_y), Vector2(park_at.x, _hoist_y), park_at])
+	_drop_segment = ""
+	speed = 0.0
+	load = 0
+	mode = Mode.HOISTED
+
+
+func _set_route(points: Array) -> void:
+	_route = PackedVector2Array(points)
 	_route_marks = PackedFloat32Array([0.0])
 	for i in range(1, _route.size()):
 		_route_marks.append(_route_marks[i - 1] + _route[i - 1].distance_to(_route[i]))
 	_route_d = 0.0
-	speed = 0.0
-	load = 0
-	mode = Mode.HOISTED
 
 
 func _route_point(d: float) -> Vector2:

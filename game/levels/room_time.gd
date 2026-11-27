@@ -242,6 +242,19 @@ func rewrite_past_where(id: String, flag: String) -> bool:
 	return world.rewrite_past_where(temporal_objects(), id, flag)
 
 
+## The room's history starts again from now: the past before this tick is
+## gone, and a rewind stops here (level 04: the intro ride is not a past to
+## rewind into, D219). Only at the head of history in normal time; false if
+## not now.
+func forget_past() -> bool:
+	var manager := get_node_or_null("/root/TimeManager")
+	var direction: int = manager.direction if manager != null else TimeWorld.FORWARD
+	if direction != TimeWorld.FORWARD or not world.timeline.at_head():
+		return false
+	world.start(temporal_objects())
+	return true
+
+
 ## Back to the room as it was loaded, with a fresh history and its prelude
 ## run again: the player comes back into the same past.
 func reset() -> void:

@@ -13,8 +13,10 @@ extends SceneTree
 ## the station and the exit is a jump away. The hoist runs under the walkway
 ## back to the shaft.
 ##
-## Session 1 of the one-screen card: plate K, shutter Z, the bricked wall and
-## the intro ride come in session 2 (the tunnel stands open until then).
+## Session 2: between the hopper and the tunnel plate K lies on the rails and
+## drops shutter Z after its latch (levels.json); deep in the tunnel, before
+## the exit, the bricked wall stops an empty cart. The wall stands this deep
+## so that a cart bounced off it fits whole between it and Z (D219).
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
 ##   godot --headless --path game --script $PWD/tools/build_level_04.gd
@@ -88,6 +90,20 @@ const WALKWAY_Y := 7.0
 ## The hopper's gate (the middle of its bottom), in cells: under the walkway,
 ## over the main line; the pigs fall from here to the bottom of the room.
 const HOPPER_AT := Vector2(11.5, 9.5)
+## Plate K on the main line (its first x and its width, in cells) and the
+## shutter Z it drops: a blade in guides under the walkway, its bottom just
+## over the rails when closed, out of the hoist's way when open.
+const PLATE_K_X := 8.8
+const PLATE_K_CELLS := 1.5
+const SHUTTER_Z_X := 7.55
+const SHUTTER_Z_SIZE := Vector2(0.5, 1.875)
+const SHUTTER_Z_BOTTOM := 12.95
+const SHUTTER_Z_OPEN_BOTTOM := 9.0
+## The bricked wall across the tunnel: its middle x and width, from the
+## tunnel's ceiling down to the rails, in cells.
+const WALL_X := 3.35
+const WALL_WIDTH := 0.5
+const WALL_TOP := 9.0
 ## The barrier at the end of the walkway over the park, in cells (D192): it
 ## stands while the cart is away, so nobody steps into the empty shaft.
 const GATE_CELLS := Rect2(25.6, 4.5, 0.4, 2.5)
@@ -171,6 +187,29 @@ func _initialize() -> void:
 		plate.position = Vector2((cell.x + PLATE_CELLS / 2.0) * CELL, cell.y * CELL)
 		_own(root, plate)
 
+	var plate_k := TimePlate.new()
+	plate_k.object_id = "plate_k"
+	plate_k.name = "PlateK"
+	plate_k.label = "K"
+	plate_k.target_ids = PackedStringArray(["shutter_z"])
+	plate_k.width = PLATE_K_CELLS * CELL
+	plate_k.position = Vector2(PLATE_K_X + PLATE_K_CELLS / 2.0, MAIN_Y) * CELL
+	_own(root, plate_k)
+	var z := Shutter.new()
+	z.object_id = "shutter_z"
+	z.name = "ShutterZ"
+	z.label = "Z"
+	z.bars_carts = true
+	z.size = SHUTTER_Z_SIZE * CELL
+	z.travel = Vector2(0.0, (SHUTTER_Z_OPEN_BOTTOM - SHUTTER_Z_BOTTOM) * CELL)
+	z.position = Vector2(SHUTTER_Z_X, SHUTTER_Z_BOTTOM - SHUTTER_Z_SIZE.y / 2.0) * CELL
+	_own(root, z)
+	var wall := BrickWall.new()
+	wall.object_id = "wall"
+	wall.name = "BrickWall"
+	wall.size = Vector2(WALL_WIDTH, MAIN_Y - WALL_TOP) * CELL
+	wall.position = Vector2(WALL_X, MAIN_Y) * CELL
+	_own(root, wall)
 	var hopper := Hopper.new()
 	hopper.name = "Hopper"
 	hopper.position = HOPPER_AT * CELL

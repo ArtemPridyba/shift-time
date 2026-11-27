@@ -1,36 +1,38 @@
 [gd_scene format=4]
 
-[ext_resource type="Script" path="res://levels/level_room.gd" id="1_dmyuw"]
-[ext_resource type="TileSet" path="res://levels/blockout/blockout_tileset.tres" id="2_b3fh1"]
-[ext_resource type="Script" path="res://objects/entrance_frame.gd" id="3_nkw3h"]
-[ext_resource type="Script" path="res://objects/rails.gd" id="4_kf744"]
-[ext_resource type="Script" path="res://objects/rail_switch.gd" id="5_e7ppy"]
-[ext_resource type="Script" path="res://objects/time_plate.gd" id="6_hdakc"]
-[ext_resource type="Script" path="res://objects/hopper.gd" id="7_7qqq0"]
-[ext_resource type="Script" path="res://objects/minecart.gd" id="8_7ehwn"]
-[ext_resource type="PackedScene" path="res://objects/exit_zone.tscn" id="9_7l03k"]
-[ext_resource type="Script" path="res://objects/exit_zone.gd" id="10_srcxc"]
-[ext_resource type="PackedScene" path="res://objects/player.tscn" id="11_3uq77"]
-[ext_resource type="Script" path="res://objects/player.gd" id="12_folie"]
-[ext_resource type="Script" path="res://levels/room_time.gd" id="13_s5m8x"]
+[ext_resource type="Script" path="res://levels/level_room.gd" id="1_nkw3h"]
+[ext_resource type="TileSet" path="res://levels/blockout/blockout_tileset.tres" id="2_kf744"]
+[ext_resource type="Script" path="res://objects/entrance_frame.gd" id="3_e7ppy"]
+[ext_resource type="Script" path="res://objects/rails.gd" id="4_hdakc"]
+[ext_resource type="Script" path="res://objects/rail_switch.gd" id="5_7qqq0"]
+[ext_resource type="Script" path="res://objects/time_plate.gd" id="6_7ehwn"]
+[ext_resource type="Script" path="res://objects/shutter.gd" id="7_7l03k"]
+[ext_resource type="Script" path="res://objects/brick_wall.gd" id="8_srcxc"]
+[ext_resource type="Script" path="res://objects/hopper.gd" id="9_3uq77"]
+[ext_resource type="Script" path="res://objects/minecart.gd" id="10_folie"]
+[ext_resource type="PackedScene" path="res://objects/exit_zone.tscn" id="11_s5m8x"]
+[ext_resource type="Script" path="res://objects/exit_zone.gd" id="12_1tvcb"]
+[ext_resource type="PackedScene" path="res://objects/player.tscn" id="13_h7bjr"]
+[ext_resource type="Script" path="res://objects/player.gd" id="14_5vvk3"]
+[ext_resource type="Script" path="res://levels/room_time.gd" id="15_egyev"]
 
-[node name="Level04" type="Node2D" unique_id=630060254]
-script = ExtResource("1_dmyuw")
+[node name="Level04" type="Node2D" unique_id=1010963862]
+script = ExtResource("1_nkw3h")
 
-[node name="Blocks" type="TileMapLayer" parent="." unique_id=1214028931]
+[node name="Blocks" type="TileMapLayer" parent="." unique_id=615404235]
 tile_map_data = PackedByteArray("AAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAACAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAFAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAHAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAJAAAAAAAAAAAAAAAKAAAAAAAAAAAAAAALAAAAAAAAAAAAAAAMAAAAAAAAAAAAAAANAAAAAAAAAAAAAAAOAAAAAAAAAAAAAAAPAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAARAAAAAAAAAAAAAAASAAAAAAAAAAAAAAATAAAAAAAAAAAAAAAUAAAAAAAAAAAAAAAVAAAAAAAAAAAAAAAWAAAAAAAAAAAAAAAXAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAaAAAAAAAAAAAAAAAbAAAAAAAAAAAAAAAcAAAAAAAAAAAAAAAdAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAABAAEAAAAAAAAAAAACAAEAAAAAAAAAAAADAAEAAAAAAAAAAAAEAAEAAAAAAAAAAAAFAAEAAAAAAAAAAAAGAAEAAAAAAAAAAAAHAAEAAAAAAAAAAAAIAAEAAAAAAAAAAAAJAAEAAAAAAAAAAAAKAAEAAAAAAAAAAAALAAEAAAAAAAAAAAAMAAEAAAAAAAAAAAANAAEAAAAAAAAAAAAOAAEAAAAAAAAAAAAPAAEAAAAAAAAAAAAQAAEAAAAAAAAAAAARAAEAAAAAAAAAAAASAAEAAAAAAAAAAAATAAEAAAAAAAAAAAAUAAEAAAAAAAAAAAAVAAEAAAAAAAAAAAAWAAEAAAAAAAAAAAAXAAEAAAAAAAAAAAAYAAEAAAAAAAAAAAAZAAEAAAAAAAAAAAAaAAEAAAAAAAAAAAAbAAEAAAAAAAAAAAAcAAEAAAAAAAAAAAAdAAEAAAAAAAAAAAAAAAIAAAAAAAAAAAABAAIAAAAAAAAAAAACAAIAAAAAAAAAAAADAAIAAAAAAAAAAAAEAAIAAAAAAAAAAAAFAAIAAAAAAAAAAAAGAAIAAAAAAAAAAAAHAAIAAAAAAAAAAAAcAAIAAAAAAAAAAAAdAAIAAAAAAAAAAAAAAAMAAAAAAAAAAAABAAMAAAAAAAAAAAACAAMAAAAAAAAAAAADAAMAAAAAAAAAAAAEAAMAAAAAAAAAAAAFAAMAAAAAAAAAAAAGAAMAAAAAAAAAAAAHAAMAAAAAAAAAAAAcAAMAAAAAAAAAAAAdAAMAAAAAAAAAAAAAAAQAAAAAAAAAAAABAAQAAAAAAAAAAAACAAQAAAAAAAAAAAADAAQAAAAAAAAAAAAEAAQAAAAAAAAAAAAFAAQAAAAAAAAAAAAGAAQAAAAAAAAAAAAHAAQAAAAAAAAAAAAcAAQAAAAAAAAAAAAdAAQAAAAAAAAAAAAAAAUAAAAAAAAAAAAcAAUAAAAAAAAAAAAdAAUAAAAAAAAAAAAAAAYAAAAAAAAAAAAcAAYAAAAAAAAAAAAdAAYAAAAAAAAAAAAAAAcAAAAAAAAAAAABAAcAAAAAAAAAAAACAAcAAAAAAAAAAAADAAcAAAAAAAAAAAAEAAcAAAAAAAAAAAAFAAcAAAAAAAAAAAAGAAcAAAAAAAAAAAAHAAcAAAAAAAAAAAAIAAcAAAAAAAAAAAAJAAcAAAAAAAAAAAAKAAcAAAAAAAAAAAALAAcAAAAAAAAAAAAMAAcAAAAAAAAAAAANAAcAAAAAAAAAAAAOAAcAAAAAAAAAAAAPAAcAAAAAAAAAAAAQAAcAAAAAAAAAAAARAAcAAAAAAAAAAAASAAcAAAAAAAAAAAATAAcAAAAAAAAAAAAUAAcAAAAAAAAAAAAVAAcAAAAAAAAAAAAWAAcAAAAAAAAAAAAXAAcAAAAAAAAAAAAYAAcAAAAAAAAAAAAZAAcAAAAAAAAAAAAcAAcAAAAAAAAAAAAdAAcAAAAAAAAAAAAAAAgAAAAAAAAAAAABAAgAAAAAAAAAAAACAAgAAAAAAAAAAAADAAgAAAAAAAAAAAAEAAgAAAAAAAAAAAAFAAgAAAAAAAAAAAAGAAgAAAAAAAAAAAAcAAgAAAAAAAAAAAAdAAgAAAAAAAAAAAAAAAkAAAAAAAAAAAAcAAkAAAAAAAAAAAAdAAkAAAAAAAAAAAAAAAoAAAAAAAAAAAAcAAoAAAAAAAAAAAAdAAoAAAAAAAAAAAAAAAsAAAAAAAAAAAAcAAsAAAAAAAAAAAAdAAsAAAAAAAAAAAAAAAwAAAAAAAAAAAAcAAwAAAAAAAAAAAAdAAwAAAAAAAAAAAAAAA0AAAAAAAAAAAABAA0AAAAAAAAAAAACAA0AAAAAAAAAAAADAA0AAAAAAAAAAAAEAA0AAAAAAAAAAAAFAA0AAAAAAAAAAAAGAA0AAAAAAAAAAAAcAA0AAAAAAAAAAAAdAA0AAAAAAAAAAAAAAA4AAAAAAAAAAAABAA4AAAAAAAAAAAACAA4AAAAAAAAAAAADAA4AAAAAAAAAAAAEAA4AAAAAAAAAAAAFAA4AAAAAAAAAAAAGAA4AAAAAAAAAAAAcAA4AAAAAAAAAAAAdAA4AAAAAAAAAAAAAAA8AAAAAAAAAAAABAA8AAAAAAAAAAAACAA8AAAAAAAAAAAADAA8AAAAAAAAAAAAEAA8AAAAAAAAAAAAFAA8AAAAAAAAAAAAGAA8AAAAAAAAAAAAcAA8AAAAAAAAAAAAdAA8AAAAAAAAAAAAAABAAAAAAAAAAAAABABAAAAAAAAAAAAACABAAAAAAAAAAAAADABAAAAAAAAAAAAAEABAAAAAAAAAAAAAFABAAAAAAAAAAAAAGABAAAAAAAAAAAAAcABAAAAAAAAAAAAAdABAAAAAAAAAAAAA=")
-tile_set = ExtResource("2_b3fh1")
+tile_set = ExtResource("2_kf744")
 
-[node name="SpawnPoint" type="Marker2D" parent="." unique_id=243481777]
+[node name="SpawnPoint" type="Marker2D" parent="." unique_id=1645625321]
 position = Vector2(96, 448)
 
-[node name="Entrance" type="Node2D" parent="." unique_id=1634377557]
+[node name="Entrance" type="Node2D" parent="." unique_id=1966560574]
 position = Vector2(64, 320)
-script = ExtResource("3_nkw3h")
+script = ExtResource("3_e7ppy")
 size = Vector2(64, 128)
 
-[node name="Rails" type="Node2D" parent="." unique_id=552044211]
-script = ExtResource("4_kf744")
+[node name="Rails" type="Node2D" parent="." unique_id=288971442]
+script = ExtResource("4_hdakc")
 segments = [{
 "end": {
 "kind": "switch",
@@ -77,61 +79,84 @@ hoist_from_x = 448.0
 hoist_to_x = 1656.0
 ground_y = 1088.0
 
-[node name="Switch1" type="Node2D" parent="." unique_id=840178457]
+[node name="Switch1" type="Node2D" parent="." unique_id=2006602595]
 position = Vector2(1376, 832)
-script = ExtResource("5_e7ppy")
+script = ExtResource("5_7qqq0")
 object_id = "switch_1"
 side_direction = Vector2(-0.70710677, 0.70710677)
 label = "1"
 
-[node name="Switch2" type="Node2D" parent="." unique_id=583980621]
+[node name="Switch2" type="Node2D" parent="." unique_id=442807485]
 position = Vector2(1120, 832)
-script = ExtResource("5_e7ppy")
+script = ExtResource("5_7qqq0")
 object_id = "switch_2"
 main_when = "up"
 side_direction = Vector2(-0.70710677, 0.70710677)
 label = "2"
 
-[node name="Plate2" type="Node2D" parent="." unique_id=1436947931]
+[node name="Plate2" type="Node2D" parent="." unique_id=1082578485]
 position = Vector2(1120, 448)
-script = ExtResource("6_hdakc")
+script = ExtResource("6_7ehwn")
 object_id = "plate_2"
 target_ids = PackedStringArray("switch_2")
 label = "2"
 
-[node name="Plate1" type="Node2D" parent="." unique_id=901990770]
+[node name="Plate1" type="Node2D" parent="." unique_id=582051601]
 position = Vector2(1376, 448)
-script = ExtResource("6_hdakc")
+script = ExtResource("6_7ehwn")
 object_id = "plate_1"
 target_ids = PackedStringArray("switch_1")
 label = "1"
 
-[node name="Hopper" type="Node2D" parent="." unique_id=1262642456]
-position = Vector2(736, 608)
-script = ExtResource("7_7qqq0")
+[node name="PlateK" type="Node2D" parent="." unique_id=35658868]
+position = Vector2(611.2, 832)
+script = ExtResource("6_7ehwn")
+object_id = "plate_k"
+target_ids = PackedStringArray("shutter_z")
+width = 96.0
+label = "K"
 
-[node name="Minecart" type="Node2D" parent="." unique_id=303281724]
+[node name="ShutterZ" type="AnimatableBody2D" parent="." unique_id=1001768786]
+z_index = -1
+position = Vector2(483.2, 768.8)
+collision_mask = 0
+script = ExtResource("7_7l03k")
+object_id = "shutter_z"
+travel = Vector2(0, -252.8)
+size = Vector2(32, 120)
+label = "Z"
+bars_carts = true
+
+[node name="BrickWall" type="Node2D" parent="." unique_id=458862740]
+position = Vector2(214.4, 832)
+script = ExtResource("8_srcxc")
+
+[node name="Hopper" type="Node2D" parent="." unique_id=670480035]
+position = Vector2(736, 608)
+script = ExtResource("9_3uq77")
+
+[node name="Minecart" type="Node2D" parent="." unique_id=443381748]
 process_physics_priority = -40
 z_index = -1
 position = Vector2(1656, 536)
-script = ExtResource("8_7ehwn")
+script = ExtResource("10_folie")
 rails_path = NodePath("../Rails")
 gate_rect = Rect2(1638.4, 288, 25.6, 160)
 
-[node name="Exit" type="Area2D" parent="." unique_id=1737959079 instance=ExtResource("9_7l03k")]
+[node name="Exit" type="Area2D" parent="." unique_id=421790875 instance=ExtResource("11_s5m8x")]
 position = Vector2(128, 768)
 collision_layer = 0
 collision_mask = 2
 monitorable = false
-script = ExtResource("10_srcxc")
+script = ExtResource("12_1tvcb")
 size = Vector2(128, 128)
 
-[node name="Player" type="CharacterBody2D" parent="." unique_id=1769750762 instance=ExtResource("11_3uq77")]
+[node name="Player" type="CharacterBody2D" parent="." unique_id=1575415826 instance=ExtResource("13_h7bjr")]
 z_index = 2
 collision_layer = 2
-script = ExtResource("12_folie")
+script = ExtResource("14_5vvk3")
 
-[node name="RoomTime" type="Node" parent="." unique_id=1500503124]
+[node name="RoomTime" type="Node" parent="." unique_id=2014456660]
 process_physics_priority = -50
-script = ExtResource("13_s5m8x")
+script = ExtResource("15_egyev")
 player_path = NodePath("../Player")

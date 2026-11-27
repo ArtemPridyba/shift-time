@@ -41,7 +41,7 @@
     "move_seconds": 0.6
   },
   "minecart": {
-    "_about": "The minecart of level 04 (card docs/levels/04.md, D168), out of time: real seconds, never the world clock. speed_px: its speed on the rails, px a second (the ride from the park to the station takes about 12 s, inside the 20 s of history). accel_px: how fast it speeds up from the park, px/s². brake_px: how hard it brakes into the station, px/s²; creep_px: its last crawl to the buffer, px/s. launch_seconds: from her landing on the platform until the stopper is down and it rolls. bump_seconds: at a dead end it hits the buffer, bounces back bounce_px and shakes shake_px fading over this time; then the hoist takes it, at hoist_speed_px, back to the park with her. Its shape: length_px long, the body body_px high at the front, the operator's platform platform_px high and platform_width_px wide at the back; her feet stand seat_px behind its middle. board_px: how close to the platform her feet must come for a landing. loaded_speed_px: its speed with pigs of iron in the body (D216), slower; break_load: how many pigs it needs to break through the bricked wall.",
+    "_about": "The minecart of level 04 (card docs/levels/04.md, D168), out of time: real seconds, never the world clock. speed_px: its speed on the rails, px a second (the ride from the park to the station takes about 12 s, inside the 20 s of history). accel_px: how fast it speeds up from the park, px/s². brake_px: how hard it brakes into the station, px/s²; creep_px: its last crawl to the buffer, px/s. launch_seconds: from her landing on the platform until the stopper is down and it rolls. bump_seconds: at a dead end it hits the buffer, bounces back bounce_px and shakes shake_px fading over this time; then the hoist takes it, at hoist_speed_px, back to the park with her. Its shape: length_px long, the body body_px high at the front, the operator's platform platform_px high and platform_width_px wide at the back; her feet stand seat_px behind its middle. board_px: how close to the platform her feet must come for a landing. loaded_speed_px: its speed with pigs of iron in the body (D216), slower; break_load: how many pigs it needs to break through the bricked wall; break_jolt_seconds: how long it jolts after the break. clear_px: how high over the rails a shutter closing onto it waits (the cart with her on the platform).",
     "speed_px": 150,
     "accel_px": 400,
     "brake_px": 500,
@@ -58,7 +58,15 @@
     "seat_px": 60,
     "board_px": 6,
     "loaded_speed_px": 115,
-    "break_load": 4
+    "break_load": 4,
+    "clear_px": 124,
+    "break_jolt_seconds": 0.5
+  },
+  "brick_wall": {
+    "_about": "The bricked wall before the exit of level 04 (card docs/levels/04.md, session 2), a recorded object; world seconds (D96). A cart with minecart.break_load pigs breaks it: the bricks fly up to fly_px ahead over burst_seconds and lie still; a brick is brick_px long. Under Shift they fly back.",
+    "burst_seconds": 0.8,
+    "fly_px": 110,
+    "brick_px": 32
   },
   "hopper": {
     "_about": "The hopper of pig iron of level 04 (card docs/levels/04.md, D216), a recorded object; seconds of the world clock (D96). The launch of the cart pulls its gate open: after delay_seconds the count pigs pour out one by one over pour_seconds, fall at gravity_px (px/s² of world seconds) into the pit, spread across spread_px under the gate; each is pig_px long. A pig that passes through the cart's body stays in it.",

@@ -19,6 +19,20 @@ extends Node2D
 ## entry of data/levels.json, level 07, D191): at the start the empty cart
 ## leaves the park by itself, rides its way and comes back on the hoist, so the
 ## player sees where the way leads before boarding. A reset runs it again.
+## Level 04 gives it as an object (session 2): `{"segment", "distance_px",
+## "hoist_after_seconds"}`: the rope opens the hopper at the start, and after
+## that many seconds the hoist takes the empty cart from the park and lets it
+## down onto the rails there, past the switches that still lead to dead ends.
+## Riding the intro, the cart never catches pigs: only her ride does. Once it
+## is back at the park, the room's history starts again (`forget_past`, D219):
+## under Shift the world never rewinds into the intro, with Z down and the
+## first pour in the pit.
+##
+## Barriers on the rails (group `rail_barrier`: shutter Z and the bricked
+## wall, level 04) answer the front of the cart (`meet_cart`): it bounces off
+## them, or breaks through the wall with `break_load` pigs. When it bounces
+## anywhere, the hoist that comes for it first lifts every shutter that bars
+## carts, so the way back is clear.
 ##
 ## A level may also put a barrier at the end of the walkway over the park
 ## (`gate_rect`, D192): a wall while the cart is away, open while it stands
@@ -55,6 +69,13 @@ var _deck_shape: CollisionShape2D
 var _hoist_rail_y := 0.0
 var _clock := 0.0
 var _intro_pending := false
+## The intro from the hoist (level 04); empty for the intro from the park.
+var _intro_hoist := {}
+## Seconds left before the hoist takes the cart for the intro; -1 not yet.
+var _intro_wait := -1.0
+var _was_mode := CartRide.Mode.PARKED
+var _in_intro := false
+var _forget_pending := false
 var _gate: StaticBody2D
 var _gate_shape: CollisionShape2D
 var _gate_bar: ColorRect
@@ -76,7 +97,9 @@ func _ready() -> void:
 	ride = CartRide.new(track, _params, park_segment, rails.hoist_y if rails != null else 0.0)
 	_make_deck()
 	_make_gate()
-	intro_ride = _level_asks_intro()
+	var asked: Variant = _level_intro()
+	intro_ride = (asked is bool and bool(asked)) or asked is Dictionary
+	_intro_hoist = asked if asked is Dictionary else {}
 	_intro_pending = intro_ride
 	_apply()
 
@@ -88,21 +111,96 @@ func reset_ride() -> void:
 	_rider = null
 	_was_touching = false
 	_intro_pending = intro_ride
+	_intro_wait = -1.0
+	_in_intro = false
+	_forget_pending = false
 	ride.park()
+	_was_mode = ride.mode
 	_apply()
 
 
 func _physics_process(delta: float) -> void:
 	_clock += delta
 	if _intro_pending and _rider == null and ride.mode == CartRide.Mode.PARKED:
-		# The empty cart leaves by itself: the stopper drops, nobody aboard.
-		_intro_pending = false
-		_launch()
-	ride.step(delta, _leads_main)
+		_in_intro = true
+		if _intro_hoist.is_empty():
+			# The empty cart leaves by itself: the stopper drops, nobody aboard.
+			_intro_pending = false
+			_launch()
+		else:
+			_intro_from_hoist(delta)
+	ride.step(delta, _leads_main, _barrier)
+	if ride.mode == CartRide.Mode.BUMPED and _was_mode != CartRide.Mode.BUMPED:
+		_lift_barring_shutters()
+	if ride.mode == CartRide.Mode.PARKED and _was_mode != CartRide.Mode.PARKED and not _intro_pending:
+		_forget_pending = _in_intro and not _intro_hoist.is_empty()
+		_in_intro = false
+	if _forget_pending:
+		var room_time := _room_time()
+		_forget_pending = room_time != null and not bool(room_time.call("forget_past"))
+	_was_mode = ride.mode
 	_apply()
 	_catch_pigs()
 	_check_boarding()
 	queue_redraw()
+
+
+## The intro from the hoist: the rope opens the hopper now, the hoist comes
+## for the cart after `hoist_after_seconds`.
+func _intro_from_hoist(delta: float) -> void:
+	if _intro_wait < 0.0:
+		_intro_wait = float(_intro_hoist.get("hoist_after_seconds", 0.0))
+		var room_time := _room_time()
+		if room_time != null:
+			for hopper in _hoppers():
+				hopper.call("open", room_time)
+		return
+	_intro_wait -= delta
+	if _intro_wait <= 0.0:
+		_intro_pending = false
+		ride.drop_from_hoist(str(_intro_hoist.get("segment", "")), float(_intro_hoist.get("distance_px", 0.0)))
+
+
+## The front of the cart moved from `from` to `to` this tick (room pixels):
+## what the barriers of the room say (see `CartRide.step`).
+func _barrier(from: Vector2, to: Vector2, load: int) -> String:
+	var room := get_parent()
+	var room_time := _room_time()
+	if room == null or room_time == null:
+		return ""
+	var top := to.y - _number("body_px")
+	var sweep := Rect2(Vector2(minf(from.x, to.x), top), Vector2(maxf(absf(to.x - from.x), 1.0), _number("body_px")))
+	var heavy := load >= int(_number("break_load"))
+	for node in get_tree().get_nodes_in_group("rail_barrier"):
+		if node.get_parent() == room and node.has_method("meet_cart"):
+			var verdict := str(node.call("meet_cart", room_time, sweep, heavy))
+			if verdict != "":
+				return verdict
+	return ""
+
+
+## The hoist comes for a bumped cart: shutters over the rails go up first.
+func _lift_barring_shutters() -> void:
+	var room := get_parent()
+	var room_time := _room_time()
+	if room == null or room_time == null:
+		return
+	for node in get_tree().get_nodes_in_group("rail_barrier"):
+		if node.get_parent() == room and node is Shutter:
+			room_time.call("apply_change", str(node.get("object_id")), {"target": 0})
+
+
+## The room a shutter must leave over the cart, in the parent's coordinates:
+## the whole length, as high as her head on the platform (`clear_px`).
+func outline_rect() -> Rect2:
+	var length := _number("length_px")
+	var clear := _number("clear_px")
+	return Rect2(position + Vector2(-length / 2.0, -clear), Vector2(length, clear))
+
+
+## True from the start of the intro ride until the cart is back at the park.
+func intro_running() -> bool:
+	return _intro_pending or _in_intro
 
 
 ## True while the heroine rides it.
@@ -163,18 +261,18 @@ func _apply() -> void:
 	position = at
 	# Local +x points to the back of the cart.
 	rotation = (-ride.facing()).angle()
-	var parked := ride.mode == CartRide.Mode.PARKED and _rider == null
+	var parked := ride.mode == CartRide.Mode.PARKED and _rider == null and not _intro_pending
 	if _deck_shape != null:
 		_deck_shape.set_deferred("disabled", not parked)
 	if _gate_shape != null:
-		var shut := ride.mode != CartRide.Mode.PARKED
+		var shut := ride.mode != CartRide.Mode.PARKED or _intro_pending
 		_gate_shape.set_deferred("disabled", not shut)
 		_gate_bar.visible = shut
 
 
 ## True while the barrier at the end of the walkway stands closed.
 func gate_closed() -> bool:
-	return _gate_shape != null and ride.mode != CartRide.Mode.PARKED
+	return _gate_shape != null and (ride.mode != CartRide.Mode.PARKED or _intro_pending)
 
 
 ## She lands on the platform of the parked cart: she rides, the stopper drops.
@@ -183,7 +281,7 @@ func _check_boarding() -> void:
 	if player == null:
 		return
 	var touching := false
-	if ride.mode == CartRide.Mode.PARKED and _rider == null:
+	if ride.mode == CartRide.Mode.PARKED and _rider == null and not _intro_pending:
 		var rect: Rect2 = player.call("body_rect")
 		var deck := platform_rect()
 		touching = absf(rect.end.y - deck.position.y) <= _number("board_px") \
@@ -208,9 +306,9 @@ func _launch() -> void:
 
 
 ## Pigs in the air that are inside the body now stay in it: under Shift they
-## fly up out of the pit through it (D216). Only on the rails.
+## fly up out of the pit through it (D216). Only on the rails, with her aboard.
 func _catch_pigs() -> void:
-	if not ride.on_rails():
+	if not ride.on_rails() or _rider == null:
 		return
 	var tub := body_rect()
 	for hopper in _hoppers():
@@ -297,13 +395,14 @@ func _make_gate() -> void:
 	_gate.global_position = parent.to_global(gate_rect.get_center()) if parent != null else gate_rect.get_center()
 
 
-## `objects.<id>.intro_ride` of this room's entry in data/levels.json.
-func _level_asks_intro() -> bool:
+## `objects.<id>.intro_ride` of this room's entry in data/levels.json: true,
+## an object (the intro from the hoist) or false.
+func _level_intro() -> Variant:
 	var room := get_parent()
 	var entry := Content.level_for_scene(room.scene_file_path if room != null else "")
 	var settings: Variant = entry.get("objects", {})
 	var mine: Variant = (settings as Dictionary).get(object_id, {}) if settings is Dictionary else {}
-	return mine is Dictionary and bool((mine as Dictionary).get("intro_ride", false))
+	return (mine as Dictionary).get("intro_ride", false) if mine is Dictionary else false
 
 
 func _draw() -> void:

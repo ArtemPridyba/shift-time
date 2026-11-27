@@ -183,7 +183,9 @@
 		"intro_seconds": 0.6,
 		"objects": {
 			"switch_1": { "start": "up" },
-			"switch_2": { "start": "down" }
+			"switch_2": { "start": "down" },
+			"shutter_z": { "start": "open", "delay_seconds": 0.95 },
+			"minecart": { "intro_ride": { "segment": "main_2", "distance_px": 32, "hoist_after_seconds": 3.5 } }
 		},
 		"title": "04 Plates"
 	},

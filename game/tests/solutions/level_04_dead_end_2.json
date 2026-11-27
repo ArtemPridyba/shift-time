@@ -4,8 +4,10 @@
 	"segments": [
 		{ "actions": [], "ticks": 40 },
 		{ "actions": ["move_right"], "ticks": 370 },
-		{ "actions": [], "ticks": 300 },
-		{ "actions": ["rewind"], "ticks": 180 },
+		{ "actions": [], "ticks": 560 },
+		{ "actions": ["move_right"], "ticks": 40 },
+		{ "actions": [], "ticks": 260 },
+		{ "actions": ["rewind"], "ticks": 280 },
 		{ "actions": [], "ticks": 400 }
 	]
 }

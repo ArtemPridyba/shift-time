@@ -77,8 +77,11 @@ const RAIL_SWITCH_KEYS: Array[String] = ["move_seconds"]
 const MINECART_KEYS: Array[String] = [
 	"speed_px", "accel_px", "brake_px", "creep_px", "launch_seconds", "bump_seconds", "bounce_px",
 	"shake_px", "hoist_speed_px", "length_px", "body_px", "platform_px", "platform_width_px", "seat_px", "board_px",
-	"loaded_speed_px", "break_load",
+	"loaded_speed_px", "break_load", "clear_px", "break_jolt_seconds",
 ]
+## The bricked wall of level 04 (session 2), all above 0: world seconds of the
+## bricks' flight, how far they fly and the size of a brick, px.
+const BRICK_WALL_KEYS: Array[String] = ["burst_seconds", "fly_px", "brick_px"]
 ## The hopper of pig iron of level 04 (D216), all above 0: world seconds, px.
 const HOPPER_KEYS: Array[String] = ["count", "delay_seconds", "pour_seconds", "gravity_px", "spread_px", "pig_px"]
 const LEVER_KEYS: Array[String] = ["interact_radius_px"]
@@ -481,8 +484,8 @@ static func _object_settings_problems(settings: Variant, where: String) -> Packe
 				errors.append("%s: 'objects.%s.speed' must be a number above 0" % [where, id])
 			elif str(key) == "lifts_player" and not value is bool:
 				errors.append("%s: 'objects.%s.lifts_player' must be true or false" % [where, id])
-			elif str(key) == "intro_ride" and not value is bool:
-				errors.append("%s: 'objects.%s.intro_ride' must be true or false" % [where, id])
+			elif str(key) == "intro_ride":
+				errors.append_array(_intro_ride_problems(value, "%s: 'objects.%s.intro_ride'" % [where, id]))
 			elif str(key) == "outlet_inset_px" and (not _is_number(value) or float(value) < 0.0):
 				errors.append("%s: 'objects.%s.outlet_inset_px' must be a number, 0 or more" % [where, id])
 			elif str(key).ends_with("_level") and (not _is_number(value) or float(value) < 0.0 or float(value) > 10000.0):
@@ -493,6 +496,26 @@ static func _object_settings_problems(settings: Variant, where: String) -> Packe
 				errors.append_array(_winch_key_problems(value, "%s: 'objects.%s.keys'" % [where, id]))
 			elif str(key) == "cycle" and not value in LEVEL_DOOR_CYCLES:
 				errors.append("%s: 'objects.%s.cycle' must be one of %s" % [where, id, LEVEL_DOOR_CYCLES])
+	return errors
+
+
+## The intro ride of a minecart (D191, level 04 session 2): true or false
+## (from the park), or the intro from the hoist: `{"segment": String,
+## "distance_px": number 0 or more, "hoist_after_seconds": number above 0}`.
+static func _intro_ride_problems(value: Variant, where: String) -> Array[String]:
+	var errors: Array[String] = []
+	if value is bool:
+		return errors
+	if not value is Dictionary:
+		errors.append("%s must be true, false or an object" % where)
+		return errors
+	var d := value as Dictionary
+	if not d.get("segment") is String or str(d.get("segment")) == "":
+		errors.append("%s.segment must name a rail segment" % where)
+	if not _is_number(d.get("distance_px")) or float(d.get("distance_px")) < 0.0:
+		errors.append("%s.distance_px must be a number, 0 or more" % where)
+	if not _is_number(d.get("hoist_after_seconds")) or float(d.get("hoist_after_seconds")) <= 0.0:
+		errors.append("%s.hoist_after_seconds must be a number above 0" % where)
 	return errors
 
 
@@ -591,7 +614,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	# 10000 is Water.LEVEL_MAX (core/ does not refer to objects/).
 	if 10000.0 / (float(data["water"]["full_seconds"]) * ticks) > max_step:
 		errors.append("objects.json: 'water.full_seconds' is too short: the level would jump more than max_state_step per tick")
-	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["pipe_plug", PIPE_PLUG_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["rope", ROPE_KEYS], ["winch_ramp", WINCH_RAMP_KEYS], ["cage", CAGE_KEYS], ["ramp", RAMP_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS], ["rail_switch", RAIL_SWITCH_KEYS], ["minecart", MINECART_KEYS], ["hopper", HOPPER_KEYS]]:
+	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["pipe_plug", PIPE_PLUG_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["rope", ROPE_KEYS], ["winch_ramp", WINCH_RAMP_KEYS], ["cage", CAGE_KEYS], ["ramp", RAMP_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS], ["rail_switch", RAIL_SWITCH_KEYS], ["minecart", MINECART_KEYS], ["hopper", HOPPER_KEYS], ["brick_wall", BRICK_WALL_KEYS]]:
 		var isec := interact_section as Array
 		var isec_name: String = isec[0]
 		var ientry: Variant = data.get(isec_name)
