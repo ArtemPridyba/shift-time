@@ -4,12 +4,14 @@
 // level of the list, and in each level holds Shift, releases it, presses R and
 // Esc. Writes a screenshot of every step, the console of the page and a short
 // report (time to the menu, file sizes, frames per second of the page).
-// Optionally plays a solution of game/tests/solutions/ by its segments in real
-// time (keys held for ticks / 60 s) and checks that the level list then marks
-// the level as passed.
+// With --solution it instead opens the page as index.html?solution=NAME: the
+// game itself plays game/tests/solutions/ tick by tick of the physics
+// (autoload SolutionReplay, D203), and the check waits for its results in
+// window.solutionReplay, with a screenshot every --every seconds.
 //
 //   node tools/web_check.js                    # every level, build/web
-//   node tools/web_check.js --solution level_01
+//   node tools/web_check.js --solution chapter # levels 01–05 one after another
+//   node tools/web_check.js --solution level_03 --timeout 900
 //   node tools/web_check.js --levels 3 --out build/web_check
 //
 // The build is single-threaded, so no COOP/COEP headers are needed. The
@@ -31,9 +33,9 @@ const buildDir = path.resolve(arg('--build', path.join(root, 'build/web')));
 const outDir = path.resolve(arg('--out', path.join(root, 'build/web_check')));
 const solution = arg('--solution', '');
 const port = Number(arg('--port', '8060'));
-// Seconds between Enter on a level and its first tick: the screen fades to
-// black (fade_seconds of data/menu.json), then the level starts under the title card.
-const startDelay = Number(arg('--start-delay', '0.6'));
+// The replay: give up after this many seconds, screenshot every this many.
+const timeout = Number(arg('--timeout', '1800'));
+const every = Number(arg('--every', '30'));
 
 // Keys of game/project.godot, by physical code.
 const KEYS = {
@@ -84,22 +86,36 @@ async function fps(page, ms = 2000) {
 	}), ms);
 }
 
-// Holds the solution's actions segment by segment, on an absolute clock so
-// the delays of the browser do not add up.
-async function playSolution(page, segments, shot) {
-	const held = new Set();
+// The game plays the solution itself (?solution=NAME); this waits for the
+// results it keeps in window.solutionReplay and screenshots along the way.
+async function replay(page, shot, consoleLines) {
 	const start = Date.now();
-	let ticks = 0;
-	for (const seg of segments) {
-		const want = new Set((seg.actions || []).map((a) => KEYS[a]).filter(Boolean));
-		for (const code of held) if (!want.has(code)) { await page.keyboard.up(code); held.delete(code); }
-		for (const code of want) if (!held.has(code)) { await page.keyboard.down(code); held.add(code); }
-		ticks += Number(seg.ticks);
-		const wait = start + ticks * 1000 / 60 - Date.now();
-		if (wait > 0) await sleep(wait);
-		if (shot) await shot(`sol_t${String(ticks).padStart(5, '0')}`);
+	let state = null;
+	let next = 0;
+	while ((Date.now() - start) / 1000 < timeout) {
+		state = await page.evaluate(() => window.solutionReplay || null);
+		const s = (Date.now() - start) / 1000;
+		if (s >= next) {
+			await shot(`sol_${String(Math.round(s)).padStart(4, '0')}s`);
+			next += every;
+		}
+		if (state && !state.running) break;
+		await sleep(2000);
 	}
-	for (const code of held) await page.keyboard.up(code);
+	note(`replay ${solution}: ${((Date.now() - start) / 1000).toFixed(0)} s`);
+	for (const line of consoleLines.filter((l) => l.includes('SOLUTION '))) note(`  ${line}`);
+	if (!state || state.running) note(`replay ${solution}: did not finish in ${timeout} s`);
+	await shot('sol_end');
+	return state;
+}
+
+// Writes the console and the report; lists errors and warnings.
+function finish(consoleLines) {
+	fs.writeFileSync(path.join(outDir, 'console.txt'), consoleLines.join('\n') + '\n');
+	const bad = consoleLines.filter((l) => /^\[(error|warning|pageerror|requestfailed)\]/.test(l));
+	note(`console: ${consoleLines.length} lines, ${bad.length} errors or warnings`);
+	for (const l of bad.slice(0, 40)) note(`  ${l}`);
+	fs.writeFileSync(path.join(outDir, 'report.txt'), log.join('\n') + '\n');
 }
 
 async function main() {
@@ -116,16 +132,50 @@ async function main() {
 	const count = Math.min(Number(arg('--levels', String(list.length))), list.length);
 
 	const server = await serve();
-	const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
+	const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'].concat(args.includes('--autoplay') ? ['--autoplay-policy=no-user-gesture-required'] : ['--autoplay-policy=user-gesture-required']), ignoreDefaultArgs: ['--autoplay-policy=no-user-gesture-required'] });
 	const page = await browser.newPage({ viewport: { width: Number(arg('--width', '1280')), height: Number(arg('--height', '720')) } });
+	// Sound probe: Web Audio is wrapped before the game starts, so the report
+	// says whether the context runs and how many sounds really started
+	// (Godot plays samples as AudioBufferSourceNode on the web).
+	await page.addInitScript(() => {
+		const a = (window.__audio = { contexts: [], starts: 0, decoded: 0, decodeErrors: 0, worklets: 0 });
+		const Base = window.AudioContext;
+		if (!Base) return;
+		window.AudioContext = class extends Base {
+			constructor(...args) { super(...args); a.contexts.push(this); }
+		};
+		const start = AudioBufferSourceNode.prototype.start;
+		AudioBufferSourceNode.prototype.start = function (...args) { a.starts++; return start.apply(this, args); };
+		const decode = BaseAudioContext.prototype.decodeAudioData;
+		BaseAudioContext.prototype.decodeAudioData = function (...args) {
+			const p = decode.apply(this, args);
+			p.then(() => a.decoded++, () => a.decodeErrors++);
+			return p;
+		};
+		const add = AudioWorklet.prototype.addModule;
+		AudioWorklet.prototype.addModule = function (...args) { a.worklets++; return add.apply(this, args); };
+	});
+	const audio = async (label) => {
+		const r = await page.evaluate(() => {
+			const a = window.__audio || { contexts: [] };
+			return { states: a.contexts.map((c) => c.state), starts: a.starts, decoded: a.decoded, decodeErrors: a.decodeErrors, worklets: a.worklets };
+		});
+		note(`audio ${label}: contexts [${r.states.join(', ')}], worklets ${r.worklets}, decoded ${r.decoded}, decode errors ${r.decodeErrors}, sounds started ${r.starts}`);
+	};
 	const consoleLines = [];
-	page.on('console', (m) => consoleLines.push(`[${m.type()}] ${m.text()}`));
+	const opened = Date.now();
+	page.on('console', (m) => {
+		const text = m.text();
+		// The replay's results with the time since the page opened.
+		consoleLines.push(text.startsWith('SOLUTION ') ? `[${m.type()}] ${text} (${((Date.now() - opened) / 1000).toFixed(0)} s)` : `[${m.type()}] ${text}`);
+	});
 	page.on('pageerror', (e) => consoleLines.push(`[pageerror] ${e.message}`));
 	page.on('requestfailed', (r) => consoleLines.push(`[requestfailed] ${r.url()} ${r.failure() && r.failure().errorText}`));
 
 	const shot = async (name) => page.screenshot({ path: path.join(outDir, `${name}.png`) });
 	const t0 = Date.now();
-	await page.goto(`http://127.0.0.1:${port}/index.html`);
+	const query = solution ? `?solution=${encodeURIComponent(solution)}` : '';
+	await page.goto(`http://127.0.0.1:${port}/index.html${query}`);
 	// Godot removes its status overlay once the engine has started.
 	try {
 		await page.waitForFunction(() => !document.getElementById('status'), null, { timeout: 120000 });
@@ -137,7 +187,10 @@ async function main() {
 	note(`engine started: ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 	await sleep(1500);
 	note(`menu shown: ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+	await audio('before the first click');
 	await page.click('canvas');
+	await sleep(500);
+	await audio('after the first click');
 	await shot('00_menu');
 	note(`fps on the menu: ${(await fps(page)).toFixed(1)}`);
 
@@ -159,23 +212,15 @@ async function main() {
 	};
 
 	if (solution) {
-		const sol = JSON.parse(fs.readFileSync(path.join(root, 'game/tests/solutions', solution.replace(/\.json$/, '') + '.json'), 'utf8'));
-		const index = list.findIndex((e) => e.id === sol.level);
-		await openList();
-		await openLevel(index);
-		await sleep(startDelay * 1000);
-		const s = Date.now();
-		await playSolution(page, sol.segments, args.includes('--steps') ? shot : null);
-		note(`solution ${solution}: played ${((Date.now() - s) / 1000).toFixed(1)} s`);
-		await shot(`sol_${solution}_end`);
-		await sleep(4000); // the passage to the next level
-		await shot(`sol_${solution}_after`);
-		await tap(page, 'Escape');
-		await toList();
-		await shot(`sol_${solution}_list`);
-	} else {
-		await openList();
+		const state = await replay(page, shot, consoleLines);
+		const passed = state ? state.results.filter((r) => r.reached).length : 0;
+		note(`replay ${solution}: ${passed} of ${state ? state.results.length : 0} levels reached the exit`);
+		finish(consoleLines);
+		await browser.close();
+		server.close();
+		process.exit(state && !state.running && passed === state.results.length && passed > 0 ? 0 : 1);
 	}
+	await openList();
 	await shot('01_levels');
 	for (let i = 0; i < count; i++) {
 		const id = list[i].id;
@@ -199,16 +244,13 @@ async function main() {
 		await shot(`${id}_e_pause`);
 		await toList();
 		note(`${id}: ${consoleLines.length - before} console lines`);
+		await audio(`after ${id}`);
 	}
 	await tap(page, 'Escape');
 	await sleep(1500);
 	await shot('99_menu_again');
 
-	fs.writeFileSync(path.join(outDir, 'console.txt'), consoleLines.join('\n') + '\n');
-	const bad = consoleLines.filter((l) => /^\[(error|warning|pageerror|requestfailed)\]/.test(l));
-	note(`console: ${consoleLines.length} lines, ${bad.length} errors or warnings`);
-	for (const l of bad.slice(0, 40)) note(`  ${l}`);
-	fs.writeFileSync(path.join(outDir, 'report.txt'), log.join('\n') + '\n');
+	finish(consoleLines);
 	await browser.close();
 	server.close();
 }

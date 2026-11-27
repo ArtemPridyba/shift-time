@@ -34,6 +34,9 @@ var world_seconds := 0.0
 var _seconds_per_frame := 1.0 / 60.0
 var _color := Color.WHITE
 var _color_end := Color.WHITE
+## Floats per instance in `MultiMesh.buffer`: a 2D transform (8) and a colour (4).
+const BUFFER_STRIDE := 12
+var _buffer := PackedFloat32Array()
 
 
 func _ready() -> void:
@@ -69,14 +72,30 @@ func show_at(seconds: float) -> void:
 	world_seconds = seconds
 	last_sample = field.sample(seconds)
 	var count := mini(last_sample.size() / ParticleField.STRIDE, multimesh.instance_count)
+	# One write of the whole buffer instead of two calls per particle (D208):
+	# per instance the 2D transform as rows (x.x, y.x, 0, origin.x, x.y, y.y,
+	# 0, origin.y), then the colour.
+	if _buffer.size() != multimesh.instance_count * BUFFER_STRIDE:
+		_buffer.resize(multimesh.instance_count * BUFFER_STRIDE)
+	var b := _buffer
 	for k in count:
 		var o := k * ParticleField.STRIDE
 		var xf := Transform2D(last_sample[o + 2], Vector2(last_sample[o + 3], last_sample[o + 4]), 0.0,
 			Vector2(last_sample[o], last_sample[o + 1]))
-		multimesh.set_instance_transform_2d(k, xf)
 		var c := _color.lerp(_color_end, last_sample[o + 6])
-		c.a = last_sample[o + 5]
-		multimesh.set_instance_color(k, c)
+		var w := k * BUFFER_STRIDE
+		b[w] = xf.x.x
+		b[w + 1] = xf.y.x
+		b[w + 3] = xf.origin.x
+		b[w + 4] = xf.x.y
+		b[w + 5] = xf.y.y
+		b[w + 7] = xf.origin.y
+		b[w + 8] = c.r
+		b[w + 9] = c.g
+		b[w + 10] = c.b
+		b[w + 11] = last_sample[o + 5]
+	_buffer = b
+	multimesh.buffer = _buffer
 	multimesh.visible_instance_count = count
 
 
