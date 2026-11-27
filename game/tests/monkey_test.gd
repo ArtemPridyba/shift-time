@@ -119,6 +119,7 @@ func _play(id: String, seed_value: int, ticks: int) -> void:
 	var exits := 0
 	var resets := 0
 	var pauses := 0
+	var paused_ticks := 0
 	var previous := {}
 	var previous_cursor := -1
 	var previous_pos := Vector2.INF
@@ -143,6 +144,7 @@ func _play(id: String, seed_value: int, ticks: int) -> void:
 		var tick_usec := now_usec - last_usec
 		last_usec = now_usec
 		if _paused():
+			paused_ticks += 1
 			continue
 		if bool(room.get("is_completed")):
 			# The exit: start the level again instead of moving on.
@@ -224,9 +226,9 @@ func _play(id: String, seed_value: int, ticks: int) -> void:
 	for kind: String in _found:
 		problems += int(_found[kind]["count"])
 	_total_found += problems
-	print("%s %s seed %d: %d ticks, %.1f s, exits %d, resets %d, pauses %d, problems %d" % [
+	print("%s %s seed %d: %d ticks, %.1f s, exits %d, resets %d, pauses %d (%d ticks), problems %d" % [
 		"PASS" if problems == 0 else "FAIL", id, seed_value, ticks,
-		(Time.get_ticks_msec() - start_ms) / 1000.0, exits, resets, pauses, problems])
+		(Time.get_ticks_msec() - start_ms) / 1000.0, exits, resets, pauses, paused_ticks, problems])
 	for kind: String in _found:
 		print("  - %s: %d" % [kind, _found[kind]["count"]])
 		for example: String in _found[kind]["examples"]:
