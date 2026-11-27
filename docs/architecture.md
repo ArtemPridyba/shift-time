@@ -109,14 +109,14 @@
 ```
 game/
   project.godot
-  autoload/        # узлы-синглтоны: time_manager.gd, game_data.gd
-  core/            # RefCounted без узлов: timeline.gd, temporal_recorder.gd, time_world.gd, content.gd, level_data.gd, input_log.gd
+  autoload/        # узлы-синглтоны: time_manager.gd, level_loader.gd, art.gd, sound.gd (звук, D183)
+  core/            # RefCounted без узлов: timeline.gd, temporal_recorder.gd, time_world.gd, content.gd, level_data.gd, input_log.gd, sound_rules.gd
   objects/         # временные объекты и игрок: player.tscn/.gd, platform_moving, door, button, lever, water, water_float, crate
   levels/          # только уровни: level_01.tscn … level_05.tscn; test_room.gd (база всех уровней), level_room.gd, room_time.gd
   ui/              # HUD, устройство на руке, меню
-  data/            # time.json, player.json, objects.json, levels.json, texts.json
+  data/            # time.json, player.json, objects.json, levels.json, texts.json, audio.json (звук)
   art/             # backgrounds, decals, characters, objects, ui, particles
-  audio/
+  audio/           # room_sound.gd — звук комнаты идёт за записанным состоянием (под Shift — обратные двойники); time_sound.gd — два звука Shift
   tests/           # test_runner.gd, script_errors.gd, test_core.gd, ui_smoke_test.gd, solutions/,
                    # rooms/ — тестовые комнаты (test_room*, mech_test) и их rooms.json; не в меню и не в экспорте
 ```
