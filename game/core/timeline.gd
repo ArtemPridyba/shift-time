@@ -148,6 +148,16 @@ func current() -> Dictionary:
 	return (_slots[_cursor % _capacity] as Dictionary).duplicate(true)
 
 
+## One field of one object in kept frame `number`, read without copying the
+## frame (the sound reads many frames a tick, D179); null where the frame, the
+## object or the field is missing. Do not change what it returns.
+func peek(number: int, object_id: String, field: String) -> Variant:
+	if number < _first or number > _head:
+		return null
+	var state: Variant = (_slots[number % _capacity] as Dictionary).get(object_id)
+	return (state as Dictionary).get(field) if state is Dictionary else null
+
+
 ## A copy of kept frame `number`, or an empty Dictionary outside the kept frames.
 func frame_at(number: int) -> Dictionary:
 	if number < _first or number > _head:

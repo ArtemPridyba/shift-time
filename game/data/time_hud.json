@@ -38,8 +38,8 @@
 		"outer": 1.1
 	},
 	"audio": {
-		"forward": "",
-		"rewind": ""
+		"forward": "res://assets/audio/time_rewind_end.ogg",
+		"rewind": "res://assets/audio/time_rewind_start.ogg"
 	},
 	"world_timer": {
 		"_about": "The world-time timer at the top left of every level (Д4): WORLD 00:14.2, world seconds of the room (D96), counting back under Shift. Not the time colour: that belongs to the heroine (D60).",

@@ -75,6 +75,7 @@ func _run() -> void:
 		_failed += 1
 		print("FAIL SCRIPT ERROR ", message)
 	print("UI smoke test: %d failed" % _failed)
+	_silence()
 	quit(1 if _failed > 0 else 0)
 
 
@@ -129,3 +130,12 @@ func _check_time_indicator(main: Node) -> void:
 	for i in 3:
 		await physics_frame
 	_check(hud.state.glyph() == ">>", "the device must return to forward arrows after the release, got '%s'" % hud.state.glyph())
+
+
+## Stops every sound and lets the audio thread drop them before quitting, so no
+## playback is left in use at exit (the sound, D179).
+func _silence() -> void:
+	for kind in ["AudioStreamPlayer", "AudioStreamPlayer2D"]:
+		for node in root.find_children("*", kind, true, false):
+			node.call("stop")
+	OS.delay_msec(150)
