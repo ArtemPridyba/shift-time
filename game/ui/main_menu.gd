@@ -1,8 +1,11 @@
 extends Control
 ## The main menu, the first screen of the game (task 4.3): the title over the
 ## dark shop, «Start» (or «Continue» once a level is passed), «Levels» and
-## «Quit» (not in the browser, where a page cannot close itself). Texts:
-## `data/menu.json`.
+## «Quit» (not in the browser, where a page cannot close itself), and the
+## line of keys at the bottom. Texts: `data/menu.json`, `data/controls.json`.
+
+const KEY_LINE_FONT := 26
+const KEY_LINE_MARGIN := 48
 
 var _box: VBoxContainer
 
@@ -22,7 +25,21 @@ func _ready() -> void:
 	_add("Levels", MenuStyle.button_text("levels", "Levels"), _on_levels)
 	var quit := _add("Quit", MenuStyle.button_text("quit", "Quit"), _on_quit)
 	quit.visible = not OS.has_feature("web")
+	_add_key_line()
 	MenuStyle.focus_first(_box)
+
+
+## The line of keys at the bottom (`menu_line` of `data/controls.json`): the
+## page on itch says nothing before the game starts.
+func _add_key_line() -> void:
+	var data := ControlsData.load_data()
+	var text := KeyNames.format(str(data.get("menu_line", "")), data.get("key_names", {}) as Dictionary)
+	var line := MenuStyle.make_label(text, KEY_LINE_FONT, MenuStyle.TEXT_DIM)
+	line.name = "Keys"
+	line.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	line.offset_top = -KEY_LINE_MARGIN - KEY_LINE_FONT * 1.5
+	line.offset_bottom = -KEY_LINE_MARGIN
+	add_child(line)
 
 
 func _add(button_name: String, text: String, action: Callable) -> Button:
