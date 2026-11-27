@@ -58,6 +58,12 @@ Artemiy Pridyba and Borys Shapovalov. Thanks to Godot Engine and its contributor
 
 ---
 
+## AI disclosure for the jam form (short)
+
+Shift Time uses generative AI. Pictures: the factory backgrounds, the brick and machine kit, platforms and the heroine's body parts were generated with Google's Gemini app from our prompts and our own screenshots, then cut and assembled by our scripts; all motion is code. Code: written by the two of us with AI coding assistants (Claude Code, Gemini in Antigravity), and reviewed, tested and play-tested by us. Game design, levels and decisions are ours. Sound: *(fill in after the sound session)*. Every generated file and its prompt are listed in docs/art/log.md of the public repository.
+
+---
+
 ## itch.io settings (for the person who uploads)
 
 - Kind of project: **HTML**; upload `shift-time-web.zip` (the `build.yml` artifact `shift-time-web` of the latest `main`, or the command «Web export» in `CLAUDE.md`), tick «This file will be played in the browser».
