@@ -913,6 +913,31 @@ func test_level_01_objects_take_the_pictures_light() -> void:
 	await _free(room)
 
 
+## 27.11 (D185): the painted room is sharp: the dark and the lit picture are one
+## size, so the cones line up pixel for pixel, they keep the room's shape, and
+## at the start zoom on a 1920 px screen one screen pixel gets at least one
+## texel, so the camera never stretches the picture. Mipmaps keep the overview,
+## where the picture is shrunk, from shimmering.
+func test_level_01_picture_is_sharp_at_the_start_zoom() -> void:
+	var data := WorldData.backdrop(WorldData.layout(WorldData.entry("level_01")))
+	var lit := load(str(data["lit"])) as Texture2D
+	var dark := load(str(data["dark"])) as Texture2D
+	check(lit.get_size() == dark.get_size(), "the lit and the dark picture are one size: %s %s" % [lit.get_size(), dark.get_size()])
+	var r: Array = data["rect"]
+	var room_px := Vector2(float(r[2]), float(r[3])) * WorldData.CELL
+	check(absf(lit.get_size().aspect() - room_px.aspect()) < 0.02 * room_px.aspect(),
+			"the picture keeps the room's shape: %s for %s" % [lit.get_size(), room_px])
+	var zoom := float(Content.camera().get("zoom", 1.0))
+	var texels_per_screen_px := float(lit.get_width()) / (room_px.x * zoom)
+	check(texels_per_screen_px >= 1.0, "at zoom %s a screen pixel gets %.2f texels" % [zoom, texels_per_screen_px])
+	check(lit.get_image().has_mipmaps() and dark.get_image().has_mipmaps(), "both pictures have mipmaps")
+	var room := await _load()
+	var painted := room.get_node("WorldBack/Backdrop") as WorldBackdrop
+	check(painted.picture.texture_filter == CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS, "the picture is drawn with its mipmaps")
+	check(painted.picture.material.shader.code.contains("filter_linear_mipmap"), "and so is the dark one in the shader")
+	await _free(room)
+
+
 ## 25.11 notes: at its foot the painted flight is steeper (rubble); the slope
 ## follows it as a broken line from the top of the flight to the pit floor.
 func test_level_01_stairs_follow_the_painted_rubble() -> void:

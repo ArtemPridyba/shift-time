@@ -496,6 +496,12 @@ static func _object_settings_problems(settings: Variant, where: String) -> Packe
 				errors.append_array(_winch_key_problems(value, "%s: 'objects.%s.keys'" % [where, id]))
 			elif str(key) == "cycle" and not value in LEVEL_DOOR_CYCLES:
 				errors.append("%s: 'objects.%s.cycle' must be one of %s" % [where, id, LEVEL_DOOR_CYCLES])
+			# A level's own sprinkler spin-up obeys max_state_step like the one
+			# of objects.json (found by the monkey, D201). 1000 is Sprinkler.FLOW_MAX.
+			if str(key) == "spin_up_seconds" and _is_number(value) and float(value) > 0.0:
+				var time_data := time()
+				if 1000.0 / (float(value) * float(time_data["physics_ticks_per_second"])) > float(time_data["max_state_step"]):
+					errors.append("%s: 'objects.%s.spin_up_seconds' is too short: the flow would jump more than max_state_step per tick" % [where, id])
 	return errors
 
 

@@ -40,7 +40,12 @@ const SUITES: Array[String] = [
 	"res://tests/test_level_03.gd",
 	"res://tests/test_level_04.gd",
 	"res://tests/test_level_05.gd",
+	"res://tests/test_level_06.gd",
+	"res://tests/test_level_07.gd",
+	"res://tests/test_level_08.gd",
 	"res://tests/test_solutions.gd",
+	"res://tests/test_solution_replay.gd",
+	"res://tests/test_monkey.gd",
 ]
 
 const SLOWEST_SHOWN := 10
