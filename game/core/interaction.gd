@@ -61,3 +61,28 @@ static func power_changes(targets: PackedStringArray, objects: Array, powered: b
 				changes.append({"id": id, "state": state})
 				break
 	return changes
+
+
+## The interaction point a key hint shows (task 4.3): the closest candidate
+## in reach that is no fallback (the drop of an item in the hands is not shown;
+## E puts it down anywhere), or {} when none is in reach.
+static func hint_target(player_pos: Vector2, candidates: Array) -> Dictionary:
+	var best := {}
+	var best_dist := INF
+	for item: Variant in candidates:
+		if not item is Dictionary or bool((item as Dictionary).get("fallback", false)):
+			continue
+		var d := item as Dictionary
+		var dist := player_pos.distance_to(d.get("position", Vector2.ZERO) as Vector2)
+		if dist <= float(d.get("radius", 0)) and dist < best_dist:
+			best_dist = dist
+			best = d
+	return best
+
+
+## The key alpha a hint moves to this frame: towards 1 while shown, towards 0
+## while hidden, in `fade_in` / `fade_out` seconds for the whole way.
+static func fade(alpha: float, shown: bool, delta: float, fade_in: float, fade_out: float) -> float:
+	var seconds := fade_in if shown else fade_out
+	var step := delta / seconds if seconds > 0.0 else 1.0
+	return move_toward(alpha, 1.0 if shown else 0.0, step)
