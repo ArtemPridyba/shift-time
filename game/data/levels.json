@@ -139,7 +139,7 @@
 			"ramp": { "keys": [[0, "flat"], [11, "flat"], [12, "up"]] },
 			"lift_rope": { "burn_seconds": 0.6 },
 			"lift": { "rise_seconds": 1.0 },
-			"sprinkler": { "rain_seconds": 4, "spin_up_seconds": 0.3 }
+			"sprinkler": { "rain_seconds": 4, "spin_up_seconds": 0.42 }
 		},
 		"world": {
 			"_about": "Level 03 «Нить» in the Night shop (same kit and scale as level 01, D112), one screen of 30x17 cells, the roof on rows 0-1. The entrance floor (columns 0-8) with the winch over it; the pit (columns 9-13); the lower floor right of it with the lift (columns 15-16), the torch's burner and the lift rope's cleat by the wall, and the steel mezzanine over it (row 10, columns 17-24, drawn by the level) with the second burner, closed by a wall at column 24; the cage's shaft (columns 25-26); the gallery with the exit (columns 27-29 from row 7). Lamps: 0 over the winch, 1 over the pit, 2 over the lift and the second burner, 3 over the fire detector and the lower floor, 4 over the shaft, 5 by the exit. Objects (D178, D193): ramp.keys: the winch's schedule, [world seconds, pose] (flat: a bridge over the pit; up: closed), the board turns smoothly between keys. lift_rope: the rope that ties the lift down; burn_seconds (real seconds) from its cleat to the lift once a torch has lit it. lift: a counterweight cage; rise_seconds (world seconds) from the floor to the mezzanine once its rope has burnt through. sprinkler: the fire detector's rain; rain_seconds (real seconds) it runs once a burning torch has come under the detector, spin_up_seconds to full rain.",
