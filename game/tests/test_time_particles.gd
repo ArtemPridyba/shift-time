@@ -33,6 +33,22 @@ func test_the_same_time_gives_the_same_particles() -> void:
 	check(_field("dust", 4).sample(5.0) != at_five, "another seed must give other particles")
 
 
+## The random numbers of a particle are kept between frames (D208): the kept
+## ones must give exactly what fresh hashing gives, also after the store was
+## emptied, and the store must stay bounded on a long run.
+func test_kept_random_numbers_change_nothing() -> void:
+	var dust := _field("dust", 5)
+	var reference := _field("dust", 5).sample(30.0)
+	for tick in 3600:
+		dust.sample(tick / 60.0)
+	check(dust.sample(30.0) == reference, "after a minute of frames the particles of 30 s must be the same")
+	check(dust._random_cache.size() <= 4 * dust.capacity() + 64 + 1,
+		"the store of random numbers must stay bounded (%d kept)" % dust._random_cache.size())
+	var r := dust._randoms(5, 17)
+	for channel in ParticleField.RANDOM_CHANNELS:
+		check(r[channel] == ParticleField.rand01(5, 17, channel), "a kept number must equal rand01 (channel %d)" % channel)
+
+
 func test_a_particle_moves_in_small_steps() -> void:
 	var dust := _field("dust")
 	var index := int(dust.rate * 2.0)

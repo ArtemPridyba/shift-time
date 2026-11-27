@@ -43,6 +43,10 @@ func _ready() -> void:
 		loader.connect("level_finished", _on_level_finished)
 		for signal_name in ["menu_opened", "list_opened", "final_opened"]:
 			loader.connect(signal_name, _on_left_level)
+		# The pause lives the whole game; its focus on opening is no move either.
+		if loader.has_signal("pause_opening"):
+			loader.connect("pause_opening", _hush_menu)
+	_preload.call_deferred()
 	_start_ambience.call_deferred()
 
 
@@ -164,6 +168,23 @@ func _attach(room_time: Node) -> void:
 	room_sound.setup(room_time as RoomTime, self)
 	parent.add_child(room_sound)
 	_room = room_time
+
+
+## Every file of `sounds`, both ways, loaded once at the start (about 15 ms):
+## the first Shift or the first lever must not wait for a file (D207).
+func _preload() -> void:
+	for sound_name: Variant in (config.get("sounds", {}) as Dictionary).keys():
+		stream(str(sound_name))
+		stream(str(sound_name), true)
+
+
+## The streams loaded so far (tests).
+func loaded_count() -> int:
+	return _streams.size()
+
+
+func _hush_menu() -> void:
+	_quiet_until = Time.get_ticks_msec() + QUIET_AFTER_BUTTON_MSEC
 
 
 func _on_button_pressed() -> void:
