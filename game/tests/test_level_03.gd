@@ -447,7 +447,7 @@ func test_level_03_past_has_the_bridge() -> void:
 	await _free(room)
 
 
-func test_level_03_torch_is_taken_below_and_lit_again_at_either_burner() -> void:
+func test_level_03_torch_is_taken_below_and_lit_again_on_the_mezzanine() -> void:
 	var room := await _load()
 	await _ticks(150)
 	var torch: Torch = room.get_node("Torch")
@@ -459,12 +459,32 @@ func test_level_03_torch_is_taken_below_and_lit_again_at_either_burner() -> void
 	check(not (room.get_node("LiftRope") as FireRope).is_burning(), "taking it does not light the lift's rope")
 	torch.lit = false
 	await _press_for("move_left", 30)
-	check(torch.held and torch.lit, "walking past the burner with the torch out lights it again")
+	check(torch.held and not torch.lit, "the burner below only gives the torch: one out stays out (D220)")
 	check(not torch.mounted, "a burner never takes the torch back")
-	torch.lit = false
 	await _up_with_torch(room)
-	check(torch.held and torch.lit, "the second burner on the mezzanine lights it again too")
+	check(torch.held and torch.lit, "the second burner on the mezzanine lights it again")
 	check(not (room.get_node("Sprinkler") as Sprinkler).powered, "lit at that burner, it is out of the detector's watch")
+	await _free(room)
+
+
+func test_level_03_torch_out_never_lights_the_lift_rope() -> void:
+	var room := await _load()
+	await _ticks(150)
+	var torch: Torch = room.get_node("Torch")
+	var player: Player = room.get_node("Player")
+	var rope: FireRope = room.get_node("LiftRope")
+	var lift: Node2D = room.get_node("Lift")
+	player.respawn(torch.home + Vector2(-70.0, torch.floor_offset_px))
+	await _ticks(4)
+	await _press_for("move_right", 10)
+	player.respawn(Vector2(lift.position.x + 100.0, torch.home.y + torch.floor_offset_px))
+	torch.position = player.position + Torch.HAND
+	await _ticks(4)
+	torch.lit = false
+	await _press_for("move_right", 160)
+	check(rope.points[0].x < player.position.x, "she walked past the burner and the cleat")
+	check(not torch.lit, "the burner on the way does not light it again")
+	check(rope.is_whole(), "a torch that went out never lights the lift's rope")
 	await _free(room)
 
 
