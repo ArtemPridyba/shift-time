@@ -7,9 +7,11 @@
 #   tools/itch_media.sh            # GIF and every screenshot
 #   tools/itch_media.sh shots      # only the screenshots
 #   tools/itch_media.sh gif        # only the GIF
+#   tools/itch_media.sh cover      # only the 630x500 cover (tools/itch_cover.py)
 #   tools/itch_media.sh shots level_03:760   # one level at another tick
 #
-# Output: docs/itch/gif/level_01_rewind.gif (under 5 MB) and
+# Output: docs/itch/gif/level_01_rewind.gif (under 3 MB, the itch cap for a
+# page image, D204) and
 # docs/itch/shots/level_NN.jpg. Uses tools/shots.sh (xvfb, ImageMagick, ffmpeg).
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -23,10 +25,12 @@ if [[ $# -gt 0 ]]; then
 	SHOTS=("$@")
 fi
 # The GIF: ticks of the level 01 solution where the platform plays back up and
-# carries her to the exit; 15 frames a second, 640 px wide.
+# carries her to the exit; 15 frames a second, 560 px wide.
 GIF_FROM=660
 GIF_TO=1060
-GIF_WIDTH=640
+GIF_WIDTH=560
+GIF_COLORS=96
+GIF_LIMIT_MB=3
 
 mkdir -p "$root/docs/itch/gif" "$root/docs/itch/shots"
 
@@ -49,12 +53,16 @@ if [[ "$what" == all || "$what" == gif ]]; then
 	"$root/tools/shots.sh" level_01 --every 4 --from "$GIF_FROM" --to "$GIF_TO" --scale 0.5 --out "$out" >/dev/null
 	gif="$root/docs/itch/gif/level_01_rewind.gif"
 	ffmpeg -loglevel error -y -framerate 15 -pattern_type glob -i "$out/t*.png" \
-		-vf "scale=$GIF_WIDTH:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" \
+		-vf "scale=$GIF_WIDTH:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=$GIF_COLORS:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" \
 		-loop 0 "$gif"
 	size=$(stat -c %s "$gif")
 	echo "gif: docs/itch/gif/level_01_rewind.gif ($((size / 1024)) KB)"
-	if (( size > 5 * 1024 * 1024 )); then
-		echo "the GIF is over 5 MB: narrow GIF_FROM..GIF_TO or GIF_WIDTH" >&2
+	if (( size > GIF_LIMIT_MB * 1024 * 1024 )); then
+		echo "the GIF is over $GIF_LIMIT_MB MB: narrow GIF_FROM..GIF_TO or GIF_WIDTH" >&2
 		exit 1
 	fi
+fi
+
+if [[ "$what" == all || "$what" == cover ]]; then
+	python3 "$root/tools/itch_cover.py"
 fi
