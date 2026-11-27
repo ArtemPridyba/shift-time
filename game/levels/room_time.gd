@@ -251,7 +251,7 @@ func forget_past() -> bool:
 	var direction: int = manager.direction if manager != null else TimeWorld.FORWARD
 	if direction != TimeWorld.FORWARD or not world.timeline.at_head():
 		return false
-	world.start(temporal_objects())
+	world.timeline.start_over(world.recorder_capture(temporal_objects()))
 	return true
 
 

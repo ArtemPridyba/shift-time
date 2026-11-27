@@ -97,6 +97,14 @@ func record(frame: Dictionary) -> bool:
 	return true
 
 
+## The history starts over from `frame`, the present: every kept frame is
+## gone, the world clock keeps its tick (level 04 after its intro, D219).
+func start_over(frame: Dictionary) -> void:
+	var tick := maxi(world_tick(), 0)
+	clear()
+	_append(frame, tick)
+
+
 ## True when `frame` is the same as the head frame: the room did not change.
 func same_as_head(frame: Dictionary) -> bool:
 	return not is_empty() and _slots[_head % _capacity] == frame

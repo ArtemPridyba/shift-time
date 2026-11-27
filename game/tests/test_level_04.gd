@@ -636,6 +636,7 @@ func test_intro_rides_from_the_hoist_past_z_into_the_wall_and_back() -> void:
 	await _tree.physics_frame
 	var timeline := (room.get_node("RoomTime") as RoomTime).world.timeline
 	check(timeline.size() <= 3, "back at the park, the room's history starts again (%d frames)" % timeline.size())
+	check(timeline.world_tick() >= t, "the world clock keeps running through the new start (%d after %d ticks)" % [timeline.world_tick(), t])
 	room.queue_free()
 	await _tree.process_frame
 
