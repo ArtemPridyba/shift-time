@@ -15,6 +15,15 @@ extends Node2D
 ## platform is a floor only then); she gets off with a jump, at the ramp or at
 ## the station. Riding, she can only hold Shift.
 ##
+## A level may ask for an intro ride (`objects.minecart.intro_ride` in its
+## entry of data/levels.json, level 07, D191): at the start the empty cart
+## leaves the park by itself, rides its way and comes back on the hoist, so the
+## player sees where the way leads before boarding. A reset runs it again.
+##
+## A level may also put a barrier at the end of the walkway over the park
+## (`gate_rect`, D192): a wall while the cart is away, open while it stands
+## parked, so nobody steps into the empty shaft.
+##
 ## Numbers: `minecart` in data/objects.json.
 
 const BODY_COLOR := Color("#6b5a48")
@@ -30,8 +39,13 @@ const STOPPER_COLOR := Color("#b8352a")
 @export var rails_path: NodePath
 ## The segment whose start is the park at the top of the ramp.
 @export var park_segment := "ramp"
+## The barrier at the end of the walkway, in the parent's coordinates; no area
+## means no barrier.
+@export var gate_rect := Rect2()
 
 var ride: CartRide
+## True when the level asks for the intro ride.
+var intro_ride := false
 
 var _params := {}
 var _rider: Node2D = null
@@ -40,6 +54,10 @@ var _deck: AnimatableBody2D
 var _deck_shape: CollisionShape2D
 var _hoist_rail_y := 0.0
 var _clock := 0.0
+var _intro_pending := false
+var _gate: StaticBody2D
+var _gate_shape: CollisionShape2D
+var _gate_bar: ColorRect
 
 
 func _init() -> void:
@@ -57,6 +75,9 @@ func _ready() -> void:
 	_hoist_rail_y = rails.hoist_rail_y if rails != null else 0.0
 	ride = CartRide.new(track, _params, park_segment, rails.hoist_y if rails != null else 0.0)
 	_make_deck()
+	_make_gate()
+	intro_ride = _level_asks_intro()
+	_intro_pending = intro_ride
 	_apply()
 
 
@@ -66,12 +87,17 @@ func reset_ride() -> void:
 		_rider.call("leave_carrier")
 	_rider = null
 	_was_touching = false
+	_intro_pending = intro_ride
 	ride.park()
 	_apply()
 
 
 func _physics_process(delta: float) -> void:
 	_clock += delta
+	if _intro_pending and _rider == null and ride.mode == CartRide.Mode.PARKED:
+		# The empty cart leaves by itself: the stopper drops, nobody aboard.
+		_intro_pending = false
+		ride.board()
 	ride.step(delta, _leads_main)
 	_apply()
 	_check_boarding()
@@ -139,6 +165,15 @@ func _apply() -> void:
 	var parked := ride.mode == CartRide.Mode.PARKED and _rider == null
 	if _deck_shape != null:
 		_deck_shape.set_deferred("disabled", not parked)
+	if _gate_shape != null:
+		var shut := ride.mode != CartRide.Mode.PARKED
+		_gate_shape.set_deferred("disabled", not shut)
+		_gate_bar.visible = shut
+
+
+## True while the barrier at the end of the walkway stands closed.
+func gate_closed() -> bool:
+	return _gate_shape != null and ride.mode != CartRide.Mode.PARKED
 
 
 ## She lands on the platform of the parked cart: she rides, the stopper drops.
@@ -183,6 +218,40 @@ func _make_deck() -> void:
 	_deck_shape.position = Vector2(_number("seat_px"), -_number("platform_px") + 4.0)
 	_deck.add_child(_deck_shape)
 	add_child(_deck)
+
+
+## The barrier: a body of its own outside the cart's moving transform.
+func _make_gate() -> void:
+	if not gate_rect.has_area():
+		return
+	_gate = StaticBody2D.new()
+	_gate.name = "Gate"
+	_gate.top_level = true
+	_gate.collision_layer = 1
+	_gate.collision_mask = 0
+	_gate_shape = CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = gate_rect.size
+	_gate_shape.shape = rect
+	_gate.add_child(_gate_shape)
+	_gate_bar = ColorRect.new()
+	_gate_bar.color = STOPPER_COLOR
+	_gate_bar.position = -gate_rect.size / 2.0
+	_gate_bar.size = gate_rect.size
+	_gate_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_gate.add_child(_gate_bar)
+	add_child(_gate)
+	var parent := get_parent() as Node2D
+	_gate.global_position = parent.to_global(gate_rect.get_center()) if parent != null else gate_rect.get_center()
+
+
+## `objects.<id>.intro_ride` of this room's entry in data/levels.json.
+func _level_asks_intro() -> bool:
+	var room := get_parent()
+	var entry := Content.level_for_scene(room.scene_file_path if room != null else "")
+	var settings: Variant = entry.get("objects", {})
+	var mine: Variant = (settings as Dictionary).get(object_id, {}) if settings is Dictionary else {}
+	return mine is Dictionary and bool((mine as Dictionary).get("intro_ride", false))
 
 
 func _draw() -> void:

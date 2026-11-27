@@ -279,5 +279,17 @@
 			}
 		},
 		"title": "05 Crane"
+	},
+	{
+		"id": "level_07",
+		"scene": "res://levels/level_07.tscn",
+		"prelude_seconds": 0.5,
+		"intro_seconds": 0.6,
+		"objects": {
+			"shutter_a": { "start": "closed" },
+			"switch_b": { "start": "down" },
+			"minecart": { "intro_ride": true }
+		},
+		"title": "07 Plates"
 	}
 ]
