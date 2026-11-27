@@ -54,16 +54,15 @@ func _process(delta: float) -> void:
 	var player := _player()
 	var room_time := get_parent()
 	if player == null or room_time == null or not room_time.has_method("interaction_candidates"):
-		_show("", Vector2.ZERO, delta)
+		_show("", Vector2.ZERO, Vector2.ZERO, delta)
 		return
 	var pos := player.global_position
 	var candidates: Array = room_time.call("interaction_candidates")
 	var target := InteractionSystem.hint_target(pos, candidates)
 	if not target.is_empty() and _would_change(target.get("node") as Node, room_time):
-		_show("interact", target.get("position", pos) as Vector2, delta)
+		_show("interact", target.get("position", pos) as Vector2, pos, delta)
 	else:
-		var held := _held_action(candidates)
-		_show(held, pos, delta)
+		_show(_held_action(candidates), pos, pos, delta)
 	for stencil in _stencils:
 		stencil.update(pos, delta)
 
@@ -73,13 +72,15 @@ func stencils() -> Array[Stencil]:
 	return _stencils
 
 
-func _show(action: String, at: Vector2, delta: float) -> void:
+## The cap over `at`, and never lower than above the heroine's head.
+func _show(action: String, at: Vector2, player_pos: Vector2, delta: float) -> void:
 	var on := not action.is_empty()
 	if on:
 		if action != shown_action:
 			_cap.set_label(KeyNames.primary(action, _names))
 		shown_action = action
-		_cap.global_position = at - Vector2(0, float(_hint.get("offset_px", 72)))
+		var y := minf(at.y - float(_hint.get("offset_px", 72)), player_pos.y - float(_hint.get("above_player_px", 96)))
+		_cap.global_position = Vector2(at.x, y)
 	alpha = InteractionSystem.fade(alpha, on, delta, float(_hint.get("fade_in_seconds", 0.15)), float(_hint.get("fade_out_seconds", 0.35)))
 	if alpha <= 0.0:
 		shown_action = ""

@@ -1,5 +1,5 @@
 {
-	"_about": "Key hints and the controls list (task 4.3, M1). Texts in English; a {name} in a text is the first key of that action of project.godot, {name+} all its keys joined by ' or '. key_names: shorter names for keys (Godot's name -> shown name). hint: the key cap over an interaction point the heroine can use now (E) or over her while she holds a jet item (F): offset_px above the point, height_px of the cap, font_px of its letter, fade_in_seconds / fade_out_seconds to show and hide it, color of its edge and letter (signal yellow D65, never the time colour D60), fill of its face. menu_line: the line of keys at the bottom of the main menu. controls_title, volume: the headings of the pause. controls: the rows of the pause, each the actions whose keys it shows and its text. default_volume: the Master volume (0..1) before the player moves the slider; the slider's value is saved between runs. stencil: the look of the wall stencils (dim_alpha far, lit_alpha while the heroine stands in the zone, fade_seconds, color, font_px of the first line, line_scale for the lines under it). stencils: per level id, the stencils on its walls, each text lines, position (room pixels, centre of the first line) and zone [x, y, w, h] where it lights up.",
+	"_about": "Key hints and the controls list (task 4.3, M1). Texts in English; a {name} in a text is the first key of that action of project.godot, {name+} all its keys joined by ' or '. key_names: shorter names for keys (Godot's name -> shown name). hint: the key cap over an interaction point the heroine can use now (E) or over her while she holds a jet item (F): offset_px above the point and at least above_player_px above the heroine's centre, so it never covers her head, height_px of the cap, font_px of its letter, fade_in_seconds / fade_out_seconds to show and hide it, color of its edge and letter (signal yellow D65, never the time colour D60), fill of its face. menu_line: the line of keys at the bottom of the main menu. controls_title, volume: the headings of the pause. controls: the rows of the pause, each the actions whose keys it shows, its text and optionally max_keys (at most that many keys of each action). default_volume: the Master volume (0..1) before the player moves the slider; the slider's value is saved between runs. stencil: the look of the wall stencils (dim_alpha far, lit_alpha while the heroine stands in the zone, fade_seconds, color, font_px of the first line, line_scale for the lines under it). stencils: per level id, the stencils on its walls, each text lines, position (room pixels, centre of the first line) and zone [x, y, w, h] where it lights up.",
 	"key_names": {
 		"Escape": "Esc",
 		"Space": "Space",
@@ -10,6 +10,7 @@
 	},
 	"hint": {
 		"offset_px": 72,
+		"above_player_px": 96,
 		"height_px": 34,
 		"font_px": 22,
 		"fade_in_seconds": 0.15,
@@ -24,11 +25,11 @@
 	"controls": [
 		{ "actions": ["move_left", "move_right"], "text": "Walk" },
 		{ "actions": ["jump"], "text": "Jump" },
-		{ "actions": ["rewind"], "text": "Hold: the world runs back, you don't" },
+		{ "actions": ["rewind"], "text": "Hold: the world runs back, not you" },
 		{ "actions": ["interact"], "text": "Use, pick up, put down" },
-		{ "actions": ["use_item"], "text": "Hold: use the item in your hands" },
+		{ "actions": ["use_item"], "text": "Hold: use the item in hand" },
 		{ "actions": ["overview"], "text": "Look at the whole room" },
-		{ "actions": ["zoom_in", "zoom_out"], "text": "Zoom" },
+		{ "actions": ["zoom_in", "zoom_out"], "text": "Zoom", "max_keys": 1 },
 		{ "actions": ["reset_level"], "text": "Restart the room" },
 		{ "actions": ["pause"], "text": "Pause" }
 	],
@@ -38,7 +39,7 @@
 		"fade_seconds": 0.6,
 		"color": "#d8cfbc",
 		"font_px": 34,
-		"line_scale": 0.6
+		"line_scale": 0.5
 	},
 	"stencils": {
 		"level_01": [
@@ -49,7 +50,7 @@
 			},
 			{
 				"text": ["HOLD {rewind+}", "THE WORLD RUNS BACK. YOU DON'T."],
-				"position": [330, 300],
+				"position": [280, 300],
 				"zone": [380, 300, 220, 400]
 			}
 		]

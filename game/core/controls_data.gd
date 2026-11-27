@@ -5,7 +5,7 @@ extends RefCounted
 ## and its check; the names of the keys come from `KeyNames` (ui/).
 
 const PATH := "res://data/controls.json"
-const HINT_KEYS: Array[String] = ["offset_px", "height_px", "font_px", "fade_in_seconds", "fade_out_seconds"]
+const HINT_KEYS: Array[String] = ["offset_px", "above_player_px", "height_px", "font_px", "fade_in_seconds", "fade_out_seconds"]
 const STENCIL_KEYS: Array[String] = ["fade_seconds", "font_px", "line_scale"]
 const TEXT_KEYS: Array[String] = ["menu_line", "controls_title", "volume"]
 
@@ -70,6 +70,9 @@ static func validate(data: Variant) -> PackedStringArray:
 			if not row is Dictionary or not (row as Dictionary).get("text") is String or str((row as Dictionary)["text"]).is_empty():
 				errors.append("controls.json: every 'controls' row needs a non-empty 'text'")
 				continue
+			var most: Variant = (row as Dictionary).get("max_keys", 1)
+			if not Content._is_number(most) or int(most) < 1:
+				errors.append("controls.json: 'max_keys' of the row '%s' must be a whole number from 1" % (row as Dictionary)["text"])
 			var actions: Variant = (row as Dictionary).get("actions")
 			if not actions is Array or (actions as Array).is_empty():
 				errors.append("controls.json: the row '%s' needs a list of 'actions'" % (row as Dictionary)["text"])
