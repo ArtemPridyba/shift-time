@@ -431,11 +431,15 @@ func _show_bodies() -> void:
 func _draw() -> void:
 	_draw_rail()
 	for k in pieces.size():
-		if k >= plan.pieces.size() or int(plan.pieces[k]["act"]) != 3:
-			_draw_platform(k)
-		elif int(plan.pieces[k]["follow"]) >= 0:
+		# A counterweight is drawn with its platform in either act (level 08
+		# has one in act 1, D210).
+		if k < plan.pieces.size() and int(plan.pieces[k]["follow"]) >= 0:
 			_draw_counterweight(k, int(plan.pieces[k]["follow"]))
-		elif not _pulls(k):
+		elif k < plan.pieces.size() and _pulls(k):
+			continue
+		elif k >= plan.pieces.size() or int(plan.pieces[k]["act"]) != 3:
+			_draw_platform(k)
+		else:
 			_draw_hangers(k)
 			_draw_chunk(k)
 	_draw_crane()
