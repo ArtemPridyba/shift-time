@@ -18,7 +18,7 @@
 9. **Посмотреть в игре.** F5 → уровень 03 (или `tools/shots.sh level_03` — лист кадров). Смотреть: ноги героини на нарисованном полу, ничего не нарисовано дважды (картинка и код), конусы под лампами, Tab — вся комната.
 10. **Предметы.** Когда фон утверждён — в том же чате Gemini запросы «П-NN-x» по одному. Приложить: утверждённый фон этого уровня (стиль) и снимок экрана из игры (F5, PrtSc), где этот предмет стоит. Положить как `p03_detector_v1.png` в `raw/`; вставит чат Claude Code: «вставь деталь П-03-д из `raw/p03_detector_v1.png`» (строка в `PIECES` `tools/cut_kit.py`, вид в `look.json`, строка в `log.md`). Посмотреть — F5.
 
-**Порядок уровней (D200):** 03 → 06 и 07 (когда их PR влиты: сначала схема, раздел 3) → 05 (после сессии 2) → 02 и 04 — только если остаются в игре рядом с 06 и 07.
+**Порядок уровней (D200):** 03 → 05 (когда влит PR №121) → 04 (после его сессии 2 и ламп) → 06 и 07 (когда их PR влиты: сначала схема, раздел 1) → 02 — только если остаётся в игре рядом с 06 (он единственный широкий, его фон — частями и после кода).
 
 ## 1. Общие запросы
 
@@ -51,13 +51,13 @@ The same image, exactly the same, but every lamp is off: no light cones, no glow
 - нарисовал лампы — «Paint no lamps, only their warm light cones»;
 - светится что-то кроме конусов или есть бирюзовый, фиолетовый — «Nothing glows except the lamp cones; no cyan, purple or magenta anywhere».
 
-**Начало каждого запроса Ф** (уже вставлено в тексты уровней ниже, здесь — для справки):
+**Начало каждого запроса Ф** (в Ф-03 уже вставлено; для остальных уровней скопировать этот блок и сразу под ним — строки уровня, одним сообщением):
 
 ```text
 Repaint the attached scheme as a finished 2D game background for my side-view puzzle-platformer, 16:9, 3840x2160. Strict side view like the cross-section of a building, no perspective. The scheme is an exact layout: keep every shape in the same place and the same size. Grey is solid masonry: dark red brick walls and riveted steel floor plates on brick plinths with rust streaks. The cyan lines are the top faces of floors: the walking surface must be exactly on them, with a thin strip of the top face visible. Green lines are slopes or flights of worn brick steps: exactly along them. The dark brown area is the inside of a night factory hall: sooty red brick back wall, tall arched windows with broken panes, black cast-iron columns, iron trusses and hanging cables under the roof; the darker band at the top is the roof. Magenta rectangles are empty dark doorways in a flat steel frame, no door leaf. Orange outlines are where the game draws moving things: paint only the back wall there, nothing standing in front of it. Blue outlines are water basins: paint them dry and empty, concrete with dark wet stains and rust; the game draws the water. Small yellow dots on thin lines are lamp bulbs: paint no lamp, only a soft warm cone of light from each dot down the wall and floor, with dust in it, and deep shadows between the cones. Nothing else glows; no cyan, purple or magenta anywhere. The white circles with numbers are notes for you, listed below: leave no circles, numbers, text, lines or coloured marks in the picture. No people.
 ```
 
-**Начало каждого запроса П** (детали; вставлено в тексты ниже):
+**Начало каждого запроса П** (детали: скопировать этот блок и сразу под ним — запрос детали, одним сообщением):
 
 ```text
 Same game, same style as the room you painted. Separate pieces on one 16:9 sheet, 3840x2160, flat pure green #00FF00 background with wide empty green gaps between pieces, no green inside a piece. Strict side view, flat even neutral light like a material swatch: no cast shadow, no light source, no glow, no vignette. Parts the game moves are drawn separately, each alone. Everything the player presses, carries or rides is worn signal-yellow paint over steel with scratches and rust at the edges; the rest is black cast iron, rusty steel, red brick, concrete. No cyan, purple or magenta; nothing glows. No text, letters, numbers or logos. Sizes are in cells: one cell is 64 game pixels; the heroine is 1.4 cells tall.
@@ -114,7 +114,7 @@ This room: a tall workshop with a pit and a steel mezzanine.
 
 ### Уровень 02 «Поток» — широкий, 70×17 клеток, три части
 
-Возможно, заменит его 06 «новый 02 на один экран» — тогда этот раздел не нужен (D200).
+Возможно, заменит его 06 «новый 02 на один экран» — тогда этот раздел не нужен (D200). Единственный широкий уровень: фон частями — только после кода (раздел 3).
 
 - **Схема:** вся комната [gemini/level02_scheme.png](gemini/level02_scheme.png); части [part1](gemini/level02_part1_scheme.png), [part2](gemini/level02_part2_scheme.png), [part3](gemini/level02_part3_scheme.png) (без номеров — `_clean`). Части перекрываются на 10 клеток.
 - **Картинки:** три по 3840×2160; `rect` — `[0, 0, 30.22, 17]`, `[19.89, 0, 30.22, 17]`, `[39.78, 0, 30.22, 17]`. Игра пока кладёт на уровень одну картинку — несколько частей потребуют кода (D199).
@@ -152,80 +152,83 @@ This room: a pump hall with water basins, one long hall painted in three parts. 
   Request P-02-d: a pump room set, separate pieces: (1) a wall control panel 1 by 1.5 cells with a green and a red lamp, both unlit, a big switch and gauges; (2) an electric motor 2 cells long on a base, its cooling fan separately as a perfect circle 0.8 cells across (the game spins it); (3) a centrifugal pump 1.5 cells with pipe flanges; (4) a fat cable that can be cut at any length.
   ```
 
-### Уровень 04 «Плиты» — широкий, 60×17 клеток, три части
+### Уровень 04 «Плиты» — один экран, 30×17 клеток
 
-Возможно, заменит его 07 «новый 04 на один экран» (D200). В уровне ещё нет `world` (ламп, кладки «Ночного цеха»): на схеме нет жёлтых точек. Фон рисовать только после того, как уровень соберут в «Ночном цехе» с лампами.
+Артём переделал уровень на один экран (PR №122, D216–D218, сессия 1 из 2): мостки с плитами 1 и 2 над стрелками, бункер с чушками, вагонетка, тоннель со станцией. В сессии 2 добавятся плита K, заслонка Z и стена с проломом (номер 11). В уровне ещё нет `world` («Ночной цех», лампы): на схеме нет жёлтых точек и крыши. **Фон рисовать после сессии 2 и ламп:** пересобрать схему, запрос — этот, с лампами.
 
-- **Схема:** [gemini/level04_scheme.png](gemini/level04_scheme.png); части `level04_part1…3_scheme.png`; `rect` — `[0, 0, 30.22, 17]`, `[14.89, 0, 30.22, 17]`, `[29.78, 0, 30.22, 17]`.
-- **Номера:** 1 вход; 2, 4 плиты A и B — код; 3, 5 заслонки A и B — набор (Н-5); 6, 7 плиты 2 и 1 над стрелками — код; 8 рельсы, стрелки, тупики — код; 9 линия подъёмника — код; 10 вагонетка на горке — код; 11 тоннель и станция; 12 выход.
+- **Схема:** [gemini/level04_scheme.png](gemini/level04_scheme.png), запасная [gemini/level04_clean.png](gemini/level04_clean.png) (собраны из ветки PR №122). `rect` — `[0, 0, 30.22, 17]`.
+- **Номера:** 1 вход; 2, 3 плиты 2 и 1 над стрелками — код; 4 шлагбаум в конце мостков — код; 5 вагонетка на горке — код; 6 рельсы, стрелки, тупики — код; 7 бункер с чушками — код; 8 линия подъёмника — код; 9 тоннель и станция; 10 выход; 11 место плиты K, заслонки Z и стены (сессия 2); 12 яма, открыта вниз.
 
-**Запрос Ф-04, часть K** — как у 02, свои строки:
+**Запрос Ф-04** (приложить `level04_scheme.png`): «Начало запроса Ф» из раздела 1, затем:
 
 ```text
-This room: an ore line in a factory: a low corridor and open walkways above, a deep pit with rail trestles below. This picture is part K of 3. (Continuity line as for level 02.)
+This room: an ore line in a factory, one screen: a walkway at the top, a deep pit with rails below, a low tunnel at the bottom left.
+The grey at the very top is the roof and the brickwork above the walkway.
 1: the entrance, an empty doorway in the left wall.
-2, 3, 4, 5, 6, 7: the game draws pressure plates and gates; paint the floor and the wall as they are.
-8: the game draws rails on trestles over the pit; paint only the pit: dark brick walls going down into blackness, no floor.
-9, 10: the game draws a hoist line and a minecart; paint only the back wall and the dark shaft at 10.
-11: a low brick tunnel with a buffer stop at its end, darker than the hall.
-12: the exit doorway at the left of the tunnel.
+2, 3, 4: the game draws pressure plates and a barrier; paint the walkway floor as it is.
+5, 7, 8: the game draws a minecart, an ore hopper and a hoist line; paint only the back wall and the dark shaft at the right.
+6: the game draws rails on trestles over the pit; paint only the pit there.
+9: a low brick tunnel with a buffer stop at its end, darker than the hall.
+10: the exit doorway at the left of the tunnel.
+11: plain back wall; the game will add a gate and a wall here.
+12: a deep pit open to the bottom: dark brick walls going down into blackness, no floor.
 ```
 
 **Детали 04:**
 
-- **П-04-а. Плиты** (2, 4, 6, 7). Код: `objects/time_plate.gd`. Плита 3 клетки. Нажимается — жёлтая; стрелку ▼▲ рисует код.
+- **П-04-а. Плиты** (2, 3; потом K). Код: `objects/time_plate.gd`. Плита 3 клетки. Нажимается — жёлтая; стрелку ▼▲ рисует код.
   ```text
   Request P-04-a: a pressure plate set into a floor, 3 cells long: (1) the steel frame in the floor; (2) separately, the plate itself, worn signal-yellow with a ribbed top, 0.25 cells thick (the game moves it down and up); (3) a vertical pull rod with a joint, cut at any length.
   ```
-- **П-04-б. Рельсы и стрелки** (8). Код: `objects/rails.gd`, `objects/rail_switch.gd`.
+- **П-04-б. Рельсы, стрелки, шлагбаум** (4, 6). Код: `objects/rails.gd`, `objects/rail_switch.gd`.
   ```text
-  Request P-04-b: a mine rail set, seen exactly from the side: (1) a straight rail on sleepers that can be cut at any length; (2) a riveted iron trestle under the rail, 1 cell wide, 2 cells tall, that can be stacked; (3) a rail switch lever on a small base, worn signal-yellow, its handle separately (the game turns it); (4) a buffer stop at the end of a rail, with a yellow-and-black striped beam.
+  Request P-04-b: a mine rail set, seen exactly from the side: (1) a straight rail on sleepers that can be cut at any length; (2) a riveted iron trestle under the rail, 1 cell wide, 2 cells tall, that can be stacked; (3) a rail switch lever on a small base, worn signal-yellow, its handle separately (the game turns it); (4) a buffer stop at the end of a rail, with a yellow-and-black striped beam; (5) a barrier arm 1.8 cells long, yellow-and-black stripes, on a post, the arm separately (the game turns it).
   ```
-- **П-04-в. Вагонетка и подъёмник** (9, 10). Код: `objects/minecart.gd`. На вагонетке — такой же прибор, как у героини: его свет — исключение из D60, решает Борис (карточка 04); здесь прибор без свечения, свет добавит код.
+- **П-04-в. Вагонетка и подъёмник** (5, 8). Код: `objects/minecart.gd`. Прибор на вагонетке — в цвете времени (исключение из D60, D168): здесь он без свечения, свет добавит код.
   ```text
-  Request P-04-c: (1) a minecart 2.5 cells long and 1.2 cells tall: a riveted steel tub with a worn signal-yellow rim, a small dark time device bolted to its side with an unlit glass dial, no glow; (2) separately, its wheel, a perfect circle 0.5 cells across; (3) a hoist hook on a short chain; (4) a hoist trolley on an overhead beam, its two wheels separately.
+  Request P-04-c: (1) a minecart 2.5 cells long and 1.2 cells tall: a riveted steel tub with a worn signal-yellow rim and an operator's step at the back, a small dark time device bolted to the back with an unlit glass dial, no glow; (2) separately, its wheel, a perfect circle 0.5 cells across; (3) a hoist hook on a short chain; (4) a hoist trolley on an overhead beam, its two wheels separately.
+  ```
+- **П-04-г. Бункер и чушки** (7). Код: бункер `Hopper`, струя `StoneStream` (ветка PR №122).
+  ```text
+  Request P-04-d: (1) an ore hopper 2.6 cells wide and 2.5 cells tall, riveted dark steel funnel on a frame, its bottom gate separately (the game opens it); (2) eight small pig-iron ingots, dark grey cast iron with rust, each about 0.3 cells long, seen from different sides.
   ```
 
-### Уровень 05 «Кран» — широкий, 66×22 клетки, две части
+### Уровень 05 «Кран» — один экран, 30×17 клеток
 
-Сессия 2 уровня идёт сейчас (кран ниже, лестница из обломков, противовес, дверь у рельса, D176): **дождаться её PR**, пересобрать схему и сверить номера с карточкой.
+Артём переделал уровень на один экран (PR №121, D215): уступ слева вверху, кран на наклонном рельсе через весь зал, дверь у рельса за плитой на двух цепях, три куска потолка, пол без ямы. Комната темнее обычной (`world.darkness`).
 
-- **Схема:** [gemini/level05_scheme.png](gemini/level05_scheme.png); части `level05_part1_scheme.png`, `level05_part2_scheme.png`; `rect` — `[0, 0, 39.11, 22]`, `[26.89, 0, 39.11, 22]`. Комната в 22 клетки высотой: 4K даёт 1,5 пикселя на пиксель комнаты, а не 2 (D199) — комната тёмная (`darkness`), это терпимо.
-- **Номера:** 1 вход; 2 три плиты на цепях — код; 3 пеньки в яме; 4 уступ крана на столбе; 5 кран на наклонном рельсе — код; 6 потолок, который рушится в акте 3 — код; 7 падающие куски и стена на цепях — код; 8 противовес и площадка — код; 9 выход.
+- **Схема:** [gemini/level05_scheme.png](gemini/level05_scheme.png), запасная [gemini/level05_clean.png](gemini/level05_clean.png) (собраны из ветки PR №121). `rect` — `[0, 0, 30.22, 17]`.
+- **Номера:** 1 вход на уступе; 2 кран у уступа — код; 3 наклонный рельс крана — код; 4 дверь и плита на цепях — код, на фоне — проём; 5, 6, 7 куски потолка — код; 8 кран у упора — код; 9 пол, куда ложатся куски.
 
-**Запрос Ф-05, часть K** — как у 02, свои строки:
+**Запрос Ф-05** (приложить `level05_scheme.png`): «Начало запроса Ф» из раздела 1, затем:
 
 ```text
-This room: a collapsing crane hall over a bottomless pit, darker than the others. This picture is part K of 2. (Continuity line as for level 02.)
-1: the entrance, an empty doorway in the left wall.
-2, 5, 6, 7, 8: the game draws hanging slabs, a crane on its rail, falling ceiling chunks and a counterweight; paint only the back wall, with a ragged hole in the roof above 6.
-3: concrete stubs standing in the pit, their tops on the cyan lines, the pit going down into blackness.
-4: a brick ledge on a tall brick pillar.
-9: the exit doorway on the high ledge at the right.
+This room: a dark crane hall, one screen, darker than the others. A high ledge at the left, a long sloping crane rail across the hall, a floor at the bottom.
+1: the entrance, an empty doorway in the left wall of the ledge.
+2, 3, 8: the game draws a crane and its sloping rail with the end stop; paint only the back wall along the rail.
+4: a doorway in a thick brick wall pier, with cold dim light behind it; the game draws a heavy slab on two chains in front of it.
+5, 6, 7: the game draws ceiling chunks hanging and falling; above them paint a ragged hole in the roof with broken trusses.
+9: a plain concrete floor with dust and rubble along the wall.
 ```
 
 **Детали 05:**
 
-- **П-05-а. Кран и рельс** (5). Код: `objects/collapse.gd`. Кран 3 клетки; героиня в нём едет — жёлтая кромка.
+- **П-05-а. Кран и рельс** (2, 3, 8). Код: `objects/collapse.gd`. Кран 3 клетки; героиня в нём едет — жёлтая кромка; педаль — жёлтая.
   ```text
-  Request P-05-a: (1) an overhead crane carriage 3 cells long: a riveted cab-less platform with a worn signal-yellow deck edge and railing, hung from a trolley; (2) separately, the trolley's two wheels, perfect circles 0.4 cells across; (3) a heavy I-beam rail that can be cut at any length.
+  Request P-05-a: (1) a small crane cab 3 cells long and 1.6 cells tall hanging from a trolley: a steel platform with a worn signal-yellow edge and railing, a foot pedal, open to the front; (2) separately, the trolley's two wheels, perfect circles 0.4 cells across; (3) a heavy I-beam rail that can be cut at any length and laid at a slope; (4) an end stop for the rail with a rubber buffer.
   ```
-- **П-05-б. Плиты, куски потолка, обломки** (2, 6, 7). Код: `objects/collapse.gd`; ломает и роняет код.
+- **П-05-б. Плита на цепях и куски потолка** (4, 5–7). Код: `objects/collapse.gd` (`collapse.gate`).
   ```text
-  Request P-05-b: (1) three concrete slabs with exposed rebar, 3 to 4 cells long and 0.8 cells thick, each with two lifting eyes for chains; (2) six ceiling chunks of brick and concrete with ragged edges, from 0.6 to 4.6 cells wide; (3) a chain that can be cut at any length; (4) twelve small rubble pieces.
-  ```
-- **П-05-в. Противовес** (8). Код: `objects/collapse.gd` (`follow`); карточка 05: плиту сделать тяжелее и заметнее.
-  ```text
-  Request P-05-c: (1) a counterweight: a heavy dark steel billet 2 cells wide with a big hook on top; (2) a lift platform 2 cells wide, worn signal-yellow deck, a hanger for a chain; (3) separately, a pulley block, a perfect grooved circle 0.7 cells across.
+  Request P-05-b: (1) a heavy concrete slab 2.8 cells wide and 2.4 cells tall with exposed rebar and two lifting eyes on top; (2) a chain that can be cut at any length, and one chain broken end; (3) three ceiling chunks of brick and concrete with ragged edges, about 2 cells wide and 0.8 cells thick, a broken truss stub on one; (4) twelve small rubble pieces.
   ```
 
 ### Уровень 06 «новый 02 на один экран» — заготовка
 
-Схемы в открытых PR на 27.11 нет. Когда PR уровня влит: добавить уровень в `ITEMS` `tools/gemini_scheme.py` (номера — по его карточке `docs/levels/06.md`), `python3 tools/gemini_scheme.py level_06`, дописать сюда номера и запрос Ф-06 по образцу 03 (одна картинка, `rect` печатает скрипт). Детали — брать из 02: поплавки (П-02-а), шлюз и заслонки (П-02-б), штурвал и труба (П-02-в), насосная (П-02-г) — какие останутся в уровне; кнопка — набор.
+Ветка `claude/level-06-flow-one-screen` есть, PR на 27.11 ещё нет. Когда PR уровня влит: добавить уровень в `ITEMS` `tools/gemini_scheme.py` (номера — по его карточке `docs/levels/06.md`), `python3 tools/gemini_scheme.py level_06`, дописать сюда номера и запрос Ф-06 по образцу 03 (одна картинка, `rect` печатает скрипт). Детали — брать из 02: поплавки (П-02-а), шлюз и заслонки (П-02-б), штурвал и труба (П-02-в), насосная (П-02-г) — какие останутся в уровне; кнопка — набор.
 
 ### Уровень 07 «новый 04 на один экран» — заготовка
 
-Так же, как 06: схема — после PR, `python3 tools/gemini_scheme.py level_07`. Детали — из 04: плиты (П-04-а), рельсы и стрелки (П-04-б), вагонетка и подъёмник (П-04-в); заслонки — набор (Н-5).
+Так же, как 06 (ветка `claude/level-07-plates`): схема — после PR, `python3 tools/gemini_scheme.py level_07`. Детали — из 04: плиты (П-04-а), рельсы и стрелки (П-04-б), вагонетка и подъёмник (П-04-в); заслонки — набор (Н-5).
 
 ## 3. Что делает Claude Code, когда картинка готова
 
