@@ -165,8 +165,8 @@
 				{ "x": 4.0, "drop": 3.0, "radius_px": 340 },
 				{ "x": 12.0, "drop": 6.0, "radius_px": 400 },
 				{ "x": 16.6, "drop": 3.2, "radius_px": 360 },
-				{ "x": 20.5, "drop": 1.0, "radius_px": 360 },
-				{ "x": 25.0, "drop": 4.0, "radius_px": 320 },
+				{ "x": 20.5, "drop": 1.0, "radius_px": 540 },
+				{ "x": 25.0, "drop": 4.0, "radius_px": 430 },
 				{ "x": 28.0, "drop": 2.0, "radius_px": 260 }
 			],
 			"ground": {
