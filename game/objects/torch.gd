@@ -26,6 +26,9 @@ extends CharacterBody2D
 ##   torch again and keeps it in the hands; such a stand never takes it back.
 ##   The torch's fire in the hands is live, so this changes no frame. A
 ##   `GasBurner` (D193) is the same burner without a torch of its own.
+##   With `relights` off (the lower burner of level 03, D220) the stand only
+##   gives the torch: its flame goes out once the torch is taken, and a torch
+##   that went out stays out there, so it never lights a rope on its way.
 ##
 ## The node is the torch's foot on the stand; the flame is at its top.
 ##
@@ -52,6 +55,8 @@ const HAND := Vector2(22, -30)
 @export var floor_offset_px := 0.0
 ## The stand is a gas burner that lights the torch again (see above).
 @export var burner := false
+## A burner stand lights a torch in the hands again; off, it only gives it.
+@export var relights := true
 
 var held := false
 var fall_speed := 0.0
@@ -172,7 +177,8 @@ func stand_rect() -> Rect2:
 func sense(room: Object, _direction: int, player_rect: Rect2) -> void:
 	var at := player_rect.has_area() and stand_rect().intersects(player_rect)
 	if at and held and burner:
-		light_again()
+		if relights:
+			light_again()
 	elif at and not _at_stand:
 		if not held and mounted:
 			room.call("apply_change", object_id, {"held": true, "mounted": false})
@@ -250,7 +256,7 @@ func _player() -> Node2D:
 
 func _draw() -> void:
 	if burner:
-		draw_burner(self, home - position, floor_offset_px, _live_t)
+		draw_burner(self, home - position, floor_offset_px, _live_t, relights or (mounted and not held))
 	if mounted and not held:
 		draw_rect(Rect2(Vector2(-9.0, -6.0), Vector2(18.0, 8.0)), HOLDER_COLOR)
 	draw_line(Vector2.ZERO, Vector2(0.0, -LENGTH), STICK_COLOR, 6.0, true)
@@ -269,14 +275,17 @@ func _draw() -> void:
 
 ## A gas burner on `canvas` at `at` (the torch's foot on it, in the canvas's
 ## pixels), `floor_px` above the floor: a pipe up from the floor, a nozzle and
-## a small flame that flickers by the live clock `t`. Also drawn by `GasBurner`.
-static func draw_burner(canvas: CanvasItem, at: Vector2, floor_px: float, t: float) -> void:
+## a small flame that flickers by the live clock `t` (none when `flame` is
+## off). Also drawn by `GasBurner`.
+static func draw_burner(canvas: CanvasItem, at: Vector2, floor_px: float, t: float, flame := true) -> void:
 	var floor_at := at + Vector2(0.0, floor_px)
 	canvas.draw_rect(Rect2(floor_at + Vector2(-4.0, -floor_px - 4.0), Vector2(8.0, floor_px + 4.0)), HOLDER_COLOR)
 	canvas.draw_rect(Rect2(floor_at + Vector2(-12.0, -6.0), Vector2(24.0, 6.0)), HOLDER_COLOR.darkened(0.3))
 	var nozzle := at + Vector2(14.0, -18.0)
 	canvas.draw_rect(Rect2(at + Vector2(2.0, -14.0), Vector2(12.0, 5.0)), HOLDER_COLOR)
 	canvas.draw_rect(Rect2(nozzle + Vector2(-2.0, 0.0), Vector2(6.0, 6.0)), HOLDER_COLOR.darkened(0.2))
+	if not flame:
+		return
 	var tip := nozzle + Vector2(1.0 + sin(t * 11.0) * 1.5, -12.0 - sin(t * 17.0) * 2.0)
 	canvas.draw_colored_polygon(PackedVector2Array([
 		nozzle + Vector2(-3.0, 1.0), tip, nozzle + Vector2(5.0, 1.0)]), FLAME_COLOR)
