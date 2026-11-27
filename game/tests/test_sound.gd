@@ -6,6 +6,7 @@ extends RefCounted
 ## Run by test_runner.gd.
 
 const ROOM_PATH := "res://tests/rooms/test_room.tscn"
+const BUTTONS_PATH := "res://tests/rooms/test_room_buttons.tscn"
 const ACTIONS: Array[String] = [
 	"move_left", "move_right", "jump", "interact", "rewind", "reset_level", "pause",
 ]
@@ -222,3 +223,77 @@ func _settle() -> void:
 func _ticks(count: int) -> void:
 	for i in count:
 		await _tree.physics_frame
+
+
+## A reset of the room (R, drowning, burning) puts every object back at once:
+## that jump is no event, so no click, clank or loop may sound from it.
+func test_a_reset_of_the_room_makes_no_sound() -> void:
+	await _settle()
+	var room: Node = (load(BUTTONS_PATH) as PackedScene).instantiate()
+	_tree.root.add_child(room)
+	await _ticks(3)
+	var sound := room.get_node("RoomSound") as RoomSound
+	var time: RoomTime = room.get_node("RoomTime")
+	var lever: Lever = room.get_node("Lever")
+	var player: Player = room.get_node("Player")
+	player.respawn(lever.global_position)
+	time.player_interact(player.global_position)
+	await _ticks(240)
+	check(_heard(sound, "lever") and _heard(sound, "door_stop"), "the lever and the opened door must sound: %s" % [sound.heard])
+	var before := sound.heard.size()
+	time.reset()
+	await _ticks(60)
+	# The platform of this room rides at its start by itself: after the reset it
+	# rides again, and that is heard. The lever and the door only jumped back.
+	var jumped: Array[String] = []
+	for entry in sound.heard.slice(before):
+		if not entry.contains("platform"):
+			jumped.append(entry)
+	check(jumped.is_empty(), "a reset must make no sound of the lever and the door, heard %s" % [jumped])
+	var door_loop := sound.get_node_or_null("Loop_door#0") as AudioStreamPlayer2D
+	check(door_loop != null and not door_loop.playing, "the door's loop must exist and be silent after the reset")
+	room.queue_free()
+	await _settle()
+
+
+## Every sound is loaded at the start, both ways, so no file loads in the
+## middle of play (D207); opening the pause is no move in the menu.
+func test_streams_are_loaded_at_the_start_and_the_pause_opens_quietly() -> void:
+	var sound := _tree.root.get_node_or_null("Sound")
+	check(sound != null, "no Sound autoload")
+	if sound == null:
+		return
+	var names := (SoundRules.config().get("sounds", {}) as Dictionary).size()
+	check(int(sound.call("loaded_count")) >= names, "every sound must be loaded at the start: %d of %d" % [sound.call("loaded_count"), names])
+	var loader := _tree.root.get_node("LevelLoader")
+	loader.emit_signal("pause_opening")
+	check(int(sound.get("_quiet_until")) > Time.get_ticks_msec(), "the pause's first focus must not sound as a move")
+
+
+## An act of the heroine under Shift is a new present: it sounds forward,
+## once, and the rewind passing it again makes no reversed click.
+func test_an_act_under_shift_sounds_forward_once() -> void:
+	await _settle()
+	var room: Node = (load(BUTTONS_PATH) as PackedScene).instantiate()
+	_tree.root.add_child(room)
+	await _ticks(3)
+	var sound := room.get_node("RoomSound") as RoomSound
+	var lever: Lever = room.get_node("Lever")
+	var player: Player = room.get_node("Player")
+	player.respawn(lever.global_position)
+	await _ticks(240)
+	var before := sound.heard.size()
+	Input.action_press("rewind")
+	await _ticks(60)
+	Input.action_press("interact")
+	await _ticks(1)
+	Input.action_release("interact")
+	await _ticks(60)
+	Input.action_release("rewind")
+	var levers: Array[String] = []
+	for entry in sound.heard.slice(before):
+		if entry.contains(" lever"):
+			levers.append(entry)
+	check(levers.size() == 1 and not levers[0].ends_with("_rev"), "the lever turned under Shift must click forward once, heard %s" % [levers])
+	room.queue_free()
+	await _settle()
