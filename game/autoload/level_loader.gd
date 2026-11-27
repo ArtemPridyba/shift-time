@@ -13,12 +13,15 @@ signal list_opened
 signal menu_opened
 signal final_opened
 signal level_finished(id: String)
+## Sent just before the pause menu opens and grabs the focus (D207).
+signal pause_opening
 
 const MENU_SCENE := "res://ui/main_menu.tscn"
 const LIST_SCENE := "res://ui/level_select.tscn"
 const FINAL_SCENE := "res://ui/final_screen.tscn"
 const PAUSE_ACTION := "pause"
 const SAVE_PATH := "user://progress.json"
+const SETTINGS_PATH := "user://settings.json"
 
 ## Id of the running level; empty on the menus.
 var current_id := ""
@@ -26,6 +29,10 @@ var current_id := ""
 var progress := LevelProgress.new()
 ## Where the progress is saved; tests set "" to keep the disk untouched.
 var save_path := SAVE_PATH
+## The player's settings (the Master volume) and where they are saved; tests
+## set "" to keep the disk untouched.
+var settings := GameSettings.new()
+var settings_path := SETTINGS_PATH
 
 var _fade: ScreenFade
 var _pause: PauseMenu
@@ -43,7 +50,9 @@ func _ready() -> void:
 	_pause.restart_pressed.connect(restart_level)
 	_pause.levels_pressed.connect(func() -> void: _pass_to(LIST_SCENE))
 	_pause.menu_pressed.connect(func() -> void: _pass_to(MENU_SCENE))
+	_pause.volume_changed.connect(set_volume)
 	load_progress()
+	load_settings()
 
 
 ## The `levels.json` entry with this id, or an empty dictionary.
@@ -159,6 +168,7 @@ func pause() -> void:
 	if current_id.is_empty() or is_passing() or is_paused():
 		return
 	get_tree().paused = true
+	pause_opening.emit()
 	_pause.open()
 
 
@@ -245,3 +255,35 @@ func _change_scene(path: String) -> bool:
 	if manager != null:
 		manager.reset()
 	return true
+
+
+## The Master volume (0..1): to the bus at once, to the slider and to disk.
+func set_volume(value: float) -> void:
+	settings.set_volume(value)
+	_apply_volume()
+	save_settings()
+
+
+func load_settings() -> void:
+	var data: Variant = null
+	if not settings_path.is_empty() and FileAccess.file_exists(settings_path):
+		var file := FileAccess.open(settings_path, FileAccess.READ)
+		if file != null:
+			data = JSON.parse_string(file.get_as_text())
+	settings.from_dict(data, float(ControlsData.load_data().get("default_volume", 0.8)))
+	_apply_volume()
+
+
+func save_settings() -> void:
+	if settings_path.is_empty():
+		return
+	var file := FileAccess.open(settings_path, FileAccess.WRITE)
+	if file != null:
+		file.store_string(JSON.stringify(settings.to_dict()))
+
+
+func _apply_volume() -> void:
+	var bus := AudioServer.get_bus_index("Master")
+	AudioServer.set_bus_volume_db(bus, GameSettings.volume_db(settings.volume))
+	AudioServer.set_bus_mute(bus, settings.volume <= 0.001)
+	_pause.set_volume(settings.volume)

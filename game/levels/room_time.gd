@@ -11,6 +11,10 @@ extends Node
 ## the player's rect and the objects' positions are both in the room's
 ## coordinates.
 
+## Sent after `reset`: the room jumped back to its start, which is no event
+## (the sound forgets what it heard, D206).
+signal was_reset
+
 ## The player, for the crush check; empty means no player in the room.
 @export var player_path: NodePath
 ## Seconds the room runs without the player before it starts (section 2.2):
@@ -51,6 +55,11 @@ func _ready() -> void:
 	_initial = _recorder.capture(objects)
 	world.start(objects)
 	world.run_prelude(objects, _prelude_ticks, _prelude_events)
+	# The key hints over interaction points and the wall stencils (task 4.3).
+	if not player_path.is_empty():
+		var hints := KeyHints.new()
+		hints.name = "KeyHints"
+		add_child(hints)
 
 
 ## The world time the room shows, in world seconds (D96): the world tick
@@ -247,10 +256,15 @@ func reset() -> void:
 	for node in get_tree().get_nodes_in_group("minecart"):
 		if room != null and room.is_ancestor_of(node) and node.has_method("reset_ride"):
 			node.call("reset_ride")
+	# Pigs the cart took are out of time with it (D216): a reset gives them back.
+	for node in get_tree().get_nodes_in_group("hopper"):
+		if room != null and room.is_ancestor_of(node) and node.has_method("forget_taken"):
+			node.call("forget_taken")
 	var objects := temporal_objects()
 	_recorder.restore(_initial, objects)
 	world.start(objects)
 	world.run_prelude(objects, _prelude_ticks, _prelude_events)
+	was_reset.emit()
 
 
 ## Hands every object its settings from `objects` of the level's entry
@@ -274,6 +288,10 @@ func _read_prelude() -> void:
 	prelude_seconds = float(entry.get("prelude_seconds", time_data.get("default_prelude_seconds", 0)))
 	_prelude_ticks = int(round(prelude_seconds * per_second))
 	_prelude_events = TimeWorld.prelude_events_from_data(entry.get("prelude_events", []), per_second)
+	# A level may cap the rewind speed of a long hold (D217).
+	var manager := get_node_or_null("/root/TimeManager")
+	if manager != null and manager.has_method("use_rewind_speed_max"):
+		manager.call("use_rewind_speed_max", float(entry.get("rewind_speed_max", 0.0)))
 
 
 func _player_rect() -> Rect2:

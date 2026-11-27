@@ -58,6 +58,8 @@
 
 Первые `rewind_ramp_delay_seconds` (0,5 с) удержания Shift мир идёт назад со скоростью ×1, затем за `rewind_ramp_seconds` (1,5 с) скорость ровно растёт до `rewind_speed_max` (×3). Отпустил Shift — следующее удержание снова с ×1. Считает `core/rewind_speed.gd` (`RewindSpeed`), держит его `TimeManager` (`rewind_frames` — сколько кадров назад на этом тике, `rewind_speed` — для индикатора на руке). `TimeWorld.tick(direction, objects, player_rect, frames)` отступает на `frames` кадров по одному, каждый проверяет на раздавливание (2.3) и останавливается перед первым опасным; на кадре 0 мир стоит. Вперёд (повтор будущего, правило «А») скорость всегда ×1. Платформа на самой быстрой перемотке сдвигается за тик меньше `carry_margin_px`, иначе герой на ней читается как раздавленный — это проверяет `Content.validate_objects`.
 
+Уровень может ограничить разгон своим `rewind_speed_max` в записи `levels.json` (D217, 27.11): `RoomTime` при старте комнаты передаёт его `TimeManager.use_rewind_speed_max`; нет поля — число из `time.json`. У 04 — 1 (без разгона): окно ловли чушек считается в секундах мира.
+
 ### 2.1б. Темп мира (D96, 21.11.2026)
 
 `world_tempo` в `time.json` (1,25) — во сколько раз часы мира идут быстрее настоящих. Двери, платформы, вода (и шлюз как дверь) и предыстория переводят свои секунды из данных в тики через `Content.world_ticks_per_second()` = `physics_ticks_per_second / world_tempo`: при 1,25 дверь на 3 с открывается за 2,4 с, колодец на 9 с пустеет за 7,2 с, предыстория 4,5 с длится 3,6 с и даёт ту же картинку. Секунды в данных — секунды мира; окна действия проверка данных считает в настоящих секундах (секунды / темп ≥ 3). Направление времени по-прежнему ±1, шаг записи и длина истории (20 с) — настоящие. Героиня, дыхание, огонь, лампы и обратные предметы темп пока не читают: их подтянем, когда возьмёмся за их уровни. Скорость подъёма воды для героя (`rise_px_per_second`) считается в настоящих тиках.
@@ -109,14 +111,14 @@
 ```
 game/
   project.godot
-  autoload/        # узлы-синглтоны: time_manager.gd, game_data.gd
-  core/            # RefCounted без узлов: timeline.gd, temporal_recorder.gd, time_world.gd, content.gd, level_data.gd, input_log.gd
+  autoload/        # узлы-синглтоны: time_manager.gd, level_loader.gd, art.gd, sound.gd (звук, D183)
+  core/            # RefCounted без узлов: timeline.gd, temporal_recorder.gd, time_world.gd, content.gd, level_data.gd, input_log.gd, sound_rules.gd
   objects/         # временные объекты и игрок: player.tscn/.gd, platform_moving, door, button, lever, water, water_float, crate
   levels/          # только уровни: level_01.tscn … level_05.tscn; test_room.gd (база всех уровней), level_room.gd, room_time.gd
   ui/              # HUD, устройство на руке, меню
-  data/            # time.json, player.json, objects.json, levels.json, texts.json
+  data/            # time.json, player.json, objects.json, levels.json, texts.json, audio.json (звук)
   art/             # backgrounds, decals, characters, objects, ui, particles
-  audio/
+  audio/           # room_sound.gd — звук комнаты идёт за записанным состоянием (под Shift — обратные двойники); time_sound.gd — два звука Shift
   tests/           # test_runner.gd, script_errors.gd, test_core.gd, ui_smoke_test.gd, solutions/,
                    # rooms/ — тестовые комнаты (test_room*, mech_test) и их rooms.json; не в меню и не в экспорте
 ```
