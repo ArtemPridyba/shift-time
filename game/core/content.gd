@@ -257,6 +257,7 @@ static func validate() -> PackedStringArray:
 	errors.append_array(validate_camera(load_json(CAMERA_PATH)))
 	errors.append_array(validate_menu(load_json(MENU_PATH)))
 	errors.append_array(SoundRules.validate(load_json(SoundRules.PATH)))
+	errors.append_array(ControlsData.validate(load_json(ControlsData.PATH)))
 	return errors
 
 

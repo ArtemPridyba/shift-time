@@ -51,6 +51,11 @@ func _ready() -> void:
 	_initial = _recorder.capture(objects)
 	world.start(objects)
 	world.run_prelude(objects, _prelude_ticks, _prelude_events)
+	# The key hints over interaction points and the wall stencils (task 4.3).
+	if not player_path.is_empty():
+		var hints := KeyHints.new()
+		hints.name = "KeyHints"
+		add_child(hints)
 
 
 ## The world time the room shows, in world seconds (D96): the world tick
