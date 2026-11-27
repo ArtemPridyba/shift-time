@@ -400,3 +400,35 @@ func test_button_powers_every_target() -> void:
 	button.free()
 	first.free()
 	second.free()
+
+
+# ---------------------------------------------------------------------------
+# Key hints (task 4.3)
+# ---------------------------------------------------------------------------
+
+func test_hint_target_skips_the_drop_and_points_out_of_reach() -> void:
+	var held := {"id": "item", "position": Vector2.ZERO, "radius": 1.0e9, "fallback": true}
+	var lever := {"id": "lever", "position": Vector2(40, 0), "radius": 80.0}
+	check(InteractionSystem.hint_target(Vector2.ZERO, [held, lever]).get("id", "") == "lever", "the lever in reach gets the hint")
+	check(InteractionSystem.hint_target(Vector2(500, 0), [held, lever]).is_empty(), "the drop of the item in the hands gets no hint")
+	check(InteractionSystem.fade(0.0, true, 0.1, 0.2, 0.4) == 0.5, "a hint fades in over fade_in seconds")
+	check(is_equal_approx(InteractionSystem.fade(1.0, false, 0.1, 0.2, 0.4), 0.75), "a hint fades out over fade_out seconds")
+
+
+func test_key_names_fill_the_texts() -> void:
+	check(KeyNames.primary("interact") == "E", "interact is E")
+	check(KeyNames.primary("use_item") == "F", "use_item is F")
+	check(KeyNames.format("hold {rewind}") == "hold Shift", "a {name} is the first key")
+	check(KeyNames.format("HOLD {rewind+}", {}, true) == "HOLD SHIFT OR Q", "a {name+} is every key, got '%s'" % KeyNames.format("HOLD {rewind+}", {}, true))
+	check(KeyNames.primary("pause", {"Escape": "Esc"}) == "Esc", "key_names shorten a key")
+
+
+func test_level_01_has_stencils_for_walking_and_shift() -> void:
+	var data := ControlsData.load_data()
+	var stencils := ControlsData.stencils_for(data, "level_01")
+	var text := ""
+	for entry: Variant in stencils:
+		text += " ".join((entry as Dictionary)["text"])
+	check(text.contains("{move_left}") and text.contains("{jump}"), "level 01 must show walking and the jump on its wall")
+	check(text.contains("{rewind"), "level 01 must show the Shift key on its wall")
+	check(ControlsData.validate({}).size() > 0, "an empty controls.json must fail the check")
