@@ -77,6 +77,9 @@ func _ready() -> void:
 	picture = Node2D.new()
 	picture.name = "Picture"
 	picture.material = _material
+	# The pictures are bigger than the screen shows them at the start zoom
+	# (D185): mipmaps keep them from shimmering when the camera pulls back.
+	picture.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	picture.draw.connect(_draw_picture)
 	layer.add_child(picture)
 	_follow_level.call_deferred()

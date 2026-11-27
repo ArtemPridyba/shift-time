@@ -5,7 +5,7 @@ shader_type canvas_item;
 
 #include "res://art/world/picture_light.gdshaderinc"
 
-uniform sampler2D dark_picture : filter_linear, repeat_disable;
+uniform sampler2D dark_picture : filter_linear_mipmap, repeat_disable;
 
 varying vec2 room;
 

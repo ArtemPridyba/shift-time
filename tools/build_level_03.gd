@@ -1,26 +1,29 @@
 extends SceneTree
 ## Builds level 03 «Нить» `levels/level_03.tscn` (card docs/levels/03.md,
-## D177, D178): one screen, 30x17 cells.
+## D177, D178, scheme v3 D193): one screen, 30x17 cells.
 ##
 ## The hero walks out of a doorway onto the left floor. Beyond it a pit too
 ## wide to jump; a board on a hinge at its edge, raised and lowered by a winch
 ## under the roof: lying, it is a bridge to the lower floor on the right;
-## upright, it closes the way. Right of the pit a lift on a rack: in the past
-## it waited down at the floor, then rode up to the steel mezzanine. On the
-## mezzanine a gas burner with the torch, then the fire detector over its
-## sprinklers: a burning torch under it starts the rain. Past the rain the
-## cleat of the cage's stop rope; the cage waits at the bottom of the shaft
-## and the counterweight pulls it up to the gallery and the exit once the rope
-## has burnt through. The floor under the mezzanine ends at a wall before the
-## shaft.
+## upright, it closes the way. Right of the pit the lift: a second cage with a
+## counterweight, tied down at the floor by a rope to a cleat deep under the
+## steel mezzanine, by the wall. The torch burns at a gas burner on the lower
+## floor between them. The lit rope burns through fast and the weight pulls
+## the lift up to the mezzanine, empty: she is too far from it. On the
+## mezzanine a second gas burner, then the fire detector over its sprinklers:
+## a burning torch under it starts the rain. Past the rain the cleat of the
+## shaft cage's stop rope; the cage waits at the bottom of the shaft and its
+## weight pulls it up to the gallery and the exit once the rope has burnt
+## through. The floor under the mezzanine ends at a wall before the shaft.
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
 ##   godot --headless --path game --script $PWD/tools/build_level_03.gd
 ##
 ## Map legend: '#' block, '.' empty, 'S' spawn point (inside the entrance),
 ## 'E' the exit zone (centred on its cells). The pit is open to the bottom: a
-## fall is death (D135). The board, the lift, the mezzanine, the rope, the
-## torch, the sprinkler and the cage are placed by the constants below.
+## fall is death (D135). The board, the lift, the mezzanine, the ropes, the
+## torch, the burners, the sprinkler and the cage are placed by the constants
+## below.
 
 const CELL := 64
 const TILESET_RES := "res://levels/blockout/blockout_tileset.tres"
@@ -55,11 +58,18 @@ const HINGE := Vector2(9 * 64, 13 * 64)
 const BOARD_PX := 373.0
 ## The mezzanine: its top on row 10 from the lift to the shaft (columns 17-24).
 const MEZZANINE := Rect2(17 * 64, 10 * 64, 8 * 64, 24)
-## The lift: two cells wide (columns 15-16), its top flush with the floor, up
-## to the mezzanine's top.
-const LIFT_CENTRE := Vector2(16 * 64, 13 * 64)
-const LIFT_TRAVEL := Vector2(0, -3 * 64)
-const LIFT_HEIGHT := 32.0
+## The lift: a counterweight cage two cells wide (columns 15-16), its floor
+## flush with the floor, up to the mezzanine's top; its pulley under the roof.
+const LIFT_AT := Vector2(16 * 64, 13 * 64)
+const LIFT_TRAVEL := 3 * 64
+const LIFT_PULLEY_Y := 2.6 * 64
+## The lift's rope: from its cleat deep under the mezzanine (its lit end at
+## the height of a torch in her hands) down to the floor and along it to the
+## lift's floor. Lit there, the fire runs to the lift and the lift goes.
+const LIFT_ROPE := [Vector2(23.45 * 64, 11.8 * 64), Vector2(23.45 * 64, 12.88 * 64),
+	Vector2(16.9 * 64, 12.94 * 64)]
+## The torch's gas burner on the lower floor, between the lift and the cleat.
+const LOW_BURNER_X := 19.5 * 64
 ## The winch under the roof: the chain's pulley over the pit and the drum
 ## over the entrance floor.
 const PULLEY := Vector2(11.25 * 64, 2.6 * 64)
@@ -68,8 +78,8 @@ const DRUM := Vector2(4.5 * 64, 6 * 64)
 ## the cage's floor.
 const STOP_ROPE := [Vector2(24.2 * 64, 8.75 * 64), Vector2(24.7 * 64, 9.4 * 64),
 	Vector2(24.95 * 64, 10.0 * 64), Vector2(25.35 * 64, 12.9 * 64)]
-## The burner with the torch on the mezzanine; the torch's foot stands this
-## high over the deck.
+## The second gas burner on the mezzanine (no torch of its own); a torch's
+## foot stands this high over the floor at a burner.
 const STAND_X := 17.6 * 64
 const STAND_PX := 56.0
 ## The fire detector and its sprinklers over the mezzanine: the pipe's height
@@ -84,6 +94,7 @@ const CAGE_TRAVEL := 6 * 64
 const BEACON_FROM_DOOR := Vector2(-66.0, -118.0)
 const MEZZANINE_COLOR := Color("#3a3f46")
 const MEZZANINE_EDGE := Color("#5a616b")
+const CLEAT_POST_COLOR := Color("#3a3c40")
 
 
 func _initialize() -> void:
@@ -142,12 +153,20 @@ func _initialize() -> void:
 	_box(root, "MezzanineLook", MEZZANINE, MEZZANINE_COLOR)
 	_box(root, "MezzanineEdge", Rect2(MEZZANINE.position, Vector2(MEZZANINE.size.x, 4.0)), MEZZANINE_EDGE)
 
-	# The rope goes before what it holds: the cage reads it in the same tick.
+	# The ropes go before what they hold: a cage reads its rope in the same tick.
+	var floor_y := float(HINGE.y)
+	var lift_rope := FireRope.new()
+	lift_rope.name = "LiftRope"
+	lift_rope.object_id = "lift_rope"
+	lift_rope.points = PackedVector2Array(LIFT_ROPE)
+	_own(root, lift_rope)
+	_post(root, "LiftCleatPost", LIFT_ROPE[0], floor_y)
 	var stop := FireRope.new()
 	stop.name = "StopRope"
 	stop.object_id = "stop_rope"
 	stop.points = PackedVector2Array(STOP_ROPE)
 	_own(root, stop)
+	_post(root, "StopCleatPost", STOP_ROPE[0], MEZZANINE.position.y)
 
 	var ramp := WinchRamp.new()
 	ramp.name = "Ramp"
@@ -159,25 +178,31 @@ func _initialize() -> void:
 	ramp.drum = DRUM
 	_own(root, ramp)
 
-	var lift: MovingPlatform = (load("res://objects/platform.tscn") as PackedScene).instantiate()
-	lift.object_id = "lift"
+	var lift := CounterweightCage.new()
 	lift.name = "Lift"
-	lift.travel = LIFT_TRAVEL
-	lift.width = 2.0 * CELL
-	lift.track = "rack"
-	lift.position = LIFT_CENTRE + Vector2(0.0, LIFT_HEIGHT / 2.0)
+	lift.object_id = "lift"
+	lift.rope_id = "lift_rope"
+	lift.position = LIFT_AT
+	lift.travel_px = LIFT_TRAVEL
+	lift.pulley_from_floor = Vector2(0.0, LIFT_PULLEY_Y - LIFT_AT.y)
 	_own(root, lift)
 
-	var deck_y := MEZZANINE.position.y
 	var torch := Torch.new()
 	torch.name = "Torch"
 	torch.object_id = "torch"
 	torch.mounted = true
 	torch.lit = true
 	torch.burner = true
-	torch.position = Vector2(STAND_X, deck_y - STAND_PX)
+	torch.position = Vector2(LOW_BURNER_X, floor_y - STAND_PX)
 	torch.floor_offset_px = STAND_PX
 	_own(root, torch)
+
+	var deck_y := MEZZANINE.position.y
+	var burner := GasBurner.new()
+	burner.name = "Burner"
+	burner.position = Vector2(STAND_X, deck_y - STAND_PX)
+	burner.floor_offset_px = STAND_PX
+	_own(root, burner)
 
 	var sprinkler := Sprinkler.new()
 	sprinkler.name = "Sprinkler"
@@ -233,6 +258,12 @@ func _initialize() -> void:
 	root.free()
 	print("wrote ", SCENE_PATH)
 	quit()
+
+
+## Decoration: the post of a rope's cleat, from the rope's end down to the
+## floor it stands on.
+func _post(root: Node, node_name: String, top: Vector2, floor_y: float) -> void:
+	_box(root, node_name, Rect2(top + Vector2(-3.0, 2.0), Vector2(6.0, floor_y - top.y - 2.0)), CLEAT_POST_COLOR)
 
 
 ## Decoration: a plain rectangle, never recorded.

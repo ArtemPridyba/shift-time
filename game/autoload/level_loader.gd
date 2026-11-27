@@ -13,6 +13,8 @@ signal list_opened
 signal menu_opened
 signal final_opened
 signal level_finished(id: String)
+## Sent just before the pause menu opens and grabs the focus (D207).
+signal pause_opening
 
 const MENU_SCENE := "res://ui/main_menu.tscn"
 const LIST_SCENE := "res://ui/level_select.tscn"
@@ -166,6 +168,7 @@ func pause() -> void:
 	if current_id.is_empty() or is_passing() or is_paused():
 		return
 	get_tree().paused = true
+	pause_opening.emit()
 	_pause.open()
 
 

@@ -1,6 +1,6 @@
 # Shift Time — itch.io page (draft)
 
-Draft of the page text for task И1 (27.11.2026). English, as it goes on itch. Pictures: `gif/` and `shots/` next to this file; how to remake them — [README.md](README.md). The team edits the text freely; the facts (keys, tools, AI) are checked against the repository on 27.11.
+Draft of the page text for task И1 (27.11.2026). English, as it goes on itch. Pictures: `cover.png`, `gif/` and `shots/` next to this file; how to remake them — [README.md](README.md). The team edits the text freely; the facts (keys, tools, AI) are checked against the repository on 27.11.
 
 ---
 
@@ -28,7 +28,8 @@ Each room is one puzzle. Most of them start from an effect — a jammed door, a 
 | Move | A / D or ← / → |
 | Jump | Space, W or ↑ |
 | Reverse the world's time (hold) | Shift or Q |
-| Use a lever, button or valve | E |
+| Use a lever, button or valve; pick up, put down | E |
+| Use the item in your hands (hold) | F |
 | Restart the room | R |
 | Look at the whole room (hold) | Tab |
 | Zoom | mouse wheel, + / − |
@@ -49,7 +50,7 @@ We want to be plain about where AI was used.
 - **Pictures.** The look of the factory (back walls, the brick kit, lamps, platforms, the backdrop of the first room) and the heroine's body parts were generated with the Gemini app from our own prompts and our own game screenshots, then cut, keyed and fitted into the game by our scripts. Every such file is listed with its prompt in [`docs/art/log.md`](https://github.com/ArtemPridyba/shift-time/blob/main/docs/art/log.md).
 - **Motion.** All movement — the heroine's walk, doors, gears, water, fire, light — is code (cutout rig, shaders, particles), so that everything can play backwards.
 - **Code.** Written with AI coding assistants, reviewed and play-tested by us; the design, the levels and every decision are ours (the decision log is in the repository).
-- **Sound.** *(fill in from the sound session's rows in `docs/art/log.md`)*
+- **Sound.** No generative audio and no samples: every sound is synthesized from noise, sine waves and filters by a Python script of ours (`tools/audio/make_sounds.py`), written with Claude Code. Each sound of the world has a reversed twin that plays while you hold Shift.
 - No third-party art or sound packs.
 
 ### Credits
@@ -60,15 +61,16 @@ Artemiy Pridyba and Borys Shapovalov. Thanks to Godot Engine and its contributor
 
 ## AI disclosure for the jam form (short)
 
-Shift Time uses generative AI. Pictures: the factory backgrounds, the brick and machine kit, platforms and the heroine's body parts were generated with Google's Gemini app from our prompts and our own screenshots, then cut and assembled by our scripts; all motion is code. Code: written by the two of us with AI coding assistants (Claude Code, Gemini in Antigravity), and reviewed, tested and play-tested by us. Game design, levels and decisions are ours. Sound: *(fill in after the sound session)*. Every generated file and its prompt are listed in docs/art/log.md of the public repository.
+Shift Time uses generative AI. Pictures: the factory backgrounds, the brick and machine kit, platforms and the heroine's body parts were generated with Google's Gemini app from our prompts and our own screenshots, then cut and assembled by our scripts; all motion is code. Code: written by the two of us with AI coding assistants (Claude Code, Gemini in Antigravity), and reviewed, tested and play-tested by us. Game design, levels and decisions are ours. Sound: no generative audio and no samples; every sound is synthesized by our own Python script (written with Claude Code) from noise, sine waves and filters. Every generated file and its prompt are listed in docs/art/log.md of the public repository.
 
 ---
 
 ## itch.io settings (for the person who uploads)
 
+- Step by step, in Russian: [upload.md](upload.md).
 - Kind of project: **HTML**; upload `shift-time-web.zip` (the `build.yml` artifact `shift-time-web` of the latest `main`, or the command «Web export» in `CLAUDE.md`), tick «This file will be played in the browser».
 - Viewport **1280 × 720**, tick «Fullscreen button»; «Mobile friendly» off (no touch controls).
 - «SharedArrayBuffer support» — **off**: the build is single-threaded (check of task 2.0, 10.11).
 - Genre: Puzzle; tags: puzzle-platformer, time-manipulation, 2D, godot, game-off-2026, short.
-- Cover 630 × 500 (and 315 × 250): to be made (Г); the first frame of the GIF or a shot of level 01 under Shift will do until then.
+- Cover 630 × 500: `cover.png` next to this file (`tools/itch_cover.py`, D204).
 - Before the jam build: `"unlock_in_order": true` in `game/data/menu.json` (card И3, D167).

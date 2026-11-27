@@ -97,9 +97,10 @@ func _physics_process(delta: float) -> void:
 	if _intro_pending and _rider == null and ride.mode == CartRide.Mode.PARKED:
 		# The empty cart leaves by itself: the stopper drops, nobody aboard.
 		_intro_pending = false
-		ride.board()
+		_launch()
 	ride.step(delta, _leads_main)
 	_apply()
+	_catch_pigs()
 	_check_boarding()
 	queue_redraw()
 
@@ -190,8 +191,59 @@ func _check_boarding() -> void:
 		if touching and not _was_touching and player.has_method("board"):
 			_rider = player
 			player.call("board", self)
-			ride.board()
+			_launch()
 	_was_touching = touching
+
+
+## The stopper drops; the same pull opens the hopper's gate by its rope
+## (level 04, D216).
+func _launch() -> void:
+	if not ride.board():
+		return
+	var room_time := _room_time()
+	if room_time == null:
+		return
+	for hopper in _hoppers():
+		hopper.call("open", room_time)
+
+
+## Pigs in the air that are inside the body now stay in it: under Shift they
+## fly up out of the pit through it (D216). Only on the rails.
+func _catch_pigs() -> void:
+	if not ride.on_rails():
+		return
+	var tub := body_rect()
+	for hopper in _hoppers():
+		for pig: Dictionary in hopper.call("pigs_in_air"):
+			if tub.has_point(to_local(pig["position"])):
+				hopper.call("take", str(pig["key"]))
+				ride.load += 1
+
+
+## The inside of the body, in the cart's own coordinates.
+func body_rect() -> Rect2:
+	var length := _number("length_px")
+	var split := length / 2.0 - _number("platform_width_px")
+	return Rect2(Vector2(-length / 2.0, -_number("body_px")), Vector2(split + length / 2.0, _number("body_px") - 14.0))
+
+
+func _hoppers() -> Array:
+	var room := get_parent()
+	var result: Array = []
+	for node in get_tree().get_nodes_in_group("hopper"):
+		if room != null and room.is_ancestor_of(node):
+			result.append(node)
+	return result
+
+
+func _room_time() -> Node:
+	var room := get_parent()
+	if room == null:
+		return null
+	for node in room.get_children():
+		if node is RoomTime:
+			return node
+	return null
 
 
 func _find_player() -> Node2D:
@@ -274,6 +326,13 @@ func _draw() -> void:
 		Vector2(split - 8.0, -14.0), Vector2(front + 8.0, -14.0)])
 	draw_colored_polygon(tub, BODY_COLOR)
 	draw_polyline(tub + PackedVector2Array([tub[0]]), BODY_EDGE, 3.0)
+	# The load: pigs of iron heaped in the body.
+	for i in ride.load:
+		var row := i / 5
+		var col := i % 5
+		var at := Vector2(front + 14.0 + col * 20.0 + (row % 2) * 8.0, -body_h + 18.0 - row * 9.0)
+		draw_rect(Rect2(at, Vector2(18.0, 9.0)), Color("#7d6a5a"))
+		draw_rect(Rect2(at, Vector2(18.0, 9.0)), BODY_EDGE, false, 2.0)
 	# The operator's platform with its rail and the time device on a post.
 	draw_rect(Rect2(Vector2(split, -platform_h), Vector2(platform_w, platform_h - 14.0)), PLATFORM_COLOR)
 	draw_line(Vector2(back - 4.0, -platform_h), Vector2(back - 4.0, -platform_h - 56.0), BODY_EDGE, 4.0)

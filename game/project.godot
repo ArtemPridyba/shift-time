@@ -16,6 +16,7 @@ TimeManager="*res://autoload/time_manager.gd"
 LevelLoader="*res://autoload/level_loader.gd"
 Art="*res://autoload/art.gd"
 Sound="*res://autoload/sound.gd"
+SolutionReplay="*res://autoload/solution_replay.gd"
 
 [display]
 
