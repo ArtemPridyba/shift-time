@@ -68,6 +68,7 @@ LAMP = (255, 210, 120)
 #   solid [x, y, w, h]   solid made by a node, not by tiles (drawn grey)
 #   note  [x, y]         only a number on the scheme
 #   rails / pipe         a polyline of the scene's Rails or Pipe node
+#   line  [[x, y], ...]  a polyline in cells (a path the game draws)
 ITEMS = {
     "level_03": [
         ("open", [1, 11, 1, 2]),                 # 1 entrance
@@ -101,30 +102,32 @@ ITEMS = {
         ("leave", [64, 10, 1, 2]),               # 16 the tunnel's exit gate
         ("open", [66.1, 10, 1.8, 2]),            # 17 exit
     ],
+    # Level 04 on one screen (Artem, PR #122, D216-D218; session 2 adds K, Z, the wall).
     "level_04": [
         ("open", [1, 5, 1, 2]),                  # 1 entrance
-        ("leave", [5, 6.8, 3, 0.25]),            # 2 plate A
-        ("leave", [10.7, 5, 1, 2]),              # 3 shutter A
-        ("leave", [13, 6.8, 3, 0.25]),           # 4 plate B
-        ("leave", [17.7, 5, 1, 2]),              # 5 shutter B
-        ("leave", [36, 6.8, 3, 0.25]),           # 6 plate 2 over switch 2
-        ("leave", [46, 6.8, 3, 0.25]),           # 7 plate 1 over switch 1
-        ("rails", None),                         # 8 rails, switches, dead ends
-        ("leave", [7, 7.9, 50, 0.4]),            # 9 the hoist's line under the walkway
-        ("leave", [56, 7.2, 2.5, 1.6]),          # 10 the minecart on its hump
-        ("note", [3.5, 10.5]),                   # 11 the tunnel and the station
-        ("open", [1.1, 11, 1.8, 2]),             # 12 exit
+        ("leave", [16, 6.8, 3, 0.25]),           # 2 plate 2 over switch 2
+        ("leave", [20, 6.8, 3, 0.25]),           # 3 plate 1 over switch 1
+        ("leave", [25.3, 5.2, 0.6, 1.8]),        # 4 barrier at the end of the walkway
+        ("leave", [24.6, 7.7, 2.6, 1.3]),        # 5 the minecart on its hump
+        ("rails", None),                         # 6 rails, switches, dead ends
+        ("leave", [10.2, 7, 2.6, 2.5]),          # 7 the hopper with pig iron
+        ("leave", [7, 7.95, 19, 0.35]),          # 8 the hoist's line under the walkway
+        ("note", [3.5, 10.5]),                   # 9 the tunnel and the station
+        ("open", [1.1, 11, 1.8, 2]),             # 10 exit
+        ("note", [8, 11.0]),                     # 11 place of plate K, gate Z, the wall (session 2)
+        ("note", [12, 15.5]),                    # 12 the pit, open to the bottom
     ],
+    # Level 05 on one screen (Artem, PR #121, D215).
     "level_05": [
-        ("open", [1, 15, 1, 2]),                 # 1 entrance
-        ("leave", [7, 11, 12, 1.2]),             # 2 three slabs on chains
-        ("note", [12, 19.0]),                    # 3 stubs in the pit
-        ("note", [21.5, 12.5]),                  # 4 the crane's ledge on its pillar
-        ("leave", [25, 4.2, 30, 7.8]),           # 5 the crane on its sloping rail
-        ("leave", [42, 4.2, 12, 5.5]),           # 6 the ceiling that falls in act 3
-        ("leave", [43, 13.5, 8, 3.5]),           # 7 falling chunks, the wall on chains
-        ("leave", [55, 4.2, 4, 8]),              # 8 counterweight and lift
-        ("open", [61.1, 7, 1.8, 2]),             # 9 exit
+        ("open", [1, 4, 1, 2]),                  # 1 entrance on the ledge
+        ("leave", [6, 4.6, 3, 1.6]),             # 2 the crane waiting at the ledge
+        ("line", [[6, 4], [28, 10.4]]),          # 3 the crane's sloping rail
+        ("leave", [9.8, 5, 2.8, 2.4]),           # 4 the door and the slab on two chains
+        ("leave", [15, 4.6, 2, 0.8]),            # 5 ceiling chunk 1
+        ("leave", [18.5, 5.7, 2, 0.8]),          # 6 ceiling chunk 2
+        ("leave", [22, 6.7, 2, 0.8]),            # 7 ceiling chunk 3
+        ("leave", [25, 11.4, 3, 1.6]),           # 8 the crane at its end stop
+        ("note", [15, 14.4]),                    # 9 the floor where the chunks lie
     ],
 }
 
@@ -210,6 +213,8 @@ def draw_room(level: str, lv: dict, numbers: bool, base: Image.Image = None) -> 
         if kind in ("rails", "pipe"):
             for line in lv[kind]:
                 d.line(line, fill=ORANGE, width=8)
+        if kind == "line":
+            d.line([(x * CELL, y * CELL) for x, y in geo], fill=ORANGE, width=8)
     for lamp in world.get("lamps", []):
         cx, cy = float(lamp["x"]) * CELL, (ceiling + float(lamp["drop"])) * CELL
         d.line([(cx, ceiling * CELL), (cx, cy)], fill=LAMP, width=2)
@@ -221,6 +226,9 @@ def draw_room(level: str, lv: dict, numbers: bool, base: Image.Image = None) -> 
                 line = lv[kind][0] if lv[kind] else [(0, 0)]
                 px, py = line[len(line) // 2]
                 px, py = px, py - 40
+            elif kind == "line":
+                (ax, ay), (bx, by) = geo[0], geo[-1]
+                px, py = (ax + bx) / 2 * CELL, (ay + by) / 2 * CELL - 40
             elif kind == "note":
                 px, py = geo[0] * CELL, geo[1] * CELL
             else:
