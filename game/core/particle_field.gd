@@ -56,6 +56,10 @@ var noise_seed := 1
 ## a breakdown); false: the stream has always run (dust in a lamp's light).
 var starts_empty := false
 
+## Channels of `rand01` a particle uses (see `_add`).
+const RANDOM_CHANNELS := 11
+var _random_cache := {}
+
 
 static func from_preset(preset: Dictionary, field_seed: int) -> ParticleField:
 	var f := ParticleField.new()
@@ -109,22 +113,25 @@ func set_floor(y: float) -> void:
 ## Every particle alive at world time `t` (seconds), STRIDE floats each.
 func sample(t: float) -> PackedFloat32Array:
 	var out := PackedFloat32Array()
+	out.resize(capacity() * STRIDE)
+	var n := 0
 	if rate > 0.0:
 		var first := int(floor((t - lifetime) * rate)) + 1
 		if starts_empty:
 			first = maxi(first, 0)
 		var last := int(floor(t * rate))
 		for i in range(first, last + 1):
-			_add(out, t, float(i) / rate, noise_seed, i, _stream_origin(noise_seed, i))
+			n = _add(out, n, t, float(i) / rate, noise_seed, i, Vector2.INF)
 	if burst_count > 0 and burst_every > 0.0:
 		# The first periodic burst is at `burst_every`, not at 0: the world
 		# pinned at frame 0 shows no frozen burst.
 		var k_first := maxi(int(floor((t - lifetime) / burst_every)) + 1, 1)
 		var k_last := int(floor(t / burst_every))
 		for k in range(k_first, k_last + 1):
-			_add_burst(out, t, float(k) * burst_every, noise_seed + 7919 * (k + 1))
-	for n in extra_bursts.size():
-		_add_burst(out, t, extra_bursts[n], noise_seed + 104729 * (n + 1))
+			n = _add_burst(out, n, t, float(k) * burst_every, noise_seed + 7919 * (k + 1))
+	for m in extra_bursts.size():
+		n = _add_burst(out, n, t, extra_bursts[m], noise_seed + 104729 * (m + 1))
+	out.resize(n * STRIDE)
 	return out
 
 
@@ -133,23 +140,24 @@ func sample(t: float) -> PackedFloat32Array:
 func stream_particle(t: float, index: int) -> PackedFloat32Array:
 	var out := PackedFloat32Array()
 	if rate > 0.0:
-		_add(out, t, float(index) / rate, noise_seed, index, _stream_origin(noise_seed, index))
+		out.resize(STRIDE)
+		out.resize(_add(out, 0, t, float(index) / rate, noise_seed, index, Vector2.INF) * STRIDE)
 	return out
 
 
-func _add_burst(out: PackedFloat32Array, t: float, at: float, burst_seed: int) -> void:
+func _add_burst(out: PackedFloat32Array, n: int, t: float, at: float, burst_seed: int) -> int:
 	if t < at or t >= at + lifetime:
-		return
+		return n
 	for j in burst_count:
-		var origin := Vector2(
-			(rand01(burst_seed, j, 1) - 0.5) * burst_area.x,
-			(rand01(burst_seed, j, 2) - 0.5) * burst_area.y)
-		_add(out, t, at, burst_seed, j, origin)
+		var r := _randoms(burst_seed, j)
+		var origin := Vector2((r[1] - 0.5) * burst_area.x, (r[2] - 0.5) * burst_area.y)
+		n = _add(out, n, t, at, burst_seed, j, origin)
+	return n
 
 
-func _stream_origin(s: int, i: int) -> Vector2:
-	var u := rand01(s, i, 1)
-	var w := rand01(s, i, 2)
+func _stream_origin(r: PackedFloat64Array) -> Vector2:
+	var u := r[1]
+	var w := r[2]
 	if cone_length > 0.0:
 		# Uniform over the cone's area: depth by the square root.
 		var depth := sqrt(w) * cone_length
@@ -157,28 +165,52 @@ func _stream_origin(s: int, i: int) -> Vector2:
 	return area.position + Vector2(u * area.size.x, w * area.size.y)
 
 
-func _add(out: PackedFloat32Array, t: float, birth: float, s: int, i: int, p0: Vector2) -> void:
-	var life := lifetime * (1.0 - lifetime_jitter * rand01(s, i, 0))
+## The random numbers of one particle, channels 0 to RANDOM_CHANNELS - 1:
+## `rand01(s, i, channel)`, kept while the particle can live, because they
+## never change and hashing them every frame was most of the time of a tick
+## (D208). Only the numbers are kept; everything else is computed each frame.
+func _randoms(s: int, i: int) -> PackedFloat64Array:
+	var key := (s << 32) | (i & 0xFFFFFFFF)
+	var r: Variant = _random_cache.get(key)
+	if r != null:
+		return r
+	if _random_cache.size() > 4 * capacity() + 64:
+		_random_cache.clear()
+	var fresh := PackedFloat64Array()
+	fresh.resize(RANDOM_CHANNELS)
+	for channel in RANDOM_CHANNELS:
+		fresh[channel] = rand01(s, i, channel)
+	_random_cache[key] = fresh
+	return fresh
+
+
+## Writes one particle at slot `n` of `out` if it is alive at `t` and returns
+## the next free slot. `p0` is its start, or INF for a stream particle.
+func _add(out: PackedFloat32Array, n: int, t: float, birth: float, s: int, i: int, p0: Vector2) -> int:
+	var r := _randoms(s, i)
+	var life := lifetime * (1.0 - lifetime_jitter * r[0])
 	var age := t - birth
 	if age < 0.0 or age >= life:
-		return
+		return n
+	if p0 == Vector2.INF:
+		p0 = _stream_origin(r)
 	var v := velocity + Vector2(
-		(rand01(s, i, 3) * 2.0 - 1.0) * velocity_jitter.x,
-		(rand01(s, i, 4) * 2.0 - 1.0) * velocity_jitter.y)
+		(r[3] * 2.0 - 1.0) * velocity_jitter.x,
+		(r[4] * 2.0 - 1.0) * velocity_jitter.y)
 	var a := age
 	if has_floor and on_floor != "none":
 		var land := _landing_age(p0.y, v.y, gravity.y)
 		if age >= land:
 			if on_floor == "die":
-				return
+				return n
 			a = land
 	var pos := p0 + v * a + gravity * (0.5 * a * a)
-	var amp := lerpf(wobble_px.x, wobble_px.y, rand01(s, i, 8))
+	var amp := lerpf(wobble_px.x, wobble_px.y, r[8])
 	if amp > 0.0:
-		var hz := lerpf(wobble_hz.x, wobble_hz.y, rand01(s, i, 9))
-		pos.x += sin(TAU * (hz * a + rand01(s, i, 5))) * amp
-	var d := lerpf(size.x, size.y, rand01(s, i, 6))
-	var angle := rand01(s, i, 7) * TAU + spin * (rand01(s, i, 10) * 2.0 - 1.0) * a
+		var hz := lerpf(wobble_hz.x, wobble_hz.y, r[9])
+		pos.x += sin(TAU * (hz * a + r[5])) * amp
+	var d := lerpf(size.x, size.y, r[6])
+	var angle := r[7] * TAU + spin * (r[10] * 2.0 - 1.0) * a
 	var length := d
 	var width := d
 	if shape == "streak":
@@ -195,8 +227,18 @@ func _add(out: PackedFloat32Array, t: float, birth: float, s: int, i: int, p0: V
 	if cone_length > 0.0:
 		fade *= _cone_light(pos)
 	if fade <= 0.001:
-		return
-	out.append_array(PackedFloat32Array([pos.x, pos.y, angle, length, width, alpha * fade, k]))
+		return n
+	var o := n * STRIDE
+	if o + STRIDE > out.size():
+		out.resize(maxi(out.size() * 2, o + STRIDE))
+	out[o] = pos.x
+	out[o + 1] = pos.y
+	out[o + 2] = angle
+	out[o + 3] = length
+	out[o + 4] = width
+	out[o + 5] = alpha * fade
+	out[o + 6] = k
+	return n + 1
 
 
 ## The light of the lamp's cone at `p` (0…1), as in the mock-up: full inside
