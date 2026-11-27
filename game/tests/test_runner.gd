@@ -32,6 +32,7 @@ const SUITES: Array[String] = [
 	"res://tests/test_prelude.gd",
 	"res://tests/test_fire.gd",
 	"res://tests/test_time_hud.gd",
+	"res://tests/test_sound.gd",
 	"res://tests/test_heroine.gd",
 	"res://tests/test_level_01.gd",
 	"res://tests/test_world.gd",
@@ -134,4 +135,14 @@ func _run() -> void:
 		print("  %.1f s  %s" % [_times[i][0], _times[i][1]])
 	print("Total %.1f s" % [(Time.get_ticks_msec() - start_all) / 1000.0])
 	print("%d tests, %d failed" % [_tests, _failed])
+	_silence()
 	quit(1 if _failed > 0 else 0)
+
+
+## Stops every sound and lets the audio thread drop them before quitting, so no
+## playback is left in use at exit (the sound, D183).
+func _silence() -> void:
+	for kind in ["AudioStreamPlayer", "AudioStreamPlayer2D"]:
+		for node in root.find_children("*", kind, true, false):
+			node.call("stop")
+	OS.delay_msec(150)

@@ -292,6 +292,8 @@ func test_dropped_flamethrower_falls_rewinds_and_never_jumps() -> void:
 	var keys := (thrower.capture_state() as Dictionary).keys()
 	keys.sort()
 	check(keys == ["facing", "fall", "held", "position"], "the item's frames hold its body only, never its fire: %s" % [keys])
+	var hints := room.get_node("RoomTime/KeyHints") as KeyHints
+	check(hints.shown_action == "use_item" and hints.alpha > 0.9, "with the jet in the hands the hint must show F, got '%s'" % hints.shown_action)
 	room_time.player_interact(player.global_position)
 	check(not thrower.held, "E with nothing else near must drop the item")
 	var drop := thrower.position
