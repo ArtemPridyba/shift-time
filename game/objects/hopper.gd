@@ -133,7 +133,9 @@ func _draw() -> void:
 	for i in stream.count:
 		if stream.waiting(i, pour):
 			waiting += 1
-	for i in waiting:
+	# The heap shows how full it is: at most four rows fit in the box.
+	var shown := ceili(float(waiting) * 16.0 / float(stream.count))
+	for i in shown:
 		var row := i / 4
 		var col := i % 4
 		var at := Vector2(-w / 2.0 + 18.0 + col * 26.0, -h * 0.5 - row * 12.0)
