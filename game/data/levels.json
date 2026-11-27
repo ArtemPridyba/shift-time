@@ -179,10 +179,9 @@
 		"id": "level_04",
 		"scene": "res://levels/level_04.tscn",
 		"prelude_seconds": 0.5,
+		"rewind_speed_max": 1,
 		"intro_seconds": 0.6,
 		"objects": {
-			"shutter_a": { "start": "open" },
-			"shutter_b": { "start": "closed" },
 			"switch_1": { "start": "up" },
 			"switch_2": { "start": "down" }
 		},
