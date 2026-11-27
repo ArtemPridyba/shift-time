@@ -1,5 +1,5 @@
 extends RefCounted
-## Tests of the sound (task Д8, D179): the data check, which edge of a recorded
+## Tests of the sound (task Д8, D183): the data check, which edge of a recorded
 ## field makes which sound, the choice of the reversed twin by the direction of
 ## time, the arithmetic that lands a reversed hit on its frame, and a real room
 ## where a door sounds forward and then reversed under Shift.

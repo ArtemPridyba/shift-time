@@ -149,7 +149,7 @@ func current() -> Dictionary:
 
 
 ## One field of one object in kept frame `number`, read without copying the
-## frame (the sound reads many frames a tick, D179); null where the frame, the
+## frame (the sound reads many frames a tick, D183); null where the frame, the
 ## object or the field is missing. Do not change what it returns.
 func peek(number: int, object_id: String, field: String) -> Variant:
 	if number < _first or number > _head:

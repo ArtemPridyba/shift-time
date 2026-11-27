@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sound effects of Shift Time, made by code (task Д8, D179).
+"""Sound effects of Shift Time, made by code (task Д8, D183).
 
 Every sound of the game is synthesised here from noise, sines and filters:
 no samples from outside, so the files are ours and may be sold with the game.

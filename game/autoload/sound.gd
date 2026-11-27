@@ -1,5 +1,5 @@
 extends Node
-## The sound of the game (task Д8, D179), an autoload. It loads
+## The sound of the game (task Д8, D183), an autoload. It loads
 ## `data/audio.json` and keeps the streams; plays what outlives a room (menu
 ## clicks, the exit, a failure), the rewind loop while Shift is held and the hum
 ## of the hall; and puts a `RoomSound` next to every `RoomTime` that enters the

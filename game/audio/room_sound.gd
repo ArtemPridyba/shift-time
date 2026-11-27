@@ -1,6 +1,6 @@
 class_name RoomSound
 extends Node
-## The sound of one room (task Д8, D179). The `Sound` autoload puts one next to
+## The sound of one room (task Д8, D183). The `Sound` autoload puts one next to
 ## every `RoomTime`, so rooms need no edits. It records nothing and changes
 ## nothing: it listens. Every physics tick, after the world moved, it reads the
 ## fields named in `data/audio.json` from the frame at the cursor

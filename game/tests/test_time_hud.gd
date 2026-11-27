@@ -173,7 +173,7 @@ func test_grey_block_set_loads_with_collisions() -> void:
 func test_time_sounds_play_by_direction_and_missing_files_break_nothing() -> void:
 	var sound := TimeSound.new(Content.time_hud())
 	_tree.root.add_child(sound)
-	check(sound.has_sound(1) and sound.has_sound(-1), "both directions of time have a sound (D179)")
+	check(sound.has_sound(1) and sound.has_sound(-1), "both directions of time have a sound (D183)")
 	check(sound.play_for(-1), "pressing Shift must play the rewind sound")
 	check(sound.play_for(1), "releasing Shift must play the forward sound")
 	var empty := TimeSound.new({})

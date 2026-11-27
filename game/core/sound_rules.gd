@@ -1,6 +1,6 @@
 class_name SoundRules
 extends RefCounted
-## What the recorded states of objects sound like (task Д8, D179): the rules of
+## What the recorded states of objects sound like (task Д8, D183): the rules of
 ## `data/audio.json`, the arithmetic of reversed sounds and the data check.
 ## Pure logic, no nodes and no playback: `RoomSound` asks which sound an edge of
 ## a recorded field makes and when a reversed one must start.

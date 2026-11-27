@@ -140,7 +140,7 @@ func _run() -> void:
 
 
 ## Stops every sound and lets the audio thread drop them before quitting, so no
-## playback is left in use at exit (the sound, D179).
+## playback is left in use at exit (the sound, D183).
 func _silence() -> void:
 	for kind in ["AudioStreamPlayer", "AudioStreamPlayer2D"]:
 		for node in root.find_children("*", kind, true, false):
