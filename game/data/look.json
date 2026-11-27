@@ -316,7 +316,9 @@
       "stop_px": 18
     },
     "collapse": {
-      "_about": "The collapse of level 05 (D144): the platforms of act 1 hang on chains (chain colour) from the roof; torn stubs stub_px long stay once they fall; an I-beam has flanges flange_px thick and a rust stain (also the rebar of the chunks). The chunks of the ceiling in act 3 are concrete of colour chunk. Each of the three quakes shakes the camera shake_px for shake_seconds.",
+      "_about": "The collapse of level 05 (D144): the platforms of act 1 hang on chains (chain colour) from the roof; torn stubs stub_px long stay once they fall; an I-beam has flanges flange_px thick and a rust stain (also the rebar of the chunks). The chunks of the ceiling in act 3 are concrete of colour chunk. Each of the three quakes shakes the camera shake_px for shake_seconds. The exit door of level 05 (D215) glows door_light from beyond; the slab over it swings gate_degrees aside on its right chain once the left one tears.",
+      "door_light": "#9fd0ff",
+      "gate_degrees": 80,
       "stub_px": 18,
       "flange_px": 6,
       "chain": "#3a4048",

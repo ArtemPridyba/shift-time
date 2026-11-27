@@ -39,10 +39,18 @@ extends Node2D
 ## rest of the world, and the tick she lets go of Shift it goes onto its brake
 ## and stays there while the world runs on (an action of hers, so it branches
 ## the room). A step from the crane's own floor or from a ledge does not count.
+## The gate (D215): a heavy slab hangs on two chains over the exit door in the
+## back wall (`door_rect`). The explosion tears its left chain (`gate` in the
+## data) and it swings aside on the right one: from then the exit is open.
+## It is drawn behind the crane and has no body. This node locks the level's
+## exit zone (`exit_path`) like a door: `is_open`, `opened`.
 ## Numbers: `collapse` of the level's entry in data/levels.json; the look:
 ## `kit_objects.collapse` and `kit_objects.crane` of data/look.json.
 ##
 ## Temporal object contract: docs/architecture.md, section 4.1.
+
+## Emitted when the slab over the exit door has swung aside (D215).
+signal opened
 
 @export var object_id := "collapse"
 ## Where each piece hangs, in the room's coordinates, in the order of
@@ -61,6 +69,11 @@ extends Node2D
 @export var calm_rect := Rect2()
 ## From the load's top up to the trolley on the rail.
 @export var sling_px := 200.0
+## The exit door in the back wall and the slab hung over it (D215); empty: none.
+@export var door_rect := Rect2()
+@export var gate_rect := Rect2()
+## The exit zone the gate locks.
+@export var exit_path := NodePath()
 
 var clock := 0
 var ride := -1
@@ -93,6 +106,7 @@ var _contact_px := 6.0
 ## hers until she stands on a piece again).
 var _from_piece := false
 var _armed := false
+var _was_open := false
 
 
 func _ready() -> void:
@@ -127,6 +141,10 @@ func _ready() -> void:
 	_blast_glow.material = glow
 	_blast_glow.draw.connect(_draw_blast)
 	add_child(_blast_glow)
+	var zone := get_node_or_null(exit_path) as ExitZone if not exit_path.is_empty() else null
+	if zone != null and gate_rect.has_area():
+		zone.lock_until(self)
+	_was_open = is_open()
 	_show()
 
 
@@ -246,16 +264,15 @@ func pedal_armed() -> bool:
 
 
 ## True when the player's feet stand on a piece that holds her (not a tumbling
-## chunk): her middle over it.
+## chunk): any part of her feet over it, so the very edge counts too.
 func stands_on_piece(player_rect: Rect2) -> bool:
 	if not player_rect.has_area():
 		return false
-	var middle := player_rect.get_center().x
 	for k in pieces.size():
 		if k < _tumbling.size() and _tumbling[k] or not piece_holds(k):
 			continue
 		var r := piece_rect(k)
-		if absf(player_rect.end.y - r.position.y) <= _contact_px and middle > r.position.x and middle < r.end.x:
+		if absf(player_rect.end.y - r.position.y) <= _contact_px and player_rect.end.x > r.position.x and player_rect.position.x < r.end.x:
 			return true
 	return false
 
@@ -279,6 +296,11 @@ func stands_on_ledge(player_rect: Rect2) -> bool:
 	var middle := player_rect.get_center().x
 	return absf(player_rect.end.y - calm_rect.position.y) <= _contact_px \
 		and middle > calm_rect.position.x and middle < calm_rect.end.x
+
+
+## True once the slab over the exit door has swung aside (or there is none).
+func is_open() -> bool:
+	return not gate_rect.has_area() or _plan().gate_open(ride) >= 1.0
 
 
 ## True while the slow part of act 3 runs.
@@ -411,6 +433,10 @@ func _show() -> void:
 	if _blast_light != null:
 		_blast_light.energy = plan.blast_energy * plan.blast_light(ride)
 		_blast_glow.queue_redraw()
+	var open := is_open()
+	if open and not _was_open:
+		opened.emit()
+	_was_open = open
 	if _crane_body != null:
 		_crane_body.position = crane_load_rect().get_center()
 		(_crane_body.get_child(0) as CollisionShape2D).set_deferred("disabled", plan.crane_down(ride))
@@ -429,6 +455,7 @@ func _show_bodies() -> void:
 
 
 func _draw() -> void:
+	_draw_gate()
 	_draw_rail()
 	for k in pieces.size():
 		if k >= plan.pieces.size() or int(plan.pieces[k]["act"]) != 3:
@@ -500,6 +527,46 @@ func _draw_counterweight(k: int, heavy: int) -> void:
 		var x := lift.position.x + 6.0 + 24.0 * float(i)
 		draw_line(Vector2(x, lift.position.y + 8.0), Vector2(x + 10.0, lift.end.y - 2.0), yellow.darkened(0.3), 4.0)
 	_draw_chunk(heavy)
+
+
+## The exit door in the back wall and the slab over it (D215): a dark opening
+## with cold light from beyond, and the slab on two chains from the roof. Once
+## the left chain tears the slab swings aside on the right one, its torn end
+## dangling, and the light comes through.
+func _draw_gate() -> void:
+	if not door_rect.has_area():
+		return
+	var open := _plan().gate_open(ride)
+	var frame := ObjectLook.color(ObjectLook.mech(), "iron_dark", Color("#2a2622"))
+	var cold := ObjectLook.color(_look, "door_light", Color("#9fd0ff"))
+	draw_rect(door_rect.grow(10.0), frame)
+	draw_rect(door_rect, Color("#0b0d12"))
+	var glow := door_rect
+	glow.position.y += door_rect.size.y * 0.3
+	glow.size.y *= 0.7
+	draw_rect(glow, Color(cold, 0.12 + 0.35 * open))
+	if not gate_rect.has_area():
+		return
+	var chain := ObjectLook.color(_look, "chain", Color("#3a4048"))
+	var stone := ObjectLook.color(_look, "chunk", Color("#5a554f"))
+	var right := Vector2(gate_rect.end.x - 8.0, gate_rect.position.y)
+	# The slab turns about its right chain's hook as it swings aside.
+	var angle := -deg_to_rad(ObjectLook.number(_look, "gate_degrees", 80.0)) * open * (2.0 - open)
+	draw_line(Vector2(right.x, _ceiling_y), right, chain, 4.0, true)
+	var left := Vector2(gate_rect.position.x + 8.0, gate_rect.position.y)
+	if open <= 0.0:
+		draw_line(Vector2(left.x, _ceiling_y), left, chain, 4.0, true)
+	else:
+		var torn := _ceiling_y + (left.y - _ceiling_y) * 0.45
+		draw_line(Vector2(left.x, _ceiling_y), Vector2(left.x + 6.0 * sin(float(ride) * 0.2), torn), chain, 4.0, true)
+	draw_set_transform(right, angle)
+	var local := Rect2(gate_rect.position - right, gate_rect.size)
+	draw_rect(local, stone.darkened(0.35))
+	draw_rect(local.grow(-6.0), stone)
+	for i in 3:
+		var y := local.position.y + local.size.y * (0.25 + 0.25 * float(i))
+		draw_line(Vector2(local.position.x + 8.0, y), Vector2(local.end.x - 8.0, y), stone.darkened(0.2), 2.0)
+	draw_set_transform(Vector2.ZERO)
 
 
 ## The sloping rail the crane rides down, under the roof.
