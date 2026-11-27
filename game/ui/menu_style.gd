@@ -39,6 +39,7 @@ static func add_background(parent: Control) -> void:
 		picture.texture = load(path) as Texture2D
 		picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		picture.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		picture.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		parent.add_child(picture)

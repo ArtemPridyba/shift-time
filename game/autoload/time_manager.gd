@@ -56,6 +56,14 @@ func _physics_process(_delta: float) -> void:
 	_rewind_frames = _rewind.frames_for(_direction)
 
 
+## A level may cap how fast a long hold rewinds (`rewind_speed_max` of its
+## entry in data/levels.json, level 04, D217); `value` 0 or less means the
+## value of data/time.json. RoomTime sets it for every room it starts.
+func use_rewind_speed_max(value: float) -> void:
+	var default := float(Content.time().get("rewind_speed_max", 1.0))
+	_rewind.max_speed = maxf(value if value > 0.0 else default, 1.0)
+
+
 func is_rewinding() -> bool:
 	return _direction == BACKWARD
 
