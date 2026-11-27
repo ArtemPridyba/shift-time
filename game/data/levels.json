@@ -372,7 +372,7 @@
 			"lamps": [
 				{ "x": 3.5, "drop": 2.4, "radius_px": 340 },
 				{ "x": 11.0, "drop": 1.0, "radius_px": 320 },
-				{ "x": 15.4, "drop": 5.6, "radius_px": 440 },
+				{ "x": 15.6, "drop": 6.0, "radius_px": 620 },
 				{ "x": 22.4, "drop": 2.0, "radius_px": 420 },
 				{ "x": 27.6, "drop": 0.6, "radius_px": 280 }
 			],
