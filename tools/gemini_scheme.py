@@ -7,6 +7,11 @@ level's own data, so the picture Gemini paints over it lies on the collision.
 
     python3 tools/gemini_scheme.py level_03     # one level
     python3 tools/gemini_scheme.py all          # every level in ITEMS
+    python3 tools/gemini_scheme.py level_03 --check docs/art/gemini/raw/g03_room_v1.jpg
+    python3 tools/gemini_scheme.py level_02 --check raw/g02_room_p2_v1.jpg --part 2
+        -> build/backdrop/level_03_part1_check.jpg: the picture stretched over
+           its rect with the lines and numbers of the scheme on top; a good
+           picture has its floors on the cyan lines within half a cell
 
 Writes into docs/art/gemini/:
     levelNN_scheme.png          the whole room with numbers (for people and the
@@ -159,19 +164,22 @@ def read_level(level: str) -> dict:
             "world": entry.get("world", {}), "cols": cols, "rows": rows}
 
 
-def draw_room(level: str, lv: dict, numbers: bool) -> Image.Image:
+def draw_room(level: str, lv: dict, numbers: bool, base: Image.Image = None) -> Image.Image:
+    """The scheme, or with `base` only its lines over that picture (the check)."""
     cols, rows, world = lv["cols"], lv["rows"], lv["world"]
     ceiling = int(world.get("ceiling", 0))
-    im = Image.new("RGB", (cols * CELL, rows * CELL), HALL)
+    over = base is not None
+    im = base.copy() if over else Image.new("RGB", (cols * CELL, rows * CELL), HALL)
     d = ImageDraw.Draw(im, "RGBA")
-    d.rectangle([0, 0, cols * CELL, ceiling * CELL], fill=ROOF)
+    if not over:
+        d.rectangle([0, 0, cols * CELL, ceiling * CELL], fill=ROOF)
     cells = lv["cells"]
     for (x, y) in cells:
-        if y >= ceiling:
+        if y >= ceiling and not over:
             d.rectangle([x * CELL, y * CELL, x * CELL + CELL - 1, y * CELL + CELL - 1], fill=SOLID)
     items = ITEMS.get(level, [])
     for kind, geo in items:
-        if kind == "solid":
+        if kind == "solid" and not over:
             x, y, w, h = geo
             d.rectangle([x * CELL, y * CELL, (x + w) * CELL, (y + h) * CELL], fill=SOLID)
     for (x, y) in cells:
@@ -186,18 +194,19 @@ def draw_room(level: str, lv: dict, numbers: bool) -> Image.Image:
         top, bottom = sy * CELL, (sy + sh) * CELL
         a, b = ((x0, top), (x1, bottom)) if down_right else ((x0, bottom), (x1, top))
         foot = (x0, bottom) if down_right else (x1, bottom)
-        d.polygon([a, b, foot], fill=SOLID)
+        if not over:
+            d.polygon([a, b, foot], fill=SOLID)
         d.line([a, b], fill=GREEN, width=8)
     for kind, geo in items:
         if kind in ("open", "leave", "water"):
             x, y, w, h = geo
             box = [x * CELL, y * CELL, (x + w) * CELL, (y + h) * CELL]
             if kind == "open":
-                d.rectangle(box, fill=(8, 6, 6), outline=MAGENTA, width=6)
+                d.rectangle(box, fill=None if over else (8, 6, 6), outline=MAGENTA, width=6)
             elif kind == "leave":
                 d.rectangle(box, outline=ORANGE, width=5)
             else:
-                d.rectangle(box, fill=(60, 140, 255, 40), outline=BLUE, width=5)
+                d.rectangle(box, fill=None if over else (60, 140, 255, 40), outline=BLUE, width=5)
         if kind in ("rails", "pipe"):
             for line in lv[kind]:
                 d.line(line, fill=ORANGE, width=8)
@@ -262,9 +271,29 @@ def build(level: str) -> None:
         print(f"  {short}_part{k}_scheme.png / _clean.png  rect {list(rect)}")
 
 
+def check(level: str, picture: str, part: int) -> None:
+    """Stretch a Gemini picture over its rect and draw the geometry on it."""
+    lv = read_level(level)
+    rect = parts_of(lv["cols"], lv["rows"])[part - 1]
+    x, y, w, h = rect
+    room = Image.new("RGB", (lv["cols"] * CELL, lv["rows"] * CELL), SOLID)
+    pic = Image.open(picture).convert("RGB").resize((round(w * CELL), round(h * CELL)), Image.LANCZOS)
+    room.paste(pic, (round(x * CELL), round(y * CELL)))
+    lined = draw_room(level, lv, True, base=room)
+    lined = lined.crop((round(x * CELL), round(y * CELL), round((x + w) * CELL), round((y + h) * CELL)))
+    out = ROOT / "build" / "backdrop" / f"{level}_part{part}_check.jpg"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    lined.resize((1920, round(1920 * lined.height / lined.width)), Image.LANCZOS).save(out, quality=85)
+    print(out)
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         sys.exit(__doc__)
+    if len(sys.argv) >= 4 and sys.argv[2] == "--check":
+        part = int(sys.argv[5]) if len(sys.argv) >= 6 and sys.argv[4] == "--part" else 1
+        check(sys.argv[1], sys.argv[3], part)
+        return
     for level in (ITEMS if sys.argv[1] == "all" else [sys.argv[1]]):
         build(level)
 
