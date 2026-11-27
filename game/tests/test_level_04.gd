@@ -5,7 +5,9 @@ extends RefCounted
 ## open once time runs forward. Only the step counts, never standing on it.
 ## Then the minecart that is out of time: it rolls on under Shift while the
 ## world rewinds, takes the way its switches show at that moment, bumps at a
-## dead end and the hoist brings it back. The solutions in
+## dead end and the hoist brings it back. Its catch: pigs of iron that fly up
+## out of the pit under Shift through its body stay in it (D216). The
+## solutions in
 ## tests/solutions/level_04*.json play the level.
 
 const LEVEL_PATH := "res://levels/level_04.tscn"
@@ -264,7 +266,7 @@ func test_data_check_knows_the_minecart() -> void:
 	check(Content._object_settings_problems({"switch_1": {"start": "up"}}, "x").is_empty(), "'start': 'up' is valid level data")
 
 
-func test_level_has_the_lesson_the_switches_and_the_cart() -> void:
+func test_level_has_the_switches_the_hopper_and_the_cart() -> void:
 	var room: Node = (load(LEVEL_PATH) as PackedScene).instantiate()
 	_tree.root.add_child(room)
 	await _tree.physics_frame
@@ -272,19 +274,20 @@ func test_level_has_the_lesson_the_switches_and_the_cart() -> void:
 	for node in room.find_children("*", "", true, false):
 		if node.get("object_id") != null:
 			objects[str(node.get("object_id"))] = node
-	check(objects.has("shutter_a") and (objects["shutter_a"] as Shutter).is_open(), "shutter A starts open")
-	check(objects.has("shutter_b") and (objects["shutter_b"] as Shutter).closed == Shutter.CLOSED_MAX, "shutter B starts closed")
 	check(objects.has("switch_1") and not (objects["switch_1"] as RailSwitch).leads_main(), "switch 1 starts towards dead end 1")
 	check(objects.has("switch_2") and not (objects["switch_2"] as RailSwitch).leads_main(), "switch 2 starts towards dead end 2")
 	var plates := room.find_children("*", "TimePlate", true, false)
-	check(plates.size() == 4, "level 04 has plates A, B, 1 and 2, has %d" % plates.size())
+	check(plates.size() == 2, "level 04 has plates 1 and 2, has %d" % plates.size())
 	for plate: Node in plates:
 		for id in (plate as TimePlate).target_ids:
 			check(objects.has(id), "%s drives %s, which is in the level" % [(plate as TimePlate).object_id, id])
+	check(objects.has("hopper") and (objects["hopper"] as Hopper).pour == -1, "the hopper waits closed")
 	var rails := room.get_node_or_null("Rails") as Rails
 	check(rails != null and rails.track().problems().is_empty(), "the rails of level 04 are whole: %s" % ("" if rails == null else ", ".join(rails.track().problems())))
 	var cart := room.get_node_or_null("Minecart") as Minecart
 	check(cart != null and cart.ride.mode == CartRide.Mode.PARKED, "the cart waits parked at the top of the ramp")
+	var blocks := room.get_node("Blocks") as TileMapLayer
+	check(blocks.get_used_rect().size == Vector2i(30, 17), "level 04 is one screen, 30x17 cells, is %s" % blocks.get_used_rect().size)
 	room.queue_free()
 	await _tree.process_frame
 
@@ -319,10 +322,129 @@ func test_cart_rolls_on_under_shift_while_the_world_rewinds() -> void:
 	Input.action_release("rewind")
 	await _tree.physics_frame
 	check(blade_after < RailSwitch.DOWN, "Shift turns the switch back (blade %d)" % blade_after)
-	check(x_after < x_before - 100.0, "the cart rolls on forward under Shift (x %.0f -> %.0f)" % [x_before, x_after])
+	check(x_after < x_before - 50.0, "the cart rolls on forward under Shift (x %.0f -> %.0f)" % [x_before, x_after])
 	check(player.body_rect().end.y <= cart.position.y and absf(player.position.x - cart.seat_position().x) < 1.0, "she rides on its platform")
 	var manager := _tree.root.get_node_or_null("TimeManager")
 	if manager != null:
 		manager.call("reset")
 	room.queue_free()
 	await _tree.process_frame
+
+
+func test_stream_pours_pigs_one_by_one_into_the_pit() -> void:
+	var hopper := {"count": 5, "delay_seconds": 0.5, "pour_seconds": 2.0, "gravity_px": 1800, "spread_px": 40}
+	var stream := StoneStream.from_data(hopper, Content.time(), 400.0)
+	check(not stream.in_air(0, -1) and stream.waiting(4, -1), "a closed hopper keeps every pig")
+	check(stream.waiting(0, stream.delay_ticks - 1) and stream.in_air(0, stream.delay_ticks), "the first pig leaves after the delay")
+	check(stream.release_tick(1) > stream.release_tick(0), "the pigs leave one by one")
+	var first := stream.offset(0, stream.delay_ticks + 5).y
+	var second := stream.offset(0, stream.delay_ticks + 10).y - first
+	check(second > first, "a pig falls faster and faster (%.1f, then %.1f px)" % [first, second])
+	check(not stream.in_air(4, stream.end_tick()), "after end_tick every pig is in the pit")
+	for i in stream.count:
+		check(absf(stream.offset(i, 0).x) <= 20.0, "pig %d falls under the gate" % i)
+
+
+func test_hopper_records_its_pour_and_rewinds_it() -> void:
+	var hopper := Hopper.new()
+	_tree.root.add_child(hopper)
+	var room := FakeRoom.new()
+	hopper.open(room)
+	check(room.calls.size() == 1 and room.calls[0]["state"] == {"pour": 0, "batch": 1}, "the launch opens a new pour through apply_change")
+	hopper.restore_state({"pour": 0, "batch": 1})
+	var saved := hopper.capture_state()
+	var max_step := int(Content.time()["max_state_step"])
+	var last := hopper.pour
+	for i in hopper.stream.end_tick() + 30:
+		hopper.simulate_tick(i)
+		check(absi(hopper.pour - last) <= max_step, "the pour counts without jumps")
+		last = hopper.pour
+	check(hopper.pour == hopper.stream.end_tick() and hopper.pigs_in_air().is_empty(), "the pour stops counting once every pig is gone")
+	hopper.restore_state(saved)
+	for i in hopper.stream.delay_ticks + 2:
+		hopper.simulate_tick(i)
+	var pigs := hopper.pigs_in_air()
+	check(pigs.size() == 1, "a rewound and replayed pour shows the same pigs")
+	hopper.take(str(pigs[0]["key"]))
+	check(hopper.pigs_in_air().is_empty(), "a pig the cart took is gone from the stream")
+	hopper.restore_state(saved)
+	for i in hopper.stream.delay_ticks + 2:
+		hopper.simulate_tick(i)
+	check(hopper.pigs_in_air().is_empty(), "it stays gone at every world time: a rewind never shows it twice")
+	hopper.forget_taken()
+	check(hopper.pigs_in_air().size() == 1, "a room reset gives it back")
+	hopper.free()
+
+
+func test_hoist_tips_the_load_and_loaded_it_rolls_slower() -> void:
+	var ride := CartRide.new(_track(), Content.objects()["minecart"], "ramp", 100.0)
+	ride.board()
+	ride.load = 3
+	for i in 240:
+		ride.step(1.0 / 60.0, func(_id: String) -> bool: return true)
+	var params: Dictionary = Content.objects()["minecart"]
+	check(ride.speed <= float(params["loaded_speed_px"]) + 0.01, "loaded it rolls at loaded_speed_px (%.0f)" % ride.speed)
+	ride._start_hoist()
+	check(ride.load == 0, "the hoist tips the load into the pit")
+
+
+func test_data_check_knows_the_hopper_and_the_rewind_cap() -> void:
+	var data: Dictionary = Content.load_json(Content.OBJECTS_PATH).duplicate(true)
+	(data["hopper"] as Dictionary).erase("pour_seconds")
+	check(not Content.validate_objects(data, Content.time()).is_empty(), "a hopper without pour_seconds is broken data")
+	data = Content.load_json(Content.OBJECTS_PATH).duplicate(true)
+	data["minecart"]["loaded_speed_px"] = data["minecart"]["speed_px"]
+	check(not Content.validate_objects(data, Content.time()).is_empty(), "a loaded cart as fast as an empty one is broken data")
+	data = Content.load_json(Content.OBJECTS_PATH).duplicate(true)
+	data["minecart"]["break_load"] = int(data["hopper"]["count"]) + 1
+	check(not Content.validate_objects(data, Content.time()).is_empty(), "a break load above one pour is broken data")
+	var entry := {"id": "level_x", "scene": "res://levels/level_04.tscn", "rewind_speed_max": 0.5}
+	var problems := Content.validate_levels([entry], 20.0)
+	check(not problems.is_empty(), "a rewind cap below 1 is broken data")
+
+
+## Rides level 04 with both switches set and holds Shift from `press` ticks
+## after boarding for `hold` ticks (-1: never); the load at the station.
+func _ride_and_catch(press: int, hold: int) -> int:
+	var room: Node = (load(LEVEL_PATH) as PackedScene).instantiate()
+	_tree.root.add_child(room)
+	await _tree.physics_frame
+	var room_time := room.get_node("RoomTime") as RoomTime
+	room_time.apply_change("switch_1", {"target": RailSwitch.DOWN})
+	room_time.apply_change("switch_2", {"target": 0})
+	for i in 60:
+		await _tree.physics_frame
+	var cart := room.get_node("Minecart") as Minecart
+	var player := room.get_node("Player") as Player
+	var deck := cart.platform_rect()
+	player.respawn(Vector2(deck.get_center().x, deck.position.y - 2.0))
+	var t := 0
+	var boarded := -1
+	while t < 1200 and cart.ride.mode != CartRide.Mode.STOPPED and cart.ride.mode != CartRide.Mode.BUMPED:
+		await _tree.physics_frame
+		t += 1
+		if boarded < 0 and cart.has_rider():
+			boarded = t
+		if boarded >= 0 and press >= 0 and t - boarded == press:
+			Input.action_press("rewind")
+		if boarded >= 0 and press >= 0 and t - boarded == press + hold:
+			Input.action_release("rewind")
+	Input.action_release("rewind")
+	var load := cart.ride.load if cart.ride.mode == CartRide.Mode.STOPPED else -1
+	var manager := _tree.root.get_node_or_null("TimeManager")
+	if manager != null:
+		manager.call("reset")
+	room.queue_free()
+	await _tree.process_frame
+	return load
+
+
+func test_cart_catches_the_pigs_only_by_shift_and_the_window_is_3_seconds() -> void:
+	var need := int(Content.objects()["minecart"]["break_load"])
+	var none: int = await _ride_and_catch(-1, 0)
+	check(none == 0, "in normal time the pigs are in the pit before the cart comes (caught %d)" % none)
+	# The window of the press: 3 s apart, both ends catch enough (D216).
+	var early: int = await _ride_and_catch(250, 400)
+	var late: int = await _ride_and_catch(430, 400)
+	check(early >= need, "Shift pressed 3 s before the late end still catches %d pigs (caught %d)" % [need, early])
+	check(late >= need, "Shift pressed at the late end of the window catches %d pigs (caught %d)" % [need, late])

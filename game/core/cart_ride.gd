@@ -16,6 +16,10 @@ extends RefCounted
 ## along under the walkway and up the shaft back to the park, with the heroine.
 ## At the station it brakes to a stop and lets her off.
 ##
+## Its load (level 04, D216): pigs of iron it caught out of the hopper's
+## stream. Loaded it rolls at `loaded_speed_px`, slower; the hoist tips the
+## load into the pit, so every ride starts empty.
+##
 ## Numbers: `minecart` in data/objects.json.
 
 enum Mode { PARKED, LAUNCHING, ROLLING, BUMPED, HOISTED, STOPPED }
@@ -26,6 +30,8 @@ var distance := 0.0
 ## Pixels a second along the rails; 0 while parked or stopped.
 var speed := 0.0
 var mode := Mode.PARKED
+## How many pigs of iron lie in the body.
+var load := 0
 
 var _params := {}
 var _park_segment := ""
@@ -52,6 +58,7 @@ func park() -> void:
 	distance = 0.0
 	speed = 0.0
 	mode = Mode.PARKED
+	load = 0
 	_timer = 0.0
 	_route = PackedVector2Array()
 	_last_move = track.direction_at(segment, 0.0) if track != null else Vector2.LEFT
@@ -157,7 +164,8 @@ func stop_kind() -> String:
 
 
 func _roll(delta: float, leads_main: Callable) -> void:
-	speed = move_toward(speed, _number("speed_px"), _number("accel_px") * delta)
+	var top := _number("loaded_speed_px") if load > 0 else _number("speed_px")
+	speed = move_toward(speed, top, _number("accel_px") * delta)
 	var end := track.end_of(segment)
 	if str(end.get("kind", "")) == RailTrack.END_STOP and str(end.get("stop", "")) == RailTrack.STOP_STATION:
 		# Brakes so that it comes to rest at the buffer of the station.
@@ -197,6 +205,7 @@ func _start_hoist() -> void:
 		_route_marks.append(_route_marks[i - 1] + _route[i - 1].distance_to(_route[i]))
 	_route_d = 0.0
 	speed = 0.0
+	load = 0
 	mode = Mode.HOISTED
 
 
