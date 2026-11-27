@@ -280,3 +280,18 @@ func _reset(loader: Node) -> void:
 	if _scene_path() != LIST_PATH:
 		loader.go_to_list()
 	await _frames(3)
+
+
+## The Master volume is kept between runs (task 4.3): saved, read back,
+## clamped; a missing or broken file gives the default of controls.json.
+func test_volume_setting_round_trip() -> void:
+	var settings := GameSettings.new()
+	settings.set_volume(1.7)
+	check(settings.volume == 1.0, "the volume must stay within 0..1")
+	settings.set_volume(0.35)
+	var back := GameSettings.new()
+	back.from_dict(JSON.parse_string(JSON.stringify(settings.to_dict())), 0.8)
+	check(is_equal_approx(back.volume, 0.35), "the saved volume must come back, got %.2f" % back.volume)
+	back.from_dict(null, 0.8)
+	check(is_equal_approx(back.volume, 0.8), "without a file the default volume holds")
+	check(GameSettings.volume_db(0.0) <= -60.0 and is_equal_approx(GameSettings.volume_db(1.0), 0.0), "0 is silence, 1 is full volume")

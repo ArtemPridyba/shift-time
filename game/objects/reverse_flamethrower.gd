@@ -140,6 +140,11 @@ func interaction_candidate() -> Dictionary:
 	return {"id": object_id, "position": global_position, "radius": _radius}
 
 
+## In the hands the jet has a key of its own: the hint shows it (task 4.3).
+func held_action() -> String:
+	return "use_item"
+
+
 func get_interaction_change(_objects: Array) -> Array:
 	if held:
 		return [{"id": object_id, "rewrite_past": true,

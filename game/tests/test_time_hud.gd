@@ -170,14 +170,18 @@ func test_grey_block_set_loads_with_collisions() -> void:
 
 # --- the sound place ----------------------------------------------------------
 
-func test_empty_sound_paths_play_nothing_and_break_nothing() -> void:
+func test_time_sounds_play_by_direction_and_missing_files_break_nothing() -> void:
 	var sound := TimeSound.new(Content.time_hud())
-	check(not sound.has_sound(1) and not sound.has_sound(-1), "no sound is set yet")
-	check(not sound.play_for(1), "play_for must return false when there is no sound")
-	check(not sound.play_for(-1), "play_for must return false when there is no sound")
+	_tree.root.add_child(sound)
+	check(sound.has_sound(1) and sound.has_sound(-1), "both directions of time have a sound (D183)")
+	check(sound.play_for(-1), "pressing Shift must play the rewind sound")
+	check(sound.play_for(1), "releasing Shift must play the forward sound")
+	var empty := TimeSound.new({})
+	check(not empty.has_sound(1) and not empty.play_for(-1), "empty paths play nothing and break nothing")
 	var odd := TimeSound.new({"audio": {"forward": "res://audio/missing.ogg"}})
 	check(not odd.has_sound(1), "a missing file must be skipped, not crash")
 	sound.free()
+	empty.free()
 	odd.free()
 
 
