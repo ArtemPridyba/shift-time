@@ -83,6 +83,7 @@ func _ready() -> void:
 		add_child(player)
 		_pool.append(player)
 	_collect()
+	room_time.was_reset.connect(_forget)
 	_player = _find_player()
 	if _player != null:
 		for signal_name in ["drowned", "burned"]:
@@ -146,6 +147,26 @@ func _physics_process(delta: float) -> void:
 	_hear_heroine(delta)
 	_hear_sparks(reversed)
 	_hear_carts()
+
+
+## After a reset of the room (R, drowning, burning, a fall): every object
+## jumped back at once, which is no event. Everything heard is forgotten and
+## the room's players fall silent; the next tick listens afresh (D206).
+func _forget() -> void:
+	for player: AudioStreamPlayer2D in _pool + _loops.values():
+		player.stop()
+	for key: String in _loop_level.keys():
+		_loop_level[key] = 0.0
+	_last.clear()
+	_since.clear()
+	_loop_counts.clear()
+	_ahead.clear()
+	_early.clear()
+	_lead_next.clear()
+	_forward_tick.clear()
+	_clock.clear()
+	_last_cursor = -1
+	_walked = 0.0
 
 
 # --- recorded objects -----------------------------------------------------------
@@ -281,6 +302,7 @@ func _loop(entry: Dictionary, active: bool, reversed: bool, speed: float, counts
 		if not active:
 			return
 		player = AudioStreamPlayer2D.new()
+		player.name = "Loop_" + key
 		_positional(player)
 		add_child(player)
 		_loops[key] = player
