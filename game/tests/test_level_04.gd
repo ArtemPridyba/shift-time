@@ -450,30 +450,41 @@ func test_wheels_on_plate_b_under_shift_send_switch_3_to_the_main_line() -> void
 
 
 func test_shift_held_too_long_turns_the_walkway_back() -> void:
-	# Shift from the launch, her steps on the walkway just before: under Shift
-	# switch 1 shows the past, the dead end.
-	var early: Dictionary = await _ride_level(0, 520, 0, 120)
+	# Shift from the launch: under Shift switch 1 shows the past, the dead end.
+	var early: Dictionary = await _ride_level(0, 520, 0, 460)
 	check(str(early["segment"]) == "spur_1", "Shift from the launch: switch 1 shows the past, dead end 1 (%s)" % early)
-	# Her steps a little longer ago: the cart gets past the walkway, but the
-	# wheels on plate B under Shift cut the branch before her steps (rule A).
-	var erased: Dictionary = await _ride_level(0, 520, 240, 460)
+	# A little later, past the walkway: the rewind reaches the still time before
+	# the launch, skips it at once, and the wheels on plate B under Shift cut
+	# the branch before her steps (rule A).
+	var erased: Dictionary = await _ride_level(230, 520, 240)
 	check(str(erased["segment"]) == "spur_3" and bool(erased["switch_3"]), "the cart reaches plate B and throws switch 3 (%s)" % erased)
 	check(not bool(erased["switch_1"]) and not bool(erased["switch_2"]),
 		"but the branch cut her steps: the walkway's switches lead to dead ends again")
 
 
-func test_press_keeps_the_history_moving() -> void:
+func test_press_waits_for_the_launch_then_keeps_the_history_moving() -> void:
 	var room: Node = (load(LEVEL_PATH) as PackedScene).instantiate()
 	_tree.root.add_child(room)
 	await _tree.physics_frame
 	var room_time := room.get_node("RoomTime") as RoomTime
-	for i in 300:
+	var press := room.get_node("Press") as Door
+	var cart := room.get_node("Minecart") as Minecart
+	check(press.locked, "the press stands still until the launch")
+	await _intro_done(cart)
+	var player := room.get_node("Player") as Player
+	var deck := cart.platform_rect()
+	player.respawn(Vector2(deck.get_center().x, deck.position.y - 2.0))
+	for i in 30:
 		await _tree.physics_frame
+	check(cart.has_rider() and not press.locked, "the launch starts the press by the same pull")
 	var before := room_time.world.timeline.size()
 	for i in 120:
 		await _tree.physics_frame
 	var grown := room_time.world.timeline.size() - before
 	check(grown >= 100, "the pounding press writes a frame nearly every tick (%d of 120)" % grown)
+	var manager := _tree.root.get_node_or_null("TimeManager")
+	if manager != null:
+		manager.call("reset")
 	room.queue_free()
 	await _tree.process_frame
 
@@ -482,6 +493,7 @@ func test_data_check_knows_the_intro_from_the_hoist() -> void:
 	var good := {"minecart": {"intro_ride": {"segment": "main_2", "distance_px": 32, "hoist_after_seconds": 0.5}}}
 	check(Content._object_settings_problems(good, "x").is_empty(), "the intro from the hoist is valid level data")
 	check(Content._object_settings_problems({"minecart": {"intro_ride": true}}, "x").is_empty(), "the intro from the park still is")
+	check(not Content._object_settings_problems({"press": {"locked": 1}}, "x").is_empty(), "'locked' must be true or false")
 	for broken: Dictionary in [{"segment": "", "distance_px": 0, "hoist_after_seconds": 1},
 			{"segment": "a", "distance_px": -1, "hoist_after_seconds": 1}, {"segment": "a", "distance_px": 0}]:
 		check(not Content._object_settings_problems({"minecart": {"intro_ride": broken}}, "x").is_empty(),

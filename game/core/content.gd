@@ -476,6 +476,8 @@ static func _object_settings_problems(settings: Variant, where: String) -> Packe
 				errors.append("%s: 'objects.%s.%s' must be a number above 0" % [where, id, key])
 			elif str(key) == "speed" and (not _is_number(value) or float(value) <= 0.0):
 				errors.append("%s: 'objects.%s.speed' must be a number above 0" % [where, id])
+			elif str(key) == "locked" and not value is bool:
+				errors.append("%s: 'objects.%s.locked' must be true or false" % [where, id])
 			elif str(key) == "lifts_player" and not value is bool:
 				errors.append("%s: 'objects.%s.lifts_player' must be true or false" % [where, id])
 			elif str(key) == "intro_ride":

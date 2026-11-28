@@ -99,8 +99,9 @@ const SWITCHES := [
 ]
 ## The walkway's top, where the tie rods meet the plates, in cells.
 const WALKWAY_Y := 7.0
-## The press under the roof of the hall (D219): a door on its own loop that
-## pounds all the time, out of reach. It keeps the room moving, so its history
+## The press under the roof of the hall (D219): a door on its own loop, out of
+## reach, locked until the launch of the cart starts it by the same pull. From
+## then on it pounds all the time and keeps the room moving, so its history
 ## never stands still: a still stretch is one frame, and Shift would skip it at
 ## once, back past her steps on the plates. Under Shift it pounds backwards.
 const PRESS_CELLS := Rect2(13.0, 2.75, 1.0, 1.5)
@@ -214,6 +215,7 @@ func _initialize() -> void:
 	cart.park_segment = "ramp"
 	cart.position = PARK * CELL
 	cart.gate_rect = Rect2(GATE_CELLS.position * CELL, GATE_CELLS.size * CELL)
+	cart.starts_on_launch = PackedStringArray(["press"])
 	_own(root, cart)
 
 	var exit: ExitZone = (load("res://objects/exit_zone.tscn") as PackedScene).instantiate()

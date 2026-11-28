@@ -46,6 +46,9 @@ const STOPPER_COLOR := Color("#b8352a")
 ## The barrier at the end of the walkway, in the parent's coordinates; no area
 ## means no barrier.
 @export var gate_rect := Rect2()
+## Recorded objects of the room the launch unlocks by the same pull (the press
+## of level 04, D219): `{"locked": false}` through the room.
+@export var starts_on_launch := PackedStringArray()
 
 var ride: CartRide
 ## True when the level asks for the intro ride.
@@ -233,9 +236,25 @@ func _check_boarding() -> void:
 	_was_touching = touching
 
 
-## The stopper drops.
+## The stopper drops; the same pull starts what `starts_on_launch` names.
 func _launch() -> void:
-	ride.board()
+	if not ride.board():
+		return
+	var room_time := _room_time()
+	if room_time == null:
+		return
+	for id in starts_on_launch:
+		room_time.call("apply_change", id, {"locked": false})
+
+
+func _room_time() -> Node:
+	var room := get_parent()
+	if room == null:
+		return null
+	for node in room.get_children():
+		if node is RoomTime:
+			return node
+	return null
 
 
 func _find_player() -> Node2D:
