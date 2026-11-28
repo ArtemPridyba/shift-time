@@ -11,16 +11,7 @@ extends AnimatableBody2D
 ##
 ## State recorded: { "closed": int 0…1000, "target": int 0 or 1000 }.
 ## A level picks the start in `objects` of its entry in `data/levels.json`:
-## `"start": "open"` or `"closed"` (the default), and may give it a latch:
-## `"delay_seconds"` (world seconds) before it starts to close once its target
-## turned to closed (shutter Z of level 04). A latched shutter records two
-## more numbers: `aim`, the target it has taken up, and `hold`, world ticks
-## left before it moves.
-##
-## A shutter closing onto a minecart (level 04) waits above the cart and its
-## rider, as it waits for the heroine; it never cuts through them. A shutter
-## in the group `rail_barrier` stops a cart whose front meets its blade
-## (`meet_cart`).
+## `"start": "open"` or `"closed"` (the default).
 ##
 ## Temporal object contract: docs/architecture.md, section 4.1.
 
@@ -37,20 +28,12 @@ const STRIPE_COLOR := Color("#d9b400")
 @export var size := Vector2(32.0, 128.0)
 ## The letter shared with its plate, drawn on both (blockout look).
 @export var label := ""
-## True when it stands over rails and stops a minecart (shutter Z, level 04).
-@export var bars_carts := false
 
 var closed := CLOSED_MAX
 var target := CLOSED_MAX
 
-var aim := CLOSED_MAX
-var hold := 0
-
 var carry_margin := 8.0
 var _step := 40
-## World ticks of the latch before it closes; 0 means no latch.
-var _delay_ticks := 0
-var _ticks_per_second := 48.0
 var _closed_position := Vector2.ZERO
 var _has_base := false
 
@@ -69,7 +52,6 @@ func _init() -> void:
 ## Seconds of a full move into a step per world tick (D96).
 func configure(shutter_data: Dictionary, time_data: Dictionary) -> void:
 	var ticks := Content.world_ticks_per_second(time_data)
-	_ticks_per_second = ticks
 	var seconds := float(shutter_data.get("move_seconds", 0.6))
 	_step = maxi(int(ceil(float(CLOSED_MAX) / maxf(seconds * ticks, 1.0))), 1)
 
@@ -80,18 +62,11 @@ func apply_settings(settings: Dictionary) -> void:
 		start = 0
 	closed = start
 	target = start
-	aim = start
-	hold = 0
-	var delay: Variant = settings.get("delay_seconds", 0.0)
-	if delay is float or delay is int:
-		_delay_ticks = maxi(int(round(float(delay) * _ticks_per_second)), 0)
 	_apply()
 
 
 func _ready() -> void:
 	add_to_group("temporal")
-	if bars_carts:
-		add_to_group("rail_barrier")
 	var shape := CollisionShape2D.new()
 	var rect := RectangleShape2D.new()
 	rect.size = size
@@ -102,53 +77,21 @@ func _ready() -> void:
 
 
 func capture_state() -> Dictionary:
-	if _delay_ticks > 0:
-		return {"closed": closed, "target": target, "aim": aim, "hold": hold}
 	return {"closed": closed, "target": target}
 
 
 func restore_state(state: Dictionary) -> void:
 	closed = int(state["closed"])
 	target = int(state["target"])
-	aim = int(state.get("aim", target))
-	hold = int(state.get("hold", 0))
 	_apply()
 
 
 func simulate_tick(_tick: int) -> void:
-	if aim != target:
-		# A new target: the latch holds a closing for its delay, never an opening.
-		aim = target
-		hold = _delay_ticks if target > closed else 0
-	if hold > 0:
-		hold -= 1
-		_apply()
-		return
-	if closed < aim:
-		var next := mini(closed + _step, aim)
-		if not _onto_cart(rect_at(next)):
-			closed = next
-	elif closed > aim:
-		closed = maxi(closed - _step, aim)
+	if closed < target:
+		closed = mini(closed + _step, target)
+	elif closed > target:
+		closed = maxi(closed - _step, target)
 	_apply()
-
-
-## True when `rect` would come down on a minecart of this room or its rider.
-func _onto_cart(rect: Rect2) -> bool:
-	if not is_inside_tree():
-		return false
-	var room := get_parent()
-	for cart in get_tree().get_nodes_in_group("minecart"):
-		if room != null and cart.get_parent() == room and cart.has_method("outline_rect"):
-			if rect.intersects(cart.call("outline_rect")):
-				return true
-	return false
-
-
-## A minecart's front swept `sweep` this tick (parent's coordinates):
-## "bounce" if it meets the blade, "" if it goes on (group `rail_barrier`).
-func meet_cart(_room: Object, sweep: Rect2, _heavy: bool) -> String:
-	return "bounce" if rect_at(closed).intersects(sweep) else ""
 
 
 func on_time_direction_changed(_direction: int) -> void:

@@ -183,10 +183,12 @@
 		"rewind_speed_max": 1,
 		"intro_seconds": 0.6,
 		"objects": {
+			"shutter_a": { "start": "closed" },
+			"press": { "cycle": "loop", "open_seconds": 1.2, "hold_open_seconds": 0.1, "close_seconds": 0.4, "hold_closed_seconds": 0.1 },
 			"switch_1": { "start": "up" },
 			"switch_2": { "start": "down" },
-			"shutter_z": { "start": "open", "delay_seconds": 0.95 },
-			"minecart": { "intro_ride": { "segment": "main_2", "distance_px": 32, "hoist_after_seconds": 3.5 } }
+			"switch_3": { "start": "down" },
+			"minecart": { "intro_ride": { "segment": "main_2", "distance_px": 32, "hoist_after_seconds": 0.5 } }
 		},
 		"title": "04 Plates"
 	},

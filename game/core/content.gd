@@ -77,13 +77,7 @@ const RAIL_SWITCH_KEYS: Array[String] = ["move_seconds"]
 const MINECART_KEYS: Array[String] = [
 	"speed_px", "accel_px", "brake_px", "creep_px", "launch_seconds", "bump_seconds", "bounce_px",
 	"shake_px", "hoist_speed_px", "length_px", "body_px", "platform_px", "platform_width_px", "seat_px", "board_px",
-	"loaded_speed_px", "break_load", "clear_px", "break_jolt_seconds",
 ]
-## The bricked wall of level 04 (session 2), all above 0: world seconds of the
-## bricks' flight, how far they fly and the size of a brick, px.
-const BRICK_WALL_KEYS: Array[String] = ["burst_seconds", "fly_px", "brick_px"]
-## The hopper of pig iron of level 04 (D216), all above 0: world seconds, px.
-const HOPPER_KEYS: Array[String] = ["count", "delay_seconds", "pour_seconds", "gravity_px", "spread_px", "pig_px"]
 const LEVER_KEYS: Array[String] = ["interact_radius_px"]
 ## The plug of level 02's pipe (D164): an item, like the flamethrower; all above 0.
 const PIPE_PLUG_KEYS: Array[String] = ["interact_radius_px", "insert_radius_px", "gravity", "max_fall_speed", "friction_px", "follow_px"]
@@ -620,7 +614,7 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 	# 10000 is Water.LEVEL_MAX (core/ does not refer to objects/).
 	if 10000.0 / (float(data["water"]["full_seconds"]) * ticks) > max_step:
 		errors.append("objects.json: 'water.full_seconds' is too short: the level would jump more than max_state_step per tick")
-	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["pipe_plug", PIPE_PLUG_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["rope", ROPE_KEYS], ["winch_ramp", WINCH_RAMP_KEYS], ["cage", CAGE_KEYS], ["ramp", RAMP_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS], ["rail_switch", RAIL_SWITCH_KEYS], ["minecart", MINECART_KEYS], ["hopper", HOPPER_KEYS], ["brick_wall", BRICK_WALL_KEYS]]:
+	for interact_section: Variant in [["button", BUTTON_KEYS], ["lever", LEVER_KEYS], ["pipe_plug", PIPE_PLUG_KEYS], ["lamp", LAMP_KEYS], ["wood", WOOD_KEYS], ["steam", STEAM_KEYS], ["fire_look", FIRE_LOOK_KEYS], ["flamethrower", FLAMETHROWER_KEYS], ["torch", TORCH_KEYS], ["rope", ROPE_KEYS], ["winch_ramp", WINCH_RAMP_KEYS], ["cage", CAGE_KEYS], ["ramp", RAMP_KEYS], ["sprinkler", SPRINKLER_KEYS], ["exit_zone", EXIT_ZONE_KEYS], ["shutter", SHUTTER_KEYS], ["time_plate", TIME_PLATE_KEYS], ["rail_switch", RAIL_SWITCH_KEYS], ["minecart", MINECART_KEYS]]:
 		var isec := interact_section as Array
 		var isec_name: String = isec[0]
 		var ientry: Variant = data.get(isec_name)
@@ -640,10 +634,6 @@ static func validate_objects(data: Variant, time_data: Dictionary) -> PackedStri
 			errors.append("objects.json: 'minecart.seat_px' puts the platform past the back of the cart")
 		if float(cart["creep_px"]) >= float(cart["speed_px"]):
 			errors.append("objects.json: 'minecart.creep_px' must be below 'speed_px': it is the last crawl to the station's buffer")
-		if float(cart["loaded_speed_px"]) >= float(cart["speed_px"]) or float(cart["loaded_speed_px"]) <= float(cart["creep_px"]):
-			errors.append("objects.json: 'minecart.loaded_speed_px' must lie between 'creep_px' and 'speed_px': loaded it is slower")
-		if int(cart["break_load"]) > int(data["hopper"]["count"]):
-			errors.append("objects.json: 'minecart.break_load' is more pigs than one pour of the hopper ('hopper.count')")
 		if float(data["lamp"]["break_seconds"]) < MIN_WINDOW_SECONDS:
 			errors.append("objects.json: 'lamp.break_seconds' is a window to act and must be at least %d s" % MIN_WINDOW_SECONDS)
 		var lamp: Dictionary = data["lamp"]

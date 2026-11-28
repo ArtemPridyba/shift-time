@@ -42,11 +42,6 @@ func start(objects: Array) -> void:
 	timeline.record(_recorder.capture(objects))
 
 
-## The present state of `objects`, as a frame of the history.
-func recorder_capture(objects: Array) -> Dictionary:
-	return _recorder.capture(objects)
-
-
 ## One physics tick. `direction` is +1 or -1 (TimeManager). `player_rect` is
 ## the player's body in world pixels; an empty rect means there is no player
 ## (prelude, tests), and nothing can be crushed. `frames` is how many frames a

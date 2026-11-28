@@ -242,19 +242,6 @@ func rewrite_past_where(id: String, flag: String) -> bool:
 	return world.rewrite_past_where(temporal_objects(), id, flag)
 
 
-## The room's history starts again from now: the past before this tick is
-## gone, and a rewind stops here (level 04: the intro ride is not a past to
-## rewind into, D219). Only at the head of history in normal time; false if
-## not now.
-func forget_past() -> bool:
-	var manager := get_node_or_null("/root/TimeManager")
-	var direction: int = manager.direction if manager != null else TimeWorld.FORWARD
-	if direction != TimeWorld.FORWARD or not world.timeline.at_head():
-		return false
-	world.timeline.start_over(world.recorder_capture(temporal_objects()))
-	return true
-
-
 ## Back to the room as it was loaded, with a fresh history and its prelude
 ## run again: the player comes back into the same past.
 func reset() -> void:
@@ -269,10 +256,6 @@ func reset() -> void:
 	for node in get_tree().get_nodes_in_group("minecart"):
 		if room != null and room.is_ancestor_of(node) and node.has_method("reset_ride"):
 			node.call("reset_ride")
-	# Pigs the cart took are out of time with it (D216): a reset gives them back.
-	for node in get_tree().get_nodes_in_group("hopper"):
-		if room != null and room.is_ancestor_of(node) and node.has_method("forget_taken"):
-			node.call("forget_taken")
 	var objects := temporal_objects()
 	_recorder.restore(_initial, objects)
 	world.start(objects)

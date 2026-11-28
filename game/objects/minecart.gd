@@ -19,20 +19,10 @@ extends Node2D
 ## entry of data/levels.json, level 07, D191): at the start the empty cart
 ## leaves the park by itself, rides its way and comes back on the hoist, so the
 ## player sees where the way leads before boarding. A reset runs it again.
-## Level 04 gives it as an object (session 2): `{"segment", "distance_px",
-## "hoist_after_seconds"}`: the rope opens the hopper at the start, and after
-## that many seconds the hoist takes the empty cart from the park and lets it
-## down onto the rails there, past the switches that still lead to dead ends.
-## Riding the intro, the cart never catches pigs: only her ride does. Once it
-## is back at the park, the room's history starts again (`forget_past`, D219):
-## under Shift the world never rewinds into the intro, with Z down and the
-## first pour in the pit.
-##
-## Barriers on the rails (group `rail_barrier`: shutter Z and the bricked
-## wall, level 04) answer the front of the cart (`meet_cart`): it bounces off
-## them, or breaks through the wall with `break_load` pigs. When it bounces
-## anywhere, the hoist that comes for it first lifts every shutter that bars
-## carts, so the way back is clear.
+## Level 04 gives it as an object (D219): `{"segment", "distance_px",
+## "hoist_after_seconds"}`: after that many seconds the hoist takes the empty
+## cart from the park and lets it down onto the rails there, past the
+## walkway's switches that still lead to dead ends.
 ##
 ## A level may also put a barrier at the end of the walkway over the park
 ## (`gate_rect`, D192): a wall while the cart is away, open while it stands
@@ -75,7 +65,6 @@ var _intro_hoist := {}
 var _intro_wait := -1.0
 var _was_mode := CartRide.Mode.PARKED
 var _in_intro := false
-var _forget_pending := false
 var _gate: StaticBody2D
 var _gate_shape: CollisionShape2D
 var _gate_bar: ColorRect
@@ -113,7 +102,6 @@ func reset_ride() -> void:
 	_intro_pending = intro_ride
 	_intro_wait = -1.0
 	_in_intro = false
-	_forget_pending = false
 	ride.park()
 	_was_mode = ride.mode
 	_apply()
@@ -129,73 +117,25 @@ func _physics_process(delta: float) -> void:
 			_launch()
 		else:
 			_intro_from_hoist(delta)
-	ride.step(delta, _leads_main, _barrier)
-	if ride.mode == CartRide.Mode.BUMPED and _was_mode != CartRide.Mode.BUMPED:
-		_lift_barring_shutters()
+	ride.step(delta, _leads_main)
 	if ride.mode == CartRide.Mode.PARKED and _was_mode != CartRide.Mode.PARKED and not _intro_pending:
-		_forget_pending = _in_intro and not _intro_hoist.is_empty()
 		_in_intro = false
-	if _forget_pending:
-		var room_time := _room_time()
-		_forget_pending = room_time != null and not bool(room_time.call("forget_past"))
 	_was_mode = ride.mode
 	_apply()
-	_catch_pigs()
 	_check_boarding()
 	queue_redraw()
 
 
-## The intro from the hoist: the rope opens the hopper now, the hoist comes
-## for the cart after `hoist_after_seconds`.
+## The intro from the hoist: the hoist comes for the cart after
+## `hoist_after_seconds`.
 func _intro_from_hoist(delta: float) -> void:
 	if _intro_wait < 0.0:
 		_intro_wait = float(_intro_hoist.get("hoist_after_seconds", 0.0))
-		var room_time := _room_time()
-		if room_time != null:
-			for hopper in _hoppers():
-				hopper.call("open", room_time)
 		return
 	_intro_wait -= delta
 	if _intro_wait <= 0.0:
 		_intro_pending = false
 		ride.drop_from_hoist(str(_intro_hoist.get("segment", "")), float(_intro_hoist.get("distance_px", 0.0)))
-
-
-## The front of the cart moved from `from` to `to` this tick (room pixels):
-## what the barriers of the room say (see `CartRide.step`).
-func _barrier(from: Vector2, to: Vector2, load: int) -> String:
-	var room := get_parent()
-	var room_time := _room_time()
-	if room == null or room_time == null:
-		return ""
-	var top := to.y - _number("body_px")
-	var sweep := Rect2(Vector2(minf(from.x, to.x), top), Vector2(maxf(absf(to.x - from.x), 1.0), _number("body_px")))
-	var heavy := load >= int(_number("break_load"))
-	for node in get_tree().get_nodes_in_group("rail_barrier"):
-		if node.get_parent() == room and node.has_method("meet_cart"):
-			var verdict := str(node.call("meet_cart", room_time, sweep, heavy))
-			if verdict != "":
-				return verdict
-	return ""
-
-
-## The hoist comes for a bumped cart: shutters over the rails go up first.
-func _lift_barring_shutters() -> void:
-	var room := get_parent()
-	var room_time := _room_time()
-	if room == null or room_time == null:
-		return
-	for node in get_tree().get_nodes_in_group("rail_barrier"):
-		if node.get_parent() == room and node is Shutter:
-			room_time.call("apply_change", str(node.get("object_id")), {"target": 0})
-
-
-## The room a shutter must leave over the cart, in the parent's coordinates:
-## the whole length, as high as her head on the platform (`clear_px`).
-func outline_rect() -> Rect2:
-	var length := _number("length_px")
-	var clear := _number("clear_px")
-	return Rect2(position + Vector2(-length / 2.0, -clear), Vector2(length, clear))
 
 
 ## True from the start of the intro ride until the cart is back at the park.
@@ -293,55 +233,9 @@ func _check_boarding() -> void:
 	_was_touching = touching
 
 
-## The stopper drops; the same pull opens the hopper's gate by its rope
-## (level 04, D216).
+## The stopper drops.
 func _launch() -> void:
-	if not ride.board():
-		return
-	var room_time := _room_time()
-	if room_time == null:
-		return
-	for hopper in _hoppers():
-		hopper.call("open", room_time)
-
-
-## Pigs in the air that are inside the body now stay in it: under Shift they
-## fly up out of the pit through it (D216). Only on the rails, with her aboard.
-func _catch_pigs() -> void:
-	if not ride.on_rails() or _rider == null:
-		return
-	var tub := body_rect()
-	for hopper in _hoppers():
-		for pig: Dictionary in hopper.call("pigs_in_air"):
-			if tub.has_point(to_local(pig["position"])):
-				hopper.call("take", str(pig["key"]))
-				ride.load += 1
-
-
-## The inside of the body, in the cart's own coordinates.
-func body_rect() -> Rect2:
-	var length := _number("length_px")
-	var split := length / 2.0 - _number("platform_width_px")
-	return Rect2(Vector2(-length / 2.0, -_number("body_px")), Vector2(split + length / 2.0, _number("body_px") - 14.0))
-
-
-func _hoppers() -> Array:
-	var room := get_parent()
-	var result: Array = []
-	for node in get_tree().get_nodes_in_group("hopper"):
-		if room != null and room.is_ancestor_of(node):
-			result.append(node)
-	return result
-
-
-func _room_time() -> Node:
-	var room := get_parent()
-	if room == null:
-		return null
-	for node in room.get_children():
-		if node is RoomTime:
-			return node
-	return null
+	ride.board()
 
 
 func _find_player() -> Node2D:
@@ -425,13 +319,6 @@ func _draw() -> void:
 		Vector2(split - 8.0, -14.0), Vector2(front + 8.0, -14.0)])
 	draw_colored_polygon(tub, BODY_COLOR)
 	draw_polyline(tub + PackedVector2Array([tub[0]]), BODY_EDGE, 3.0)
-	# The load: pigs of iron heaped in the body.
-	for i in ride.load:
-		var row := i / 5
-		var col := i % 5
-		var at := Vector2(front + 14.0 + col * 20.0 + (row % 2) * 8.0, -body_h + 18.0 - row * 9.0)
-		draw_rect(Rect2(at, Vector2(18.0, 9.0)), Color("#7d6a5a"))
-		draw_rect(Rect2(at, Vector2(18.0, 9.0)), BODY_EDGE, false, 2.0)
 	# The operator's platform with its rail and the time device on a post.
 	draw_rect(Rect2(Vector2(split, -platform_h), Vector2(platform_w, platform_h - 14.0)), PLATFORM_COLOR)
 	draw_line(Vector2(back - 4.0, -platform_h), Vector2(back - 4.0, -platform_h - 56.0), BODY_EDGE, 4.0)

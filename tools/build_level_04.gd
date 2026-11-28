@@ -1,22 +1,19 @@
 extends SceneTree
-## Builds level 04 `levels/level_04.tscn` (card docs/levels/04.md, D168, D216):
+## Builds level 04 `levels/level_04.tscn` (card docs/levels/04.md, D168, D219):
 ## the minecart that rides through time, on one screen of 30x17 cells, sized
-## to the heroine (D112). A puzzle of one well-timed Shift.
+## to the heroine (D112). One rule in three places: a time plate takes the
+## direction of time.
 ##
-## Upper tier: the walkway from the doorway on the left to the shaft at the
-## right wall, with plate 2 and plate 1, each right above its rail switch; a
-## barrier at its end stands while the cart is away from the park.
+## Upper tier: a low corridor from the doorway with plate A and shutter A (the
+## lesson, as in level 07), then the walkway to the shaft at the right wall,
+## with plate 2 and plate 1, each right above its rail switch; a barrier at
+## its end stands while the cart is away from the park.
 ## Lower tier: the rails on trestles over a pit open to the bottom (a fall is
 ## death, so the rails are walked only in the cart): the ramp down to switch 1
-## (its side way: dead end 1), switch 2 (dead end 2), and the main line under
-## the hopper of pig iron into the tunnel on the left, where the cart stops at
-## the station and the exit is a jump away. The hoist runs under the walkway
-## back to the shaft.
-##
-## Session 2: between the hopper and the tunnel plate K lies on the rails and
-## drops shutter Z after its latch (levels.json); deep in the tunnel, before
-## the exit, the bricked wall stops an empty cart. The wall stands this deep
-## so that a cart bounced off it fits whole between it and Z (D219).
+## (dead end 1), switch 2 (dead end 2), switch 3 (dead end 3, with plate B
+## under the wheels at its buffer: only the cart presses it) and the main line
+## into the tunnel on the left, where the cart stops at the station and the
+## exit is a jump away. The hoist runs under the walkway back to the shaft.
 ##
 ## Run from the repository root after build_blockout.gd made the tile set:
 ##   godot --headless --path game --script $PWD/tools/build_level_04.gd
@@ -31,9 +28,9 @@ const SCENE_PATH := "res://levels/level_04.tscn"
 const MAP := [
 	"##############################",
 	"##############################",
-	"########....................##",
-	"########....................##",
-	"########....................##",
+	"############................##",
+	"############................##",
+	"############................##",
 	"#...........................##",
 	"#S..........................##",
 	"##########################..##",
@@ -51,13 +48,20 @@ const MAP := [
 ## The doorway the hero walks out of (decoration only), in cells.
 const ENTRANCE_CELLS := Rect2i(1, 5, 1, 2)
 
-## Plates: the first cell and the width in cells, on the floor row whose top
-## they lie on, each right above its switch.
+## Plates: the first cell and the width in cells, on the row whose top they
+## lie on. A in the corridor, wider than a jump under its low ceiling; 2 and 1
+## on the walkway, each right above its switch; B on the rail of dead end 3 at
+## its buffer, under the wheels.
 const PLATE_CELLS := 3
 const PLATES := [
-	{"id": "plate_2", "label": "2", "cell": Vector2i(16, 7), "targets": ["switch_2"]},
-	{"id": "plate_1", "label": "1", "cell": Vector2i(20, 7), "targets": ["switch_1"]},
+	{"id": "plate_a", "label": "A", "cell": Vector2(5, 7), "targets": ["shutter_a"]},
+	{"id": "plate_2", "label": "2", "cell": Vector2(16, 7), "targets": ["switch_2"]},
+	{"id": "plate_1", "label": "1", "cell": Vector2(20, 7), "targets": ["switch_1"]},
+	{"id": "plate_b", "label": "B", "cell": Vector2(9, 15), "targets": ["switch_3"]},
 ]
+## Shutter A: the cells it closes and where it goes to open, in cells; it rises
+## into the corridor's ceiling.
+const SHUTTER_A := {"id": "shutter_a", "label": "A", "cells": Rect2(9, 5, 0.5, 2), "travel": Vector2(0, -2)}
 
 ## The rails, in cells: the main line lies on the top of row 13, the dead
 ## ends dip to row 15, the park is in the shaft just below the walkway.
@@ -66,6 +70,8 @@ const SPUR_Y := 15.0
 const PARK := Vector2(25.875, 8.375)
 const SWITCH_1_X := 21.5
 const SWITCH_2_X := 17.5
+const SWITCH_3_X := 13.0
+const BUFFER_3_X := 8.6
 const STATION_X := 4.5
 const SEGMENTS := [
 	{"id": "ramp", "points": [PARK, Vector2(24.625, 8.375), Vector2(SWITCH_1_X, MAIN_Y)],
@@ -76,7 +82,11 @@ const SEGMENTS := [
 		"end": {"kind": "switch", "switch": "switch_2", "main": "main_2", "side": "spur_2"}},
 	{"id": "spur_2", "points": [Vector2(SWITCH_2_X, MAIN_Y), Vector2(SWITCH_2_X - 2.0, SPUR_Y), Vector2(SWITCH_2_X - 3.0, SPUR_Y)],
 		"end": {"kind": "stop", "stop": "dead_end"}},
-	{"id": "main_2", "points": [Vector2(SWITCH_2_X, MAIN_Y), Vector2(STATION_X, MAIN_Y)],
+	{"id": "main_2", "points": [Vector2(SWITCH_2_X, MAIN_Y), Vector2(SWITCH_3_X, MAIN_Y)],
+		"end": {"kind": "switch", "switch": "switch_3", "main": "main_3", "side": "spur_3"}},
+	{"id": "spur_3", "points": [Vector2(SWITCH_3_X, MAIN_Y), Vector2(SWITCH_3_X - 2.0, SPUR_Y), Vector2(BUFFER_3_X, SPUR_Y)],
+		"end": {"kind": "stop", "stop": "dead_end"}},
+	{"id": "main_3", "points": [Vector2(SWITCH_3_X, MAIN_Y), Vector2(STATION_X, MAIN_Y)],
 		"end": {"kind": "stop", "stop": "station"}},
 ]
 
@@ -84,26 +94,17 @@ const SEGMENTS := [
 const SWITCHES := [
 	{"id": "switch_1", "label": "1", "at": Vector2(SWITCH_1_X, MAIN_Y), "main_when": "down", "side": Vector2(-1, 1)},
 	{"id": "switch_2", "label": "2", "at": Vector2(SWITCH_2_X, MAIN_Y), "main_when": "up", "side": Vector2(-1, 1)},
+	{"id": "switch_3", "label": "3", "at": Vector2(SWITCH_3_X, MAIN_Y), "main_when": "up", "side": Vector2(-1, 1),
+		"rod": Vector2(10.5, 15.0)},
 ]
 ## The walkway's top, where the tie rods meet the plates, in cells.
 const WALKWAY_Y := 7.0
-## The hopper's gate (the middle of its bottom), in cells: under the walkway,
-## over the main line; the pigs fall from here to the bottom of the room.
-const HOPPER_AT := Vector2(11.5, 9.5)
-## Plate K on the main line (its first x and its width, in cells) and the
-## shutter Z it drops: a blade in guides under the walkway, its bottom just
-## over the rails when closed, out of the hoist's way when open.
-const PLATE_K_X := 8.8
-const PLATE_K_CELLS := 1.5
-const SHUTTER_Z_X := 7.55
-const SHUTTER_Z_SIZE := Vector2(0.5, 1.875)
-const SHUTTER_Z_BOTTOM := 12.95
-const SHUTTER_Z_OPEN_BOTTOM := 9.0
-## The bricked wall across the tunnel: its middle x and width, from the
-## tunnel's ceiling down to the rails, in cells.
-const WALL_X := 3.35
-const WALL_WIDTH := 0.5
-const WALL_TOP := 9.0
+## The press under the roof of the hall (D219): a door on its own loop that
+## pounds all the time, out of reach. It keeps the room moving, so its history
+## never stands still: a still stretch is one frame, and Shift would skip it at
+## once, back past her steps on the plates. Under Shift it pounds backwards.
+const PRESS_CELLS := Rect2(13.0, 2.75, 1.0, 1.5)
+const PRESS_TRAVEL := 1.25
 ## The barrier at the end of the walkway over the park, in cells (D192): it
 ## stands while the cart is away, so nobody steps into the empty shaft.
 const GATE_CELLS := Rect2(25.6, 4.5, 0.4, 2.5)
@@ -173,7 +174,10 @@ func _initialize() -> void:
 		switch.side_direction = (one["side"] as Vector2).normalized()
 		var at: Vector2 = one["at"]
 		switch.position = at * CELL
-		switch.rod_top = Vector2(0, (WALKWAY_Y - at.y) * CELL)
+		# The tie rod runs up to its plate on the walkway; switch 3 is tied to
+		# plate B down at the buffer of its dead end.
+		var rod_to: Vector2 = one.get("rod", Vector2(at.x, WALKWAY_Y))
+		switch.rod_top = (rod_to - at) * CELL
 		_own(root, switch)
 
 	for one: Dictionary in PLATES:
@@ -183,40 +187,27 @@ func _initialize() -> void:
 		plate.label = one["label"]
 		plate.target_ids = PackedStringArray(one["targets"])
 		plate.width = float(PLATE_CELLS * CELL)
-		var cell: Vector2i = one["cell"]
+		var cell: Vector2 = one["cell"]
 		plate.position = Vector2((cell.x + PLATE_CELLS / 2.0) * CELL, cell.y * CELL)
 		_own(root, plate)
+	var shutter := Shutter.new()
+	shutter.object_id = SHUTTER_A["id"]
+	shutter.name = str(SHUTTER_A["id"]).to_pascal_case()
+	shutter.label = SHUTTER_A["label"]
+	var cells: Rect2 = SHUTTER_A["cells"]
+	shutter.size = cells.size * CELL
+	shutter.travel = (SHUTTER_A["travel"] as Vector2) * CELL
+	shutter.position = (cells.position + cells.size / 2.0) * CELL
+	_own(root, shutter)
 
-	var plate_k := TimePlate.new()
-	plate_k.object_id = "plate_k"
-	plate_k.name = "PlateK"
-	plate_k.label = "K"
-	plate_k.target_ids = PackedStringArray(["shutter_z"])
-	plate_k.width = PLATE_K_CELLS * CELL
-	plate_k.position = Vector2(PLATE_K_X + PLATE_K_CELLS / 2.0, MAIN_Y) * CELL
-	_own(root, plate_k)
-	var z := Shutter.new()
-	z.object_id = "shutter_z"
-	z.name = "ShutterZ"
-	z.label = "Z"
-	z.bars_carts = true
-	z.size = SHUTTER_Z_SIZE * CELL
-	z.travel = Vector2(0.0, (SHUTTER_Z_OPEN_BOTTOM - SHUTTER_Z_BOTTOM) * CELL)
-	z.position = Vector2(SHUTTER_Z_X, SHUTTER_Z_BOTTOM - SHUTTER_Z_SIZE.y / 2.0) * CELL
-	_own(root, z)
-	var wall := BrickWall.new()
-	wall.object_id = "wall"
-	wall.name = "BrickWall"
-	wall.size = Vector2(WALL_WIDTH, MAIN_Y - WALL_TOP) * CELL
-	wall.position = Vector2(WALL_X, MAIN_Y) * CELL
-	_own(root, wall)
-	var hopper := Hopper.new()
-	hopper.name = "Hopper"
-	hopper.position = HOPPER_AT * CELL
-	hopper.fall_px = (MAP.size() - HOPPER_AT.y) * CELL
-	hopper.box = Vector2(2.0, (HOPPER_AT.y - 8.0)) * CELL
-	_own(root, hopper)
-
+	var press: Door = (load("res://objects/door.tscn") as PackedScene).instantiate()
+	press.object_id = "press"
+	press.name = "Press"
+	press.travel = PRESS_TRAVEL * CELL
+	press.height = PRESS_CELLS.size.y * CELL
+	press.width = PRESS_CELLS.size.x * CELL
+	press.position = (PRESS_CELLS.position + PRESS_CELLS.size / 2.0) * CELL
+	_own(root, press)
 	var cart := Minecart.new()
 	cart.name = "Minecart"
 	cart.rails_path = NodePath("../Rails")
