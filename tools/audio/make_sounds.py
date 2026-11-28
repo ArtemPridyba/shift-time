@@ -281,6 +281,11 @@ WINDS = {
     "vortex": dict(_WHISTLE, palette="vortex"),
     "inhale": dict(_WHISTLE, palette="inhale"),
     "frozen": dict(_WHISTLE, palette="frozen"),
+    # Not wind at all, only its motion (rise, gusts, fall): other voices for Shift.
+    "harp": dict(_WHISTLE, voice="harp"),
+    "dust": dict(_WHISTLE, voice="dust"),
+    "tape": dict(_WHISTLE, voice="tape"),
+    "glass": dict(_WHISTLE, voice="glass"),
 }
 # The strong layer the game fades in as the rewind speeds up and the world moves:
 # the same wind, higher, wider and pushier.
@@ -305,6 +310,9 @@ def _resonance(x, centers, q):
 def _wind(rng, n, centers, w, spin=None, loop=False):
     """The whistle of wind for the band centres `centers` (Hz per sample);
     `spin` is the flywheel's turns a second per sample, `loop` a seamless loop."""
+    if w.get("voice"):
+        drive = np.asarray(centers, dtype=float) / w["center"]
+        return VOICES[w["voice"]](rng, len(drive), drive, loop)
     x = _resonance(colored(rng, n, -1.0), centers, w["q"])
     x /= np.std(x) + 1e-12
     x += w["second"] * _resonance(colored(rng, n, -1.0), centers * 2.0, w["q"]) / 0.3
@@ -400,6 +408,93 @@ def _smear(rng, x, seconds, loop):
     _, y = signal.istft(z, SR, nperseg=size, noverlap=size - hop)
     y = y[size:size + len(x)]
     return 0.35 * x / (np.std(x) + 1e-12) + y / (np.std(y) + 1e-12)
+
+
+# --- other voices for Shift: the gust's motion, a new sound --------------------
+# `drive` is the gust's strength per sample (about 0.7 calm .. 1.3 strong).
+
+def _slow(rng, n, rate, loop):
+    """A smooth random wander 0..1 at about `rate` Hz (seamless over a 6 s loop)."""
+    if loop:
+        return 0.5 + 0.5 * (lfo(n, [rate, rate * 1.7, rate * 2.9], 1.0, 6.0, rng) - 1.0)
+    x = lowpass(rng.standard_normal(n + SR), rate, 2)[SR:]
+    return np.clip(0.5 + x / (4 * np.std(x) + 1e-12), 0.0, 1.0)
+
+
+def _voice_harp(rng, n, drive, loop):
+    """An aeolian harp: wind singing in the crane's cables. Overtones of a low
+    string come and go; a stronger gust wakes higher ones."""
+    t = times(n)
+    f0 = 98.0
+    x = np.zeros(n)
+    for k in range(2, 11):
+        wake = 1.0 / (1.0 + np.exp(-(drive * 9.0 - k) / 0.8))
+        level = _slow(rng, n, 0.25 + 0.05 * k, loop) ** 1.5 * wake / np.sqrt(k)
+        f = f0 * k * (1.0 + 0.002 * np.sin(2 * np.pi * (0.5 if not loop else 3 / 6.0) * t + rng.uniform(0, 6.3)))
+        x += level * sine(f, n, rng.uniform(0, 6.3))
+        breath = bandpass(rng.standard_normal(n), f0 * k * 0.985, f0 * k * 1.015, 1)
+        x += 0.6 * level * breath / (np.std(breath) + 1e-12) * 0.15
+    air = lowpass(colored(rng, n, -1.0), 1200) * 0.08
+    return lowpass(x + air * drive, 2500, 2)
+
+
+def _voice_dust(rng, n, drive, loop):
+    """Dust flying back: tiny glass chimes, each played backwards (swelling in,
+    gone); more of them as the gust grows."""
+    x = np.zeros(n)
+    notes = [587.3, 659.3, 784.0, 880.0, 987.8, 1174.7, 1318.5]
+    seconds = n / SR
+    rate = 14.0
+    for at in poisson_times(rng, rate, seconds):
+        i = min(int(at * SR), n - 1)
+        if rng.uniform() > (drive[i] - 0.55) * 1.4:
+            continue
+        m = n_of(rng.uniform(0.25, 0.6))
+        chime = modal(rng, m, rng.choice(notes), [1, 2.76, 5.4], [0.25, 0.08, 0.03], [1.0, 0.25, 0.08], 0.0)
+        chime = fade(chime[::-1], 0.0, 0.03)
+        place(x, chime * rng.uniform(0.3, 1.0), i - m // 2)
+        if loop and i - m // 2 < 0:
+            place(x, chime * 0.6, n + i - m // 2)
+    bed = lowpass(colored(rng, n, -1.0), 900) * 0.05 * drive
+    return lowpass(x + bed, 3500, 2)
+
+
+def _voice_tape(rng, n, drive, loop):
+    """A warm chord off a tape running backwards: its pitch follows the tape's
+    speed, its swells are reversed (swelling in, cut soft)."""
+    t = times(n)
+    speed = np.clip(0.55 + 0.45 * drive, 0.6, 1.15)
+    wow = 1.0 + 0.008 * np.sin(2 * np.pi * (0.5 if loop else 0.45) * t)
+    x = np.zeros(n)
+    for f, a in ((146.8, 1.0), (174.6, 0.7), (220.0, 0.8), (329.6, 0.45), (440.0, 0.25)):
+        ff = f * speed * wow
+        x += a * (sine(ff, n, rng.uniform(0, 6.3)) + 0.3 * sine(ff * 2.0, n) + 0.12 * sine(ff * 3.0, n))
+    swells = np.zeros(n)
+    period = 1.5 if loop else 1.2
+    for k in range(int(np.ceil(n / n_of(period))) + 1):
+        m = n_of(period)
+        shape = np.linspace(0.0, 1.0, m) ** 2.5
+        cut = n_of(0.12)
+        shape[-cut:] *= np.cos(np.linspace(0.0, np.pi / 2, cut)) ** 2
+        place(swells, shape, k * m)
+    x *= 0.55 + 0.45 * swells
+    hiss = highpass(colored(rng, n, -1.0), 2000) * 0.015
+    return lowpass(x * drive + hiss, 2200, 2)
+
+
+def _voice_glass(rng, n, drive, loop):
+    """A wet finger round a glass: pure tones beating slowly, swelling with the gust."""
+    t = times(n)
+    x = np.zeros(n)
+    for f, a in ((523.3, 1.0), (784.0, 0.5), (1046.5, 0.18)):
+        beat = 1.2 if not loop else 7 / 6.0
+        x += a * (sine(f, n) + sine(f + beat, n, 1.0))
+    rub = bandpass(colored(rng, n, -1.0), 480, 1150) * 0.08
+    level = np.clip(drive - 0.35, 0.0, 1.2)
+    return lowpass((x + rub) * level, 3000, 2)
+
+
+VOICES = {"harp": _voice_harp, "dust": _voice_dust, "tape": _voice_tape, "glass": _voice_glass}
 
 
 # Time: what Shift sounds like (played by the time sound and the rewind loop).
