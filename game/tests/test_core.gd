@@ -33,13 +33,16 @@ func test_menu_data_check_catches_broken_data() -> void:
 	var good := Content.menu()
 	check(Content.validate_menu(good).is_empty(), "menu.json must be valid: %s" % [Content.validate_menu(good)])
 	check(not Content.validate_menu("text").is_empty(), "non-object menu.json must be reported")
-	for key in ["title", "background", "dim", "fade_seconds", "title_card_seconds", "unlock_in_order", "buttons", "final"]:
+	for key in ["title", "accent", "background", "dim", "fade_seconds", "title_card_seconds", "unlock_in_order", "buttons", "final"]:
 		var broken := good.duplicate(true)
 		broken.erase(key)
 		check(not Content.validate_menu(broken).is_empty(), "missing '%s' in menu.json must be reported" % key)
 	var bad_dim := good.duplicate(true)
 	bad_dim["dim"] = 2
 	check(not Content.validate_menu(bad_dim).is_empty(), "dim above 1 must be reported")
+	var bad_accent := good.duplicate(true)
+	bad_accent["accent"] = "yellowish"
+	check(not Content.validate_menu(bad_accent).is_empty(), "an accent that is not a colour must be reported")
 	var bad_button := good.duplicate(true)
 	(bad_button["buttons"] as Dictionary).erase("start")
 	check(not Content.validate_menu(bad_button).is_empty(), "a missing button text must be reported")

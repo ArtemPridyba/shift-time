@@ -145,6 +145,7 @@ In a cloud session the hook puts Godot on PATH and imports the project. Without 
 - Water is a flow from its source (valve, gear). The player can be in it: walks slower, sinks slowly, never swims; rising water lifts the player on its surface; a float follows the water level and carries the player. While the head is under water the breath (`breath_seconds` in data) runs down, above water it fills again; out of air the player drowns and the room resets, so rewinding the water away in time saves the player (decision 13.11.2026, replaces «does not hurt, blocks the way»). Puddles and splashes are decoration.
 - Darkness: dark rooms show only what is lit. A broken lamp reassembles under Shift and shines while Shift is held (rule «A»); keeping the light needs interference.
 - A level may have a prelude: the room is run without the player for `prelude_seconds` and recorded, so levels that start from an effect have a past to rewind. Scripted events are data, never random.
+- The player never waits except to think (D223): no level makes them stand while water fills or drains, a mechanism travels or a prelude runs; a wait without a decision is a bug of the level.
 - Every window in which the player must act is at least 3 seconds and visible; where possible the solution works from the world pinned at frame 0. No solution depends on guessing a timing.
 - The player acts only through interaction points (buttons, levers, valves, crate grabs), never by pushing.
 - The direction of time reads from motion, particles, mechanism animation and sound, never from color alone.

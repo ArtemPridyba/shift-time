@@ -2,8 +2,8 @@ class_name MenuStyle
 extends RefCounted
 ## The shared look of the main menu, level list, pause and final screen
 ## (tasks 4.2, 4.3): the dark picture of the shop behind, a centred column of
-## dark buttons, the focused one outlined in the time colour (`accent` of
-## `time_hud.json`). Numbers and texts: `data/menu.json`.
+## dark buttons, the focused one outlined in signal yellow (`accent` of
+## `menu.json`, D221). Numbers and texts: `data/menu.json`.
 
 const BUTTON_SIZE := Vector2(640, 76)
 const BUTTON_FONT := 36
@@ -16,11 +16,10 @@ const TEXT := Color(0.93, 0.9, 0.85)
 const TEXT_DIM := Color(0.6, 0.58, 0.55)
 
 
-## The time colour of the heroine's device; the one accent of the menus.
+## The one accent of the menus: signal yellow like the key caps (`accent` of
+## menu.json, D221); the time colour stays the heroine's own (D60).
 static func accent() -> Color:
-	var colors: Variant = Content.time_hud().get("colors", {})
-	var text := str((colors as Dictionary).get("accent", "#7FE8FF")) if colors is Dictionary else "#7FE8FF"
-	return Color.from_string(text, Color("#7FE8FF"))
+	return Color.from_string(str(Content.menu().get("accent", "#e0b02a")), Color("#e0b02a"))
 
 
 ## The text of a menu button from `menu.json`, or `fallback`.
