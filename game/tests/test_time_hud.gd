@@ -176,6 +176,11 @@ func test_time_sounds_play_by_direction_and_missing_files_break_nothing() -> voi
 	check(sound.has_sound(1) and sound.has_sound(-1), "both directions of time have a sound (D183)")
 	check(sound.play_for(-1), "pressing Shift must play the rewind sound")
 	check(sound.play_for(1), "releasing Shift must play the forward sound")
+	var audio := SoundRules.config()
+	for entry: Array in [["Sound_forward", "time_rewind_end"], ["Sound_rewind", "time_rewind_start"]]:
+		var player := sound.get_node(entry[0]) as AudioStreamPlayer
+		check(is_equal_approx(player.volume_db, SoundRules.volume_db(audio, entry[1])),
+			"%s must play at its db from audio.json, not at full volume (C1)" % entry[1])
 	var empty := TimeSound.new({})
 	check(not empty.has_sound(1) and not empty.play_for(-1), "empty paths play nothing and break nothing")
 	var odd := TimeSound.new({"audio": {"forward": "res://audio/missing.ogg"}})

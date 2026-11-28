@@ -7,6 +7,8 @@ extends Node
 ## path to a missing file.
 ##
 ## `TimeHud` creates one and calls `play_for` when the direction changes.
+## A file named like a sound of `data/audio.json` takes that sound's `db`
+## (C1: before, both one-shots of Shift played at full volume).
 
 var _players: Dictionary = {}
 
@@ -23,6 +25,7 @@ func _init(config: Dictionary = {}) -> void:
 		var player := AudioStreamPlayer.new()
 		player.stream = stream
 		player.name = "Sound_%s" % entry[0]
+		player.volume_db = SoundRules.volume_db(SoundRules.config(), path.get_file().get_basename())
 		add_child(player)
 		_players[entry[1]] = player
 

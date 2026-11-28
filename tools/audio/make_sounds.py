@@ -260,61 +260,63 @@ def sound(name: str, loop: float = 0.0, reverse: bool = True, about: str = ""):
     return deco
 
 
+# Shift is wind blowing back through the hall (C1, Boris 28.11): an even
+# sound everyone knows and stops noticing, so pressing Shift a hundred times
+# never tires. No tone, no rhythm, no clicks; the highs are cut. WIND picks one
+# of the variants (`--wind` overrides it).
+WINDS = {
+    "soft": {"center": 420.0, "width": 0.9, "rumble": 0.5, "whistle": 0.0, "top": 1800.0, "rise": 0.3, "fall": 0.18, "start_sweep": 1.0},
+    "dense": {"center": 520.0, "width": 0.8, "rumble": 0.8, "whistle": 0.12, "top": 2400.0, "rise": 0.35, "fall": 0.22, "start_sweep": 1.0},
+    "breath": {"center": 600.0, "width": 0.7, "rumble": 0.25, "whistle": 0.0, "top": 2200.0, "rise": 0.25, "fall": 0.12, "start_sweep": 1.15},
+}
+WIND = "soft"
+
+
+def _wind(rng, n, centers, w, gain):
+    """Pink noise through a wide moving band, a low rumble and maybe a faint whistle."""
+    x = swept_noise(rng, n, centers, w["width"], -1.0)
+    x += w["rumble"] * lowpass(colored(rng, n, -2.0), 160)
+    if w["whistle"] > 0:
+        x += w["whistle"] * swept_noise(rng, n, centers * 1.9, 0.08, 0.0)
+    return gain * lowpass(x, w["top"], 2)
+
+
 # Time: what Shift sounds like (played by the time sound and the rewind loop).
 
-@sound("time_rewind_start", reverse=False, about="Shift pressed: the tape catches and spins up backwards")
+@sound("time_rewind_start", reverse=False, about="Shift pressed: a gust of wind rises, as if the hall's gates opened (C1)")
 def time_rewind_start(rng):
-    n = n_of(0.6)
+    w = WINDS[WIND]
+    n = n_of(0.7)
     t = times(n)
-    up = swell(n, 2.2)
-    x = 0.55 * swept_noise(rng, n, np.geomspace(6000, 700, n), 0.55) * up
-    boom = thump(n_of(0.7), 70, 42, 0.18)[::-1][-n:]
-    x += 0.9 * boom
-    f = np.geomspace(240, 1500, n) * (1 + 0.012 * np.sin(2 * np.pi * 9 * t))
-    x += 0.18 * (sine(f, n) + 0.35 * sine(f * 2, n)) * swell(n, 1.4)
-    catch = clank(rng, 0.12, 2300, bright=0.6, body=0.2, ring=0.15)
-    place(x, catch, n - len(catch) + n_of(0.02), 0.35)
-    return fade(x, 0.01, 0.006)
+    rise = np.clip(t / w["rise"], 0.0, 1.0) ** 1.6
+    env = rise * (1.0 - 0.45 * np.clip((t - w["rise"]) / 0.35, 0.0, 1.0))
+    centers = w["center"] * (0.55 + 0.45 * rise) * w["start_sweep"]
+    x = _wind(rng, n, centers, w, 1.0) * env
+    return fade(x, 0.02, 0.15)
 
 
-@sound("time_rewind_loop", loop=2.4, reverse=False, about="Shift held: tape whir, reversed clock ticks, a low flutter")
+@sound("time_rewind_loop", loop=6.0, reverse=False, about="Shift held: an even soft wind in an empty hall, no ticks, no tone (C1)")
 def time_rewind_loop(rng):
-    length, xf = 2.4, 0.3
+    w = WINDS[WIND]
+    length, xf = 6.0, 1.0
     n = n_of(length + xf)
-    t = times(n)
-    x = np.zeros(n)
-    # The spool's whine, wobbling (integer cycles over the loop).
-    f = 1150 * (1 + 0.035 * np.sin(2 * np.pi * (5 / length) * t))
-    x += 0.07 * (sine(f, n) + 0.4 * sine(f * 2.01, n))
-    # Reversed clock ticks every 0.3 s: a swell that ends on the tick.
-    tick = clank(rng, 0.16, 3100, bright=0.8, body=0.25, ring=0.12)
-    tick = reverb(tick, rng, 0.35, 0.3, 5000)[: n_of(0.3)][::-1]
-    step = n_of(0.3)
-    for k in range(int(np.ceil(n / step)) + 1):
-        place(x, tick, k * step - len(tick) + n_of(0.004), 0.45 if k % 2 else 0.32)
-    # Garbled reversed blips: speech of the world run backwards.
-    for at in poisson_times(rng, 9.0, length + xf):
-        m = n_of(rng.uniform(0.05, 0.12))
-        blip = modal(rng, m, rng.choice([520, 660, 780, 990, 1170, 1320]), [1, 2.0, 3.1], [0.04, 0.025, 0.015])
-        place(x, blip[::-1] * swell(m, 0.5), n_of(at), 0.1)
-    # Air rushing past, trembling.
-    air = highpass(colored(rng, n, -1.0), 1800) * lfo(n, [6.0], 0.35, length)
-    x += 0.09 * air
-    # A low flutter of the whole hall.
-    x += 0.12 * (sine(55, n) + 0.5 * sine(110, n)) * lfo(n, [1.25], 0.4, length)
+    # The band and the strength wander slowly, like wind through a big hall.
+    drift = lfo(n, [0.17, 0.33, 0.5], 1.0, length, rng) - 1.0
+    centers = w["center"] * 2 ** (0.35 * drift)
+    gust = 1.0 + 0.25 * (lfo(n, [0.17, 0.5], 1.0, length, rng) - 1.0)
+    x = _wind(rng, n, centers, w, 1.0) * gust
     return seamless(x, xf)
 
 
-@sound("time_rewind_end", reverse=False, about="Shift released: the world snaps back to play")
+@sound("time_rewind_end", reverse=False, about="Shift released: the gust falls away and the hall is still (C1)")
 def time_rewind_end(rng):
-    n = n_of(0.5)
+    w = WINDS[WIND]
+    n = n_of(0.7)
     t = times(n)
-    x = 0.6 * swept_noise(rng, n, np.geomspace(900, 5000, n), 0.5) * decay(n, 0.09, 0.004)
-    x += 0.8 * thump(n, 95, 55, 0.07)
-    f = np.geomspace(1500, 260, n)
-    x += 0.15 * (sine(f, n) + 0.3 * sine(f * 2, n)) * decay(n, 0.12, 0.002)
-    x += 0.2 * clank(rng, 0.5, 1900, bright=0.5, body=0.0, ring=0.12)
-    return fade(x, 0.002, 0.05)
+    env = np.clip(t / 0.04, 0.0, 1.0) * np.exp(-t / w["fall"])
+    centers = w["center"] * np.geomspace(1.0, 0.5, n)
+    x = _wind(rng, n, centers, w, 1.0) * env
+    return fade(x, 0.02, 0.2)
 
 
 # The heroine (live: always forward, no reversed twin).
@@ -410,13 +412,16 @@ def valve(rng):
     return reverb(fade(x), rng, 0.9, 0.18)
 
 
-@sound("pickup", about="a small iron thing taken in hand")
+@sound("pickup", about="a hand takes an iron thing: a muffled tunk and cloth (C1: no bright ring)")
 def pickup(rng):
-    n = n_of(0.25)
-    x = 0.4 * modal(rng, n, 2100, [1, 1.52, 2.73, 3.9], [0.07, 0.05, 0.03, 0.02])
-    x += 0.35 * swept_noise(rng, n, np.geomspace(900, 2400, n), 0.6) * env_ar(n, 0.02, 0.05)
-    x += 0.3 * burst(rng, n, 2000, 8000, 0.003)
-    return fade(x, 0.001, 0.03)
+    n = n_of(0.3)
+    x = 0.5 * modal(rng, n, 410, [1, 2.3, 3.9], [0.06, 0.035, 0.02], [1.0, 0.4, 0.15])
+    x += 0.5 * thump(n, 190, 140, 0.03)
+    m = n_of(0.12)
+    cloth = bandpass(colored(rng, m, -1.0), 350, 1800) * env_ar(m, 0.02, 0.03)
+    place(x, 0.25 * cloth, 0)
+    x = lowpass(x, 1800, 2)
+    return fade(x, 0.004, 0.04)
 
 
 @sound("drop", about="an iron thing put down on the floor")
@@ -428,11 +433,14 @@ def drop(rng):
     return reverb(fade(x), rng, 0.7, 0.14)
 
 
-@sound("plate", about="a time plate under the boot: a heavy click and a pneumatic hiss")
+@sound("plate", about="a time plate under the boot: a muffled heavy click and a pneumatic hiss")
 def plate(rng):
     n = n_of(0.5)
+    # C1: the click is muffled (lowpass, softer contact); the draws stay as
+    # before, so the hiss is the same one the team liked.
     x = 0.8 * modal(rng, n, 560, [1, 2.5, 4.1], [0.06, 0.04, 0.02]) + 0.9 * thump(n, 130, 85, 0.04)
-    x += 0.5 * burst(rng, n, 1000, 7000, 0.004)
+    x += 0.25 * burst(rng, n, 600, 2500, 0.006)
+    x = fade(lowpass(x, 1600, 2), 0.004, 0.0)
     m = n_of(0.3)
     hiss = highpass(rng.standard_normal(m), 3000) * env_ar(m, 0.01, 0.08)
     place(x, 0.18 * hiss, n_of(0.04))
@@ -555,35 +563,37 @@ def cart_roll(rng):
 
 # Level 05: the crane and the collapse.
 
-@sound("crane_break", about="the crane breaks loose and screeches down its rail")
+@sound("crane_break", about="the crane breaks loose and groans down its rail (C1: lower, no high screech)")
 def crane_break(rng):
     n = n_of(3.2)
     t = times(n)
     x = np.zeros(n)
-    place(x, clank(rng, 1.2, 520, bright=1.2, body=1.0, ring=0.8), 0)
-    snap = 0.8 * burst(rng, n_of(0.1), 1500, 9000, 0.01)
+    place(x, clank(rng, 1.2, 420, bright=0.4, body=1.0, ring=0.6), 0)
+    snap = 0.4 * lowpass(burst(rng, n_of(0.1), 600, 3000, 0.01), 2500)
     place(x, snap, 0)
-    screech_env = env_ar(n, 0.25, 0.9) * np.clip((2.95 - t) / 0.4, 0.0, 1.0)
-    for f, a in ((1900, 0.12), (2650, 0.08), (3700, 0.04)):
-        wob = f * (1 + 0.02 * np.sin(2 * np.pi * rng.uniform(4, 7) * t) + 0.01 * rng.standard_normal(n).cumsum() / np.sqrt(n))
-        x += a * sine(wob, n) * screech_env
-    x += 0.35 * swept_noise(rng, n, np.geomspace(1600, 900, n), 0.4) * screech_env
-    x += 0.5 * lowpass(colored(rng, n, -2.0), 200) * env_ar(n, 0.2, 1.2)
+    groan_env = env_ar(n, 0.3, 0.9) * np.clip((2.95 - t) / 0.4, 0.0, 1.0)
+    for f, a in ((620, 0.09), (930, 0.05), (1240, 0.025)):
+        wob = f * (1 + 0.015 * np.sin(2 * np.pi * rng.uniform(3, 5) * t) + 0.01 * rng.standard_normal(n).cumsum() / np.sqrt(n))
+        x += a * sine(wob, n) * groan_env
+    x += 0.3 * swept_noise(rng, n, np.geomspace(900, 450, n), 0.5) * groan_env
+    x += 0.55 * lowpass(colored(rng, n, -2.0), 200) * env_ar(n, 0.2, 1.2)
     for at in poisson_times(rng, 8.0, 2.6, 0.2):
-        place(x, 0.12 * modal(rng, n_of(0.05), rng.uniform(2500, 4000), [1, 1.6], [0.01, 0.006]), n_of(at))
-    return reverb(fade(x, 0.0005, 0.3), rng, 1.8, 0.3, 2800)
+        place(x, 0.08 * modal(rng, n_of(0.05), rng.uniform(900, 1500), [1, 1.6], [0.012, 0.007]), n_of(at))
+    x = lowpass(x, 3000, 2)
+    return reverb(fade(x, 0.003, 0.3), rng, 1.8, 0.3, 2400)
 
 
-@sound("crane_brake", about="the crane's brake: a squeal and a clunk")
+@sound("crane_brake", about="the crane's brake: a low moan of the shoes and a clunk (C1: no squeal)")
 def crane_brake(rng):
     n = n_of(1.2)
     t = times(n)
-    env = env_ar(n, 0.04, 0.35)
-    f = 2400 * (1 + 0.01 * np.sin(2 * np.pi * 6 * t))
-    x = 0.25 * (sine(f, n) + 0.4 * sine(f * 2.02, n) + 0.2 * sine(f * 0.5, n)) * env
-    x += 0.2 * bandpass(rng.standard_normal(n), 1500, 6000) * env
-    place(x, clank(rng, 0.6, 330, bright=0.7, body=1.0, ring=0.5), n_of(0.45))
-    return reverb(fade(x, 0.002, 0.1), rng, 1.4, 0.25, 3000)
+    env = env_ar(n, 0.08, 0.3)
+    f = 780 * (1 + 0.012 * np.sin(2 * np.pi * 5 * t))
+    x = 0.12 * (sine(f, n) + 0.35 * sine(f * 1.51, n) + 0.3 * sine(f * 0.5, n)) * env
+    x += 0.2 * bandpass(rng.standard_normal(n), 300, 1800) * env
+    place(x, clank(rng, 0.6, 300, bright=0.35, body=1.0, ring=0.4), n_of(0.45))
+    x = lowpass(x, 2500, 2)
+    return reverb(fade(x, 0.004, 0.1), rng, 1.4, 0.25, 2400)
 
 
 @sound("quake", about="a push of the collapse: a deep blast, rumble and falling stones")
@@ -751,20 +761,21 @@ def ambience_factory(rng):
     return seamless(x, xf)
 
 
-@sound("ui_move", reverse=False, about="menu: focus moves to another button")
+@sound("ui_move", reverse=False, about="menu: focus moves, a soft wooden tick (C1)")
 def ui_move(rng):
-    n = n_of(0.08)
-    x = 0.6 * modal(rng, n, 2600, [1, 2.4], [0.012, 0.008]) + 0.2 * burst(rng, n, 3000, 9000, 0.0015)
-    return fade(x, 0.0003, 0.02)
+    n = n_of(0.09)
+    x = 0.6 * modal(rng, n, 760, [1, 2.6], [0.014, 0.007], [1.0, 0.25]) + 0.3 * thump(n, 260, 200, 0.012)
+    x = lowpass(x, 1600, 2)
+    return fade(x, 0.003, 0.03)
 
 
-@sound("ui_click", reverse=False, about="menu: a button pressed, like a relay")
+@sound("ui_click", reverse=False, about="menu: a button pressed, a soft muffled relay (C1)")
 def ui_click(rng):
     n = n_of(0.2)
-    x = 0.7 * burst(rng, n, 2000, 9000, 0.0025) + 0.6 * modal(rng, n, 1500, [1, 2.2, 3.7], [0.03, 0.018, 0.01])
-    x += 0.5 * thump(n, 230, 170, 0.02)
-    place(x, 0.35 * burst(rng, n_of(0.05), 2500, 9000, 0.002) + 0.25 * modal(rng, n_of(0.05), 1900, [1, 2.2], [0.012, 0.008]), n_of(0.035))
-    return reverb(fade(x, 0.0003, 0.03), rng, 0.5, 0.08)
+    x = 0.5 * thump(n, 210, 150, 0.025) + 0.4 * modal(rng, n, 560, [1, 2.2, 3.7], [0.025, 0.014, 0.008], [1.0, 0.35, 0.12])
+    place(x, 0.2 * modal(rng, n_of(0.05), 700, [1, 2.2], [0.01, 0.006], [1.0, 0.3]), n_of(0.04))
+    x = lowpass(x, 1800, 2)
+    return reverb(fade(x, 0.003, 0.03), rng, 0.5, 0.06, 2000)
 
 
 @sound("level_done", reverse=False, about="the exit: a latch, a pneumatic hiss, two soft chimes")
@@ -843,7 +854,10 @@ def main(argv: list[str]) -> int:
     parser.add_argument("names", nargs="*", help="only these sounds (default: all)")
     parser.add_argument("--sheet", type=Path, help="also draw spectrograms into this PNG")
     parser.add_argument("--list", action="store_true", help="print the sounds and stop")
+    parser.add_argument("--wind", choices=sorted(WINDS), help="variant of the Shift wind (default: WIND)")
     args = parser.parse_args(argv)
+    global WIND
+    WIND = args.wind or WIND
     if args.list:
         for name, spec in SOUNDS.items():
             print(f"{name:20s} {'loop ' + str(spec['loop']) + ' s' if spec['loop'] else 'one-shot':12s} {'+rev' if spec['reverse'] else '    '}  {spec['about']}")
