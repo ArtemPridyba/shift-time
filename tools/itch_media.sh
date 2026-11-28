@@ -20,7 +20,7 @@ what="${1:-all}"
 shift || true
 
 # level:tick — a moment of the solution under Shift, after the opening overview.
-SHOTS=(level_01:900 level_02:600 level_03:760 level_04:740 level_05:1480)
+SHOTS=(level_01:900 level_02:600 level_03:760 level_04:740 level_05:1110)
 if [[ $# -gt 0 ]]; then
 	SHOTS=("$@")
 fi
