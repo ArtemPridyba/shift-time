@@ -256,10 +256,6 @@ func reset() -> void:
 	for node in get_tree().get_nodes_in_group("minecart"):
 		if room != null and room.is_ancestor_of(node) and node.has_method("reset_ride"):
 			node.call("reset_ride")
-	# Pigs the cart took are out of time with it (D216): a reset gives them back.
-	for node in get_tree().get_nodes_in_group("hopper"):
-		if room != null and room.is_ancestor_of(node) and node.has_method("forget_taken"):
-			node.call("forget_taken")
 	var objects := temporal_objects()
 	_recorder.restore(_initial, objects)
 	world.start(objects)

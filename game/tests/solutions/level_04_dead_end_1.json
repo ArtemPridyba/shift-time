@@ -3,11 +3,17 @@
 	"expect": "no_exit",
 	"segments": [
 		{ "actions": [], "ticks": 40 },
+		{ "actions": ["move_right", "rewind"], "ticks": 70 },
+		{ "actions": [], "ticks": 320 },
+		{ "actions": ["move_right"], "ticks": 100 },
+		{ "actions": ["move_right", "rewind"], "ticks": 130 },
 		{ "actions": ["move_right"], "ticks": 160 },
-		{ "actions": ["move_right", "rewind"], "ticks": 120 },
-		{ "actions": ["move_right"], "ticks": 90 },
-		{ "actions": [], "ticks": 300 },
-		{ "actions": ["rewind"], "ticks": 180 },
-		{ "actions": [], "ticks": 400 }
+		{ "actions": [], "ticks": 280 },
+		{ "actions": ["rewind"], "ticks": 200 },
+		{ "actions": [], "ticks": 330 },
+		{ "actions": ["jump"], "ticks": 6 },
+		{ "actions": [], "ticks": 720 },
+		{ "actions": ["jump", "move_left"], "ticks": 40 },
+		{ "actions": ["move_left"], "ticks": 90 }
 	]
 }

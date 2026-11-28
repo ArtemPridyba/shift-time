@@ -16,9 +16,8 @@ extends RefCounted
 ## along under the walkway and up the shaft back to the park, with the heroine.
 ## At the station it brakes to a stop and lets her off.
 ##
-## Its load (level 04, D216): pigs of iron it caught out of the hopper's
-## stream. Loaded it rolls at `loaded_speed_px`, slower; the hoist tips the
-## load into the pit, so every ride starts empty.
+## The intro ride may start on the hoist (`drop_from_hoist`): from the park
+## along the hoist to a point of the rails, where the hook lets it go.
 ##
 ## Numbers: `minecart` in data/objects.json.
 
@@ -30,8 +29,6 @@ var distance := 0.0
 ## Pixels a second along the rails; 0 while parked or stopped.
 var speed := 0.0
 var mode := Mode.PARKED
-## How many pigs of iron lie in the body.
-var load := 0
 
 var _params := {}
 var _park_segment := ""
@@ -42,6 +39,9 @@ var _route := PackedVector2Array()
 var _route_marks := PackedFloat32Array()
 var _route_d := 0.0
 var _last_move := Vector2.LEFT
+## Where the hoist lets the cart down onto the rails; "" to the park.
+var _drop_segment := ""
+var _drop_distance := 0.0
 
 
 func _init(rails: RailTrack, params: Dictionary, park_segment: String, hoist_y: float) -> void:
@@ -58,8 +58,8 @@ func park() -> void:
 	distance = 0.0
 	speed = 0.0
 	mode = Mode.PARKED
-	load = 0
 	_timer = 0.0
+	_drop_segment = ""
 	_route = PackedVector2Array()
 	_last_move = track.direction_at(segment, 0.0) if track != null else Vector2.LEFT
 
@@ -71,6 +71,22 @@ func board() -> bool:
 		return false
 	mode = Mode.LAUNCHING
 	_timer = _number("launch_seconds")
+	return true
+
+
+## The intro ride from the hoist: from the park along the hoist and down onto
+## `drop_segment` at `drop_distance`, where the hook lets it roll. False if
+## the cart is not parked or the place is not on the rails.
+func drop_from_hoist(drop_segment: String, drop_distance: float) -> bool:
+	if mode != Mode.PARKED or not track.has(drop_segment):
+		return false
+	var park_at := track.point_at(_park_segment, 0.0)
+	var drop_at := track.point_at(drop_segment, drop_distance)
+	_set_route([park_at, Vector2(park_at.x, _hoist_y), Vector2(drop_at.x, _hoist_y), drop_at])
+	_drop_segment = drop_segment
+	_drop_distance = drop_distance
+	speed = 0.0
+	mode = Mode.HOISTED
 	return true
 
 
@@ -120,7 +136,14 @@ func step(delta: float, leads_main: Callable) -> void:
 		Mode.HOISTED:
 			_route_d += _number("hoist_speed_px") * delta
 			if _route_d >= _route_marks[_route_marks.size() - 1]:
-				park()
+				if _drop_segment != "":
+					segment = _drop_segment
+					distance = _drop_distance
+					_drop_segment = ""
+					speed = 0.0
+					mode = Mode.ROLLING
+				else:
+					park()
 	var moved := position() - before
 	if moved.length() > 0.01:
 		_last_move = moved.normalized()
@@ -164,8 +187,7 @@ func stop_kind() -> String:
 
 
 func _roll(delta: float, leads_main: Callable) -> void:
-	var top := _number("loaded_speed_px") if load > 0 else _number("speed_px")
-	speed = move_toward(speed, top, _number("accel_px") * delta)
+	speed = move_toward(speed, _number("speed_px"), _number("accel_px") * delta)
 	var end := track.end_of(segment)
 	if str(end.get("kind", "")) == RailTrack.END_STOP and str(end.get("stop", "")) == RailTrack.STOP_STATION:
 		# Brakes so that it comes to rest at the buffer of the station.
@@ -186,12 +208,18 @@ func _roll(delta: float, leads_main: Callable) -> void:
 			distance = track.length(segment)
 			speed = 0.0
 			if str(end.get("stop", "")) == RailTrack.STOP_DEAD_END:
-				mode = Mode.BUMPED
-				_timer = _number("bump_seconds")
-				_bump_at = distance
+				_bump()
 			else:
 				mode = Mode.STOPPED
 			break
+
+
+## It hit a buffer: it bounces back from here and shakes.
+func _bump() -> void:
+	speed = 0.0
+	mode = Mode.BUMPED
+	_timer = _number("bump_seconds")
+	_bump_at = distance
 
 
 ## Up from where the cart rests to the hoist line, along it to the park, and
@@ -199,14 +227,18 @@ func _roll(delta: float, leads_main: Callable) -> void:
 func _start_hoist() -> void:
 	var from := track.point_at(segment, distance)
 	var park_at := track.point_at(_park_segment, 0.0)
-	_route = PackedVector2Array([from, Vector2(from.x, _hoist_y), Vector2(park_at.x, _hoist_y), park_at])
+	_set_route([from, Vector2(from.x, _hoist_y), Vector2(park_at.x, _hoist_y), park_at])
+	_drop_segment = ""
+	speed = 0.0
+	mode = Mode.HOISTED
+
+
+func _set_route(points: Array) -> void:
+	_route = PackedVector2Array(points)
 	_route_marks = PackedFloat32Array([0.0])
 	for i in range(1, _route.size()):
 		_route_marks.append(_route_marks[i - 1] + _route[i - 1].distance_to(_route[i]))
 	_route_d = 0.0
-	speed = 0.0
-	load = 0
-	mode = Mode.HOISTED
 
 
 func _route_point(d: float) -> Vector2:

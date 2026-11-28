@@ -3,6 +3,6 @@
 	"expect": "no_exit",
 	"segments": [
 		{ "actions": [], "ticks": 40 },
-		{ "actions": ["move_right"], "ticks": 900 }
+		{ "actions": ["move_right"], "ticks": 1900 }
 	]
 }

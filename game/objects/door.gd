@@ -13,7 +13,9 @@ extends AnimatableBody2D
 ##     The door is registered in the room as the target of `linked_id`.
 ##
 ## A level may change a door through `objects` of its entry in
-## `data/levels.json` (`apply_settings`): other cycle seconds, and
+## `data/levels.json` (`apply_settings`): other cycle seconds, `"locked": true`
+## for a door that stands still until something unlocks it (the press of
+## level 04, started by the launch of the minecart, D219), and
 ## `"cycle": "once"` for a door that starts open, waits `hold_open_seconds`,
 ## closes in `close_seconds` and then stays closed (level 01), and
 ## `"cycle": "opens_once"` for a door that starts closed, waits `delay_seconds`,
@@ -114,6 +116,7 @@ func apply_settings(settings: Dictionary) -> void:
 	var door_data: Dictionary = (Content.objects().get("door", {}) as Dictionary).duplicate()
 	door_data.merge(settings, true)
 	configure(door_data, Content.time())
+	locked = bool(settings.get("locked", false))
 	once = str(settings.get("cycle", CYCLE_LOOP)) == CYCLE_ONCE
 	opens_once = str(settings.get("cycle", CYCLE_LOOP)) == CYCLE_OPENS_ONCE
 	if opens_once:
