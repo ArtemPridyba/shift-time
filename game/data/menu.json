@@ -1,6 +1,7 @@
 {
-	"_about": "Main menu, level transitions, pause and the final screen (tasks 4.2, 4.3). title: the big name on the main menu. background: the picture behind the menus, dim: how much it is darkened (0..1). fade_seconds: the screen fades to black and back in this long; title_card_seconds: the next level's title stays on black this long. unlock_in_order: false opens every level from the menu (playtests); true opens only passed levels and the one after the last passed (turn on before the jam submission, card И3). pause_on_focus_loss: the game pauses when the browser tab or the window loses focus. final: the screen after the last level.",
+	"_about": "Main menu, level transitions, pause and the final screen (tasks 4.2, 4.3). title: the big name on the main menu. background: the picture behind the menus, dim: how much it is darkened (0..1). fade_seconds: the screen fades to black and back in this long; title_card_seconds: the next level's title stays on black this long. unlock_in_order: false opens every level from the menu (playtests); true opens only passed levels and the one after the last passed (turn on before the jam submission, card И3). pause_on_focus_loss: the game pauses when the browser tab or the window loses focus. accent: the one colour of the menus (titles, the outline of the focused button, «passed»): signal yellow like the key caps (D221), never the time colour of the heroine (D60). final: the screen after the last level.",
 	"title": "SHIFT TIME",
+	"accent": "#e0b02a",
 	"background": "res://assets/art/backdrop/level_01_dark.jpg",
 	"dim": 0.55,
 	"fade_seconds": 0.6,

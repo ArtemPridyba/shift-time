@@ -274,6 +274,9 @@ static func validate_menu(data: Variant) -> PackedStringArray:
 	var picture: Variant = menu_data.get("background")
 	if not picture is String or not ResourceLoader.exists(str(picture)):
 		errors.append("menu.json: 'background' must point to a picture of the game, got '%s'" % [picture])
+	var accent: Variant = menu_data.get("accent")
+	if not accent is String or not Color.html_is_valid(str(accent)):
+		errors.append("menu.json: 'accent' must be a colour like \"#e0b02a\", got '%s'" % [accent])
 	var dim: Variant = menu_data.get("dim")
 	if not _is_number(dim) or float(dim) < 0.0 or float(dim) > 1.0:
 		errors.append("menu.json: 'dim' must be a number from 0 to 1")
