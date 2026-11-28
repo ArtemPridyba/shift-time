@@ -260,64 +260,81 @@ def sound(name: str, loop: float = 0.0, reverse: bool = True, about: str = ""):
     return deco
 
 
-# Shift is a gust of wind (C1, Boris 28.11): a natural sound with a body that
-# everyone knows and stops noticing, so pressing Shift a hundred times never
-# tires. No tone, no rhythm, no clicks. The body is noise in a wide band around
-# `center` that moves with the gust; `air` adds the hiss of moving air above it;
-# a fast irregular flutter makes it sound like real turbulence, not a hum.
+# Shift is the whistle of wind (C1, Boris 28.11, by his two examples): noise
+# through a narrow resonance around 600 Hz whose pitch rises with the gust and
+# falls as it passes, over a softer wide band of air; almost nothing above
+# 3 kHz. A natural sound everyone knows and stops noticing, so pressing Shift a
+# hundred times never tires. `q` is how narrow the whistle is; `body` the wide
+# band under it; `rumble` the low push of the air.
 # WIND picks the variant (`--wind` overrides it).
 WINDS = {
-    "gust": {"center": 900.0, "width": 1.1, "air": 0.35, "rumble": 0.35, "flutter": 0.22, "top": 6500.0},
-    "warm": {"center": 650.0, "width": 1.0, "air": 0.2, "rumble": 0.5, "flutter": 0.18, "top": 5000.0},
+    "whistle": {"center": 600.0, "q": 22.0, "body": 0.3, "second": 0.04, "rumble": 0.45, "top": 3000.0},
+    "wide": {"center": 600.0, "q": 7.0, "body": 0.45, "second": 0.05, "rumble": 0.55, "top": 3000.0},
 }
-WIND = "gust"
+WIND = "whistle"
+
+
+def _resonance(x, centers, q):
+    """A state-variable band-pass whose centre moves per sample: a whistle that glides."""
+    out = np.empty_like(x)
+    f = 2.0 * np.sin(np.pi * np.clip(centers, 20.0, SR / 6) / SR)
+    damp = 1.0 / q
+    low = band = 0.0
+    for k in range(len(x)):
+        high = x[k] - low - damp * band
+        band += f[k] * high
+        low += f[k] * band
+        out[k] = band
+    return out
 
 
 def _wind(rng, n, centers, w):
-    """A gust's sound for the band centres `centers` (Hz per sample); unit peak-ish."""
-    x = swept_noise(rng, n, centers, w["width"], -1.0)
-    x += w["air"] * swept_noise(rng, n, centers * 3.5, 0.7, 0.0)
-    x += w["rumble"] * lowpass(colored(rng, n, -2.0), 180)
-    flutter = lowpass(rng.standard_normal(n), 9.0, 2)
-    flutter /= np.max(np.abs(flutter)) + 1e-12
-    x *= 1.0 + w["flutter"] * flutter
-    return lowpass(x, w["top"], 1)
+    """The whistle of wind for the band centres `centers` (Hz per sample)."""
+    x = _resonance(colored(rng, n, -1.0), centers, w["q"])
+    x /= np.std(x) + 1e-12
+    x += w["second"] * _resonance(colored(rng, n, -1.0), centers * 2.0, w["q"]) / 0.3
+    body = swept_noise(rng, n, centers, 0.9, -1.0)
+    x += w["body"] * body
+    x += w["rumble"] * lowpass(colored(rng, n, -2.0), 250)
+    return lowpass(x, w["top"], 2)
 
 
 # Time: what Shift sounds like (played by the time sound and the rewind loop).
 
-@sound("time_rewind_start", reverse=False, about="Shift pressed: a gust of wind rises and settles into the held wind (C1)")
+@sound("time_rewind_start", reverse=False, about="Shift pressed: the wind whistles up as a gust comes (C1)")
 def time_rewind_start(rng):
     w = WINDS[WIND]
     n = n_of(1.0)
     t = times(n)
-    rise = np.clip(t / 0.35, 0.0, 1.0) ** 1.5
-    env = rise * (1.0 - 0.5 * np.clip((t - 0.35) / 0.4, 0.0, 1.0))
-    centers = w["center"] * (0.6 + 0.65 * rise - 0.25 * np.clip((t - 0.35) / 0.4, 0.0, 1.0))
+    rise = np.clip(t / 0.45, 0.0, 1.0)
+    rise = rise * rise * (3 - 2 * rise)
+    settle = np.clip((t - 0.45) / 0.45, 0.0, 1.0)
+    env = rise * (1.0 - 0.45 * settle)
+    centers = w["center"] * (0.7 + 0.38 * rise - 0.08 * settle)
     x = _wind(rng, n, centers, w) * env
     return fade(x, 0.03, 0.25)
 
 
-@sound("time_rewind_loop", loop=6.0, reverse=False, about="Shift held: wind blowing in gusts through the hall (C1)")
+@sound("time_rewind_loop", loop=6.0, reverse=False, about="Shift held: the wind whistles on, rising and falling with the gusts (C1)")
 def time_rewind_loop(rng):
     w = WINDS[WIND]
     length, xf = 6.0, 1.0
     n = n_of(length + xf)
     gusts = lfo(n, [0.17, 0.33, 0.5], 1.0, length, rng) - 1.0
-    centers = w["center"] * 2 ** (0.4 * gusts)
-    x = _wind(rng, n, centers, w) * (1.0 + 0.3 * gusts)
+    centers = w["center"] * 2 ** (0.18 * gusts)
+    x = _wind(rng, n, centers, w) * (1.0 + 0.35 * gusts)
     return seamless(x, xf)
 
 
-@sound("time_rewind_end", reverse=False, about="Shift released: the last push of the gust passes and dies down (C1)")
+@sound("time_rewind_end", reverse=False, about="Shift released: the whistle falls and the gust passes (C1)")
 def time_rewind_end(rng):
     w = WINDS[WIND]
-    n = n_of(0.8)
+    n = n_of(0.9)
     t = times(n)
-    env = np.clip(t / 0.06, 0.0, 1.0) * np.exp(-np.maximum(t - 0.06, 0.0) / 0.22)
-    centers = w["center"] * np.geomspace(1.2, 0.5, n)
+    env = np.clip(t / 0.05, 0.0, 1.0) * np.exp(-np.maximum(t - 0.05, 0.0) / 0.25)
+    centers = w["center"] * np.geomspace(1.0, 0.65, n)
     x = _wind(rng, n, centers, w) * env
-    return fade(x, 0.02, 0.2)
+    return fade(x, 0.02, 0.25)
 
 
 # The heroine (live: always forward, no reversed twin).

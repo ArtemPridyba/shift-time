@@ -7,9 +7,9 @@
 	"rewind_pitch_max": 1.5,
 	"positional": { "max_distance_px": 2600, "attenuation": 1.0, "panning": 0.5 },
 	"sounds": {
-		"time_rewind_start": { "db": -6.0 },
-		"time_rewind_loop": { "db": -12.5, "loop": true },
-		"time_rewind_end": { "db": -8.0 },
+		"time_rewind_start": { "db": -7.9 },
+		"time_rewind_loop": { "db": -10.5, "loop": true },
+		"time_rewind_end": { "db": -8.6 },
 		"step_1": { "db": -10.0 },
 		"step_2": { "db": -10.0 },
 		"step_3": { "db": -9.0 },
