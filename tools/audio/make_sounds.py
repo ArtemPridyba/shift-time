@@ -277,6 +277,10 @@ WINDS = {
     "duct": dict(_WHISTLE, palette="duct"),
     "flywheel": dict(_WHISTLE, palette="flywheel"),
     "echo": dict(_WHISTLE, palette="echo"),
+    "grains": dict(_WHISTLE, palette="grains"),
+    "vortex": dict(_WHISTLE, palette="vortex"),
+    "inhale": dict(_WHISTLE, palette="inhale"),
+    "frozen": dict(_WHISTLE, palette="frozen"),
 }
 # The strong layer the game fades in as the rewind speeds up and the world moves:
 # the same wind, higher, wider and pushier.
@@ -327,7 +331,75 @@ def _wind(rng, n, centers, w, spin=None, loop=False):
         else:
             back = signal.fftconvolve(x[::-1], ir)[: len(x)][::-1]
         x = x + 0.9 * back / (np.std(back) + 1e-12)
+    elif w["palette"] == "grains":
+        x = _reversed_grains(x, 0.1, loop)
+    elif w["palette"] == "vortex":
+        x = _vortex(x, loop)
+    elif w["palette"] == "inhale" and loop:
+        x = x * _inhales(len(x))
+    elif w["palette"] == "frozen":
+        x = _smear(rng, x, 0.35, loop)
     return x
+
+
+def _reversed_grains(x, seconds, loop):
+    """The sound cut into short grains, each played backwards and overlapped:
+    the same wind, flowing against the grain."""
+    size = n_of(seconds) // 2 * 2
+    hop = size // 2
+    win = np.hanning(size)
+    n = len(x)
+    src = np.concatenate([x, x[:size]]) if loop else np.pad(x, (0, size))
+    out = np.zeros(n + size)
+    for start in range(-hop, n, hop):
+        idx = np.arange(start, start + size)
+        seg = src[idx % len(src)] if loop else np.where((idx >= 0) & (idx < n), src[np.clip(idx, 0, len(src) - 1)], 0.0)
+        out[max(start, 0):start + size] += (seg[::-1] * win)[max(-start, 0):]
+    return out[:n]
+
+
+def _vortex(x, loop):
+    """The whistle circling round the listener: two copies swing nearer and
+    farther, so the pitch sways (Doppler) and the loudness turns."""
+    n = len(x)
+    t = times(n)
+    turn = 0.75 if not loop else round(0.75 * 6.0) / 6.0
+    phase = 2 * np.pi * turn * t
+    out = np.zeros(n)
+    for offset in (0.0, np.pi):
+        delay = n_of(0.006) * (1.0 + np.sin(phase + offset))
+        pos = np.arange(n) - delay
+        y = np.interp(pos % n, np.arange(n), x) if loop else np.interp(pos, np.arange(n), x, left=0.0)
+        out += y * (1.0 + 0.55 * np.sin(phase + offset + np.pi / 2))
+    return out
+
+
+def _inhales(n):
+    """Gusts played backwards: each swells slowly and breaks off short."""
+    env = np.full(n, 0.45)
+    t = times(n)
+    for at, rise in ((1.6, 1.3), (3.9, 1.7), (5.7, 1.2), (7.6, 1.3)):
+        shape = np.clip((t - (at - rise)) / rise, 0.0, 1.0) ** 2.2
+        shape *= np.clip((at + 0.12 - t) / 0.12, 0.0, 1.0)
+        env = np.maximum(env, 0.45 + 0.75 * shape)
+    return env
+
+
+def _smear(rng, x, seconds, loop):
+    """The sound frozen in time: its spectrum blurred over `seconds` with
+    random phases, a glassy wind that hangs in the air."""
+    size, hop = 2048, 512
+    k = int(seconds * SR / hop)
+    src = np.concatenate([x[-size:], x, x[:size]]) if loop else np.pad(x, (size, size))
+    _, _, z = signal.stft(src, SR, nperseg=size, noverlap=size - hop)
+    mag = np.abs(z)
+    kernel = np.hanning(2 * k + 1)
+    kernel /= kernel.sum()
+    mag = np.apply_along_axis(lambda row: np.convolve(row, kernel, mode="same"), 1, mag)
+    z = mag * np.exp(1j * rng.uniform(0, 2 * np.pi, mag.shape))
+    _, y = signal.istft(z, SR, nperseg=size, noverlap=size - hop)
+    y = y[size:size + len(x)]
+    return 0.35 * x / (np.std(x) + 1e-12) + y / (np.std(y) + 1e-12)
 
 
 # Time: what Shift sounds like (played by the time sound and the rewind loop).
