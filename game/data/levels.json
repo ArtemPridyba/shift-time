@@ -195,91 +195,68 @@
 	{
 		"id": "level_05",
 		"scene": "res://levels/level_05.tscn",
-		"prelude_seconds": 0.5,
+		"prelude_seconds": 9.0,
 		"intro_seconds": 0.6,
 		"collapse": {
-			"_about": "The collapse of level 05 in three quakes (card docs/levels/05.md, D144; CollapsePlan). Act 1 counts from the room's start: the quake at quake_seconds, then each piece of act 1 falls 'second' after it (the platforms; the third breaks on its stub and crumble_seconds later crumbles into the pit) and each of 'lamps' of act 1 falls on its own onto row to_row. Act 2 begins when the heroine steps onto the crane: the second quake; after crane.delay_seconds it rides down its rail at crane.speed px per second and each of crane.lamps falls when it comes within lamp_lead_px of it. Act 3 begins when the crane reaches the end of its rail: the third quake; the crane sags sag_px over sag_seconds (tilting tilt_degrees) and falls at fall_second for fall_seconds; each piece of act 3 breaks off 'second' after the quake and goes to the bottom in fall_seconds (D149): 'sink' slides down evenly, 'drop' (the default) falls faster and faster, 'tumble' is a small chunk that drifts sideways, falls faster and faster and turns 'spin' times on its way (solid only above her feet, so she hits it but never stands on it); 'follow' hangs on a chain over pulleys against the piece 'follow' and rises as that one falls (D162); the pieces of act 3 are the first chunk by the rail, a wall hung on chains (it falls only after the slow part), a low chunk under it, a tumbling chunk, two steps, a heavy slab under the roof and the platform it hangs against, which rises from the last step to the exit ledge; the lamps of act 3 fall among them for their own fall_seconds, lit all the way down. The slow part of act 3: from_seconds after the quake the world's tempo eases down to 'tempo' over ease_seconds, holds until her step onto the exit ledge (D162), at most hold_seconds, and eases back. The heroine slows down too, to slow.heroine_tempo at the slowest (D148). blast: the explosion behind the falling ceiling at the third quake, at [x, row] in cells, burning 'seconds' of act 3's clock with a light radius_px wide, energy bright, of colour color (look only). Seconds of the world clock (D96).",
-			"quake_seconds": 3.9,
+			"_about": "The collapse of level 05, one screen (card docs/levels/05.md, D176, D215; CollapsePlan). The hall shakes at quake_seconds after the room's start. crane.start_seconds after the start the empty crane sets off by itself from the ledge with the exit door (it all happens in the prelude, before she comes in): the second quake; crane.pedal false: she only rides it, it never goes onto a brake; after crane.delay_seconds it rides down its rail at crane.speed px per second and each of crane.lamps falls when it comes within lamp_lead_px of it. At crane.blast_way of its ride (0 … 1) the third quake and the explosion (blast: at [x, row] in cells, burning 'seconds', look only); the crane rides on to the end of the rail, sags sag_px over sag_seconds (tilting tilt_degrees) and stays there by the floor for good (falls: false). Each piece is a chunk of the ceiling over the rail: it breaks off 'second' after the third quake, once the crane has passed under it, and 'sink's to the floor in fall_seconds; under Shift it rises again. gate: 'second' after the third quake the left chain of the slab over the exit door tears and the slab swings aside in swing_seconds: from then the exit is open. The lamps of act 3 fall among the chunks for their own fall_seconds, lit all the way down. slow: the world keeps its tempo (1, no slow part in this version). Seconds of the world clock (D96).",
+			"quake_seconds": 1.0,
 			"pieces": [
-				{ "act": 1, "second": 0.3, "fall_seconds": 0.6 },
-				{ "act": 1, "second": 0.9, "fall_seconds": 0.6 },
-				{ "act": 1, "second": 1.5, "fall_seconds": 0.6, "breaks": true, "crumble_seconds": 2.0 },
-				{ "act": 3, "second": 0.1, "fall_seconds": 4.8, "kind": "sink" },
-				{ "act": 3, "second": 4.5, "fall_seconds": 0.6 },
-				{ "act": 3, "second": 0.1, "fall_seconds": 4.2, "kind": "sink" },
-				{ "act": 3, "second": 1.8, "fall_seconds": 1.46, "kind": "tumble", "spin": 8 },
-				{ "act": 3, "second": 0.081, "fall_seconds": 4.6, "kind": "sink" },
-				{ "act": 3, "second": 0.05, "fall_seconds": 4.8, "kind": "sink" },
-				{ "act": 3, "second": 2.75, "fall_seconds": 0.11 },
-				{ "act": 3, "kind": "follow", "follow": 9 }
+				{ "act": 3, "second": 0.9, "fall_seconds": 2.5, "kind": "sink" },
+				{ "act": 3, "second": 1.9, "fall_seconds": 2.5, "kind": "sink" },
+				{ "act": 3, "second": 0.0, "fall_seconds": 0.8, "kind": "sink" }
 			],
 			"lamps": [
-				{ "lamp": 1, "act": 1, "second": 0.6, "to_row": 17.0 },
-				{ "lamp": 2, "act": 1, "second": 1.2, "to_row": 17.0 },
-				{ "lamp": 3, "act": 1, "second": 1.8, "to_row": 23.0 },
-				{ "lamp": 8, "act": 3, "second": 0.9, "to_row": 23.0, "fall_seconds": 3.0, "lit": true },
-				{ "lamp": 9, "act": 3, "second": 1.1, "to_row": 23.0, "fall_seconds": 3.0, "lit": true }
+				{ "lamp": 3, "act": 3, "second": 1.6, "to_row": 15.0, "fall_seconds": 2.5, "lit": true }
 			],
-			"crane": { "delay_seconds": 0.5, "speed": 220, "lamps": [5, 6, 7], "lamp_lead_px": 64, "lamp_to_row": 23.0, "sag_seconds": 2.0, "sag_px": 24, "tilt_degrees": 4, "fall_second": 2.5, "fall_seconds": 1.5 },
-			"slow": { "from_seconds": 2.4, "ease_seconds": 0.4, "tempo": 0.03, "hold_seconds": 40.0, "heroine_tempo": 0.5 },
-			"blast": { "at": [47.0, 6.5], "seconds": 3.2, "radius_px": 700, "energy": 2.5, "color": "#ff8a3a" }
+			"crane": {
+				"start_seconds": 0.5,
+				"pedal": false,
+				"delay_seconds": 0.5,
+				"speed": 220,
+				"blast_way": 0.45,
+				"lamps": [2],
+				"lamp_lead_px": 64,
+				"lamp_to_row": 15.0,
+				"sag_seconds": 1.0,
+				"sag_px": 12,
+				"tilt_degrees": 3,
+				"falls": false,
+				"fall_second": 2.5,
+				"fall_seconds": 1.0
+			},
+			"slow": { "from_seconds": 0.0, "ease_seconds": 0.5, "tempo": 1.0, "hold_seconds": 0.0, "heroine_tempo": 1.0 },
+			"blast": { "at": [17.0, 4.5], "seconds": 3.2, "radius_px": 600, "energy": 2.5, "color": "#ff8a3a" },
+			"gate": { "second": 0.2, "swing_seconds": 0.8 }
 		},
 		"world": {
-			"_about": "Level 05 in the Night shop (same kit and scale as level 01, D112), 66 cells wide and 22 high, the roof down to row 4: the start floor at the left on row 17, three stubs in the pit for the platforms of act 1, the crane's ledge on row 11 on its pillar, the pit under the crane's rail open to the bottom (a fall is death), the exit ledge high on the right on row 9. Lamps: 0 over the start, 1-3 beside the platforms (they fall in act 1), 4 over the ledge, 5-7 over the rail (they fall as the crane passes), 8-9 between the chunks of the ceiling (they fall among them, shining), 10 by the exit. darkness: this room is darker than the kit.",
-			"ceiling": 4,
+			"_about": "Level 05 in the Night shop (same kit and scale as level 01, D112), one screen of 30x17 cells, the roof down to row 2: the crane's ledge at the upper left on row 6, its rail sloping down to the right, the exit door in the back wall of that ledge, the pit open to the bottom under the rail, the floor with the entrance at the lower right on row 15. Lamps: 0 over the crane's ledge and the exit door, 1 over the rail near it, 2 over the rail (it falls as the crane passes), 3 among the chunks (it falls among them, shining), 4 over the entrance. darkness: this room is darker than the kit.",
+			"ceiling": 2,
 			"darkness": "#17171e",
 			"back": [
-				{ "kind": "window", "rect": [3.0, 9.0, 1.15, 3] },
-				{ "kind": "window", "rect": [13.0, 7.0, 1.15, 3] },
-				{ "kind": "window", "rect": [27.0, 13.5, 1.15, 2.6] },
-				{ "kind": "window", "rect": [37.0, 11.0, 1.15, 2.6] },
-				{ "kind": "window", "rect": [49.0, 14.0, 1.15, 2.6] },
-				{ "kind": "window", "rect": [60.2, 4.8, 1.15, 1.8] },
-				{ "kind": "column", "rect": [6.5, 4, 0.3, 13] },
-				{ "kind": "column", "rect": [25.6, 4, 0.3, 18] },
-				{ "kind": "column", "rect": [42.6, 4, 0.3, 18] },
-				{ "kind": "soot", "rect": [11.1, 5.0, 1.7, 0.9] },
-				{ "kind": "rust", "rect": [20.0, 13.4, 1.3, 0.8] },
-				{ "kind": "cracks", "rect": [4.0, 12.6, 1.1, 0.8] },
-				{ "kind": "cracks", "rect": [45.0, 4.2, 1.1, 0.8] },
-				{ "kind": "cracks", "rect": [52.0, 4.2, 1.1, 0.8] },
-				{ "kind": "plaster", "rect": [33.0, 16.2, 1.0, 0.7] },
-				{ "kind": "stain", "rect": [58.6, 10.6, 1.3, 0.9] },
-				{ "kind": "pipe", "rect": [2.4, 4, 0.18, 6] },
-				{ "kind": "pipe", "rect": [63.6, 4, 0.18, 3] },
-				{ "kind": "soot", "rect": [30.8, 4.5, 1.8, 0.9] }
+				{ "kind": "window", "rect": [3.0, 9.5, 1.15, 3] },
+				{ "kind": "window", "rect": [14.0, 10.5, 1.15, 2.6] },
+				{ "kind": "window", "rect": [24.0, 4.0, 1.15, 2.6] },
+				{ "kind": "column", "rect": [8.0, 2, 0.3, 13] },
+				{ "kind": "column", "rect": [20.6, 2, 0.3, 13] },
+				{ "kind": "soot", "rect": [11.0, 2.5, 1.8, 0.9] },
+				{ "kind": "rust", "rect": [23.0, 12.6, 1.3, 0.8] },
+				{ "kind": "cracks", "rect": [3.5, 7.2, 1.1, 0.8] },
+				{ "kind": "cracks", "rect": [16.0, 2.2, 1.1, 0.8] },
+				{ "kind": "stain", "rect": [26.6, 10.6, 1.3, 0.9] },
+				{ "kind": "pipe", "rect": [2.4, 2, 0.18, 4] },
+				{ "kind": "pipe", "rect": [27.6, 2, 0.18, 6] }
 			],
-			"front": [
-				{ "kind": "bricks", "rect": [4.2, 16.78, 1.2, 0.22] }
-			],
+			"front": [{ "kind": "bricks", "rect": [24.2, 14.78, 1.2, 0.22] }],
 			"lamps": [
-				{ "x": 3.5, "drop": 1.6, "radius_px": 340 },
-				{ "x": 10.4, "drop": 1.4, "radius_px": 300 },
-				{ "x": 14.5, "drop": 1.4, "radius_px": 300 },
-				{ "x": 18.0, "drop": 1.4, "radius_px": 300 },
-				{ "x": 22.0, "drop": 1.6, "radius_px": 340 },
-				{ "x": 30.0, "drop": 1.0, "radius_px": 300 },
-				{ "x": 34.0, "drop": 1.0, "radius_px": 300 },
-				{ "x": 38.0, "drop": 1.0, "radius_px": 300 },
-				{ "x": 43.2, "drop": 1.0, "radius_px": 300 },
-				{ "x": 49.7, "drop": 1.0, "radius_px": 300 },
-				{ "x": 60.0, "drop": 1.4, "radius_px": 320 },
-				{ "x": 55.0, "drop": 1.0, "radius_px": 460 },
-				{ "x": 52.8, "drop": 3.0, "radius_px": 420 }
+				{ "x": 3.0, "drop": 1.6, "radius_px": 340 },
+				{ "x": 11.6, "drop": 1.0, "radius_px": 300 },
+				{ "x": 16.0, "drop": 0.8, "radius_px": 300 },
+				{ "x": 21.2, "drop": 1.0, "radius_px": 340 },
+				{ "x": 27.3, "drop": 6.0, "radius_px": 480 }
 			],
 			"ground": {
-				"concrete": [
-					[1, 17, 6, 5],
-					[8, 17, 1, 5],
-					[12, 17, 1, 5],
-					[17, 17, 1, 5],
-					[19, 11, 6, 2],
-					[21, 13, 1, 9],
-					[56, 9, 9, 13]
-				],
-				"roof": [
-					[0, 0, 66, 4]
-				]
+				"concrete": [[1, 6, 5, 2], [20, 15, 9, 2]],
+				"roof": [[0, 0, 30, 2]]
 			}
 		},
 		"title": "05 Crane"

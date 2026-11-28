@@ -37,11 +37,14 @@ extends RefCounted
 ##   "lamps": [{"lamp", "act": 1 or 3, "second" after the act's quake,
 ##       "to_row", "fall_seconds" (absent: the kit's), "lit": shines on its
 ##       way down}] lamps that fall on their own;
-##   "crane": {"delay_seconds" from the step to setting off, "speed" px per
+##   "crane": {"start_seconds": when it sets off by itself after the room's
+##       start (absent: on her step, D215), "pedal": false — no pedal, the
+##       crane only replays its ride (default true, D176), "delay_seconds" from the step to setting off, "speed" px per
 ##       world second, "blast_way": where along its rail (0 … 1, default 1,
 ##       its arrival) act 3 begins, "lamps": [lamps over the rail], "lamp_lead_px",
 ##       "lamp_to_row", "sag_seconds", "sag_px", "tilt_degrees",
-##       "fall_second" after act 3's quake, "fall_seconds"};
+##       "falls": false keeps it at the end of its rail for good (D215; default
+##       true), "fall_second" after act 3's quake, "fall_seconds"};
 ##   "slow": {"from_seconds" after act 3's quake, "ease_seconds", "tempo",
 ##       "hold_seconds"}: the world's tempo eases down to `tempo`, holds until
 ##       she steps onto the exit ledge (`calm`, D162) but no longer than
@@ -49,7 +52,10 @@ extends RefCounted
 ##       not the heroine's slowed clock; "heroine_tempo": how fast she moves
 ##       at the slowest};
 ##   "blast": {"at": [x, row] in cells, "seconds" it burns on act 3's clock,
-##       "radius_px", "energy", "color"} — the explosion of act 3, look only }.
+##       "radius_px", "energy", "color"} — the explosion of act 3, look only;
+##   "gate": {"second" after act 3's quake the left chain of the slab over the
+##       exit door tears, "swing_seconds" it takes to swing aside} (absent:
+##       no gate): the exit is open once the slab has swung aside (D215) }.
 ## Seconds are of the world clock (D96). Lamp fall and shatter seconds:
 ## `kit_objects.quake` in look.json; the shake: `kit_objects.collapse`.
 
@@ -66,6 +72,10 @@ var pieces: Array[Dictionary] = []
 ## Lamps falling on their own: {"lamp", "act", "at", "to_row", "fall", "lit"}.
 var lamps: Array[Dictionary] = []
 var ride_delay := 1
+## The clock tick on which the crane sets off by itself (D215); -1: on her step.
+var ride_start := -1
+## False: a jump into the crane under Shift does not make it hers (D215).
+var pedal := true
 ## Pixels per tick the crane rides; ticks it takes (set by `aim`).
 var ride_step := 1.0
 var ride_ticks := 1
@@ -78,6 +88,8 @@ var sag_ticks := 1
 var sag_px := 0.0
 var tilt_degrees := 0.0
 var crane_fall_at := 0
+## False: the crane stays at the end of its rail and never falls (D215).
+var crane_falls := true
 var crane_fall_ticks := 1
 ## Where along its rail the crane is when act 3 begins: 1 at its arrival.
 var blast_way := 1.0
@@ -105,6 +117,10 @@ var blast_ticks := 1
 var blast_radius := 400.0
 var blast_energy := 2.0
 var blast_color := Color("#ff8a3a")
+## The slab over the exit door (D215): act 3's tick on which its left chain
+## tears (-1: no gate) and the ticks it takes to swing aside.
+var gate_at := -1
+var gate_swing := 1
 var lamp_fall_ticks := 1
 var shatter_ticks := 1
 var shake_ticks := 1
@@ -133,6 +149,8 @@ static func from_data(data: Variant, ticks_per_second: float, quake: Dictionary,
 			"to_row": float(l.get("to_row", 20.0)), "fall": fall, "lit": bool(l.get("lit", false))})
 	var crane: Dictionary = d.get("crane", {}) if d.get("crane", {}) is Dictionary else {}
 	plan.ride_delay = ticks.call(crane.get("delay_seconds", 1.0))
+	plan.ride_start = ticks.call(crane["start_seconds"]) if crane.has("start_seconds") else -1
+	plan.pedal = bool(crane.get("pedal", true))
 	plan.ride_step = maxf(float(crane.get("speed", 100.0)), 1.0) / ticks_per_second
 	for lamp: Variant in crane.get("lamps", []):
 		plan.crane_lamps.append(int(lamp))
@@ -143,6 +161,7 @@ static func from_data(data: Variant, ticks_per_second: float, quake: Dictionary,
 	plan.tilt_degrees = float(crane.get("tilt_degrees", 0.0))
 	plan.crane_fall_at = ticks.call(crane.get("fall_second", 1.0))
 	plan.crane_fall_ticks = maxi(ticks.call(crane.get("fall_seconds", 1.0)), 1)
+	plan.crane_falls = bool(crane.get("falls", true))
 	plan.blast_way = clampf(float(crane.get("blast_way", 1.0)), 0.0, 1.0)
 	var slow: Dictionary = d.get("slow", {}) if d.get("slow", {}) is Dictionary else {}
 	plan.slow_from = ticks.call(slow.get("from_seconds", 0.0))
@@ -158,9 +177,13 @@ static func from_data(data: Variant, ticks_per_second: float, quake: Dictionary,
 	plan.blast_radius = float(blast.get("radius_px", 400.0))
 	plan.blast_energy = float(blast.get("energy", 2.0))
 	plan.blast_color = Color.from_string(str(blast.get("color", "#ff8a3a")), Color("#ff8a3a"))
+	var gate: Variant = d.get("gate")
+	if gate is Dictionary:
+		plan.gate_at = ticks.call((gate as Dictionary).get("second", 0.0))
+		plan.gate_swing = maxi(ticks.call((gate as Dictionary).get("swing_seconds", 0.6)), 1)
 	plan.shatter_ticks = maxi(ticks.call(quake.get("shatter_seconds", 0.6)), 1)
 	plan.shake_ticks = maxi(ticks.call(look.get("shake_seconds", 1.2)), 1)
-	plan.clock_end = plan.quake_tick + plan.shake_ticks
+	plan.clock_end = maxi(plan.quake_tick + plan.shake_ticks, plan.ride_start + 1)
 	for p in plan.pieces:
 		if int(p["act"]) == 1:
 			var crumble := int(p["crumble"]) + int(p["fall"]) if int(p["crumble"]) > 0 else 0
@@ -201,7 +224,9 @@ func aim(start_x: float, travel: Vector2, lamp_x: Array) -> void:
 	# The last thing of act 3 to come to rest, in its own (slowed) ticks; the
 	# crane sags and falls from its arrival, which comes `end - act3_at` world
 	# ticks after act 3 began.
-	var last := end - act3_at + crane_fall_at + crane_fall_ticks + shake_ticks
+	var last := end - act3_at + (crane_fall_at + crane_fall_ticks if crane_falls else sag_ticks) + shake_ticks
+	if gate_at >= 0:
+		last = maxi(last, gate_at + gate_swing)
 	for p in pieces:
 		if int(p["act"]) == 3:
 			last = maxi(last, int(p["at"]) + int(p["fall"]) + shatter_ticks)
@@ -259,7 +284,7 @@ func _at_end(ride: int) -> float:
 func can_brake(ride: int) -> bool:
 	if brake >= 0 or ride < ride_delay:
 		return false
-	return _at_end(ride) < float(crane_fall_at)
+	return not crane_falls or _at_end(ride) < float(crane_fall_at)
 
 
 ## Ticks of act 3's world (slowed) for `ride`; -1 before it begins.
@@ -348,6 +373,19 @@ func blast_light(ride: int) -> float:
 	return 1.0 - (age - 0.1) / 0.9
 
 
+## How far the slab over the exit door has swung aside at `ride`: 0 hanging
+## on both chains (the door shut) … 1 aside on its right chain (open). Its
+## left chain tears `gate_at` ticks into act 3, on act 3's clock, so under
+## Shift the slab swings back and the chain mends.
+func gate_open(ride: int) -> float:
+	if gate_at < 0:
+		return 0.0
+	var t := act3(ride)
+	if t < 0.0:
+		return 0.0
+	return clampf((t - float(gate_at)) / float(gate_swing), 0.0, 1.0)
+
+
 ## Ticks since piece `k` broke off, on its act's clock; < 0 while it hangs.
 func since(k: int, clock: int, ride: int) -> float:
 	var p := pieces[k]
@@ -426,15 +464,15 @@ func crane_pose(ride: int, travel: Vector2, fall_px: float) -> Dictionary:
 		var sag := clampf(t / float(sag_ticks), 0.0, 1.0)
 		at.y += sag_px * sag
 		tilt = deg_to_rad(tilt_degrees) * sag
-		var f := clampf((t - float(crane_fall_at)) / float(crane_fall_ticks), 0.0, 1.0)
+		var f := clampf((t - float(crane_fall_at)) / float(crane_fall_ticks), 0.0, 1.0) if crane_falls else 0.0
 		at.y += fall_px * f * f
 		tilt *= 1.0 + 2.0 * f
-	return {"at": at, "tilt": tilt, "falling": t >= float(crane_fall_at), "down": crane_down(ride)}
+	return {"at": at, "tilt": tilt, "falling": crane_falls and t >= float(crane_fall_at), "down": crane_down(ride)}
 
 
 ## True once the crane lies at the bottom of the pit.
 func crane_down(ride: int) -> bool:
-	return _at_end(ride) >= float(crane_fall_at + crane_fall_ticks)
+	return crane_falls and _at_end(ride) >= float(crane_fall_at + crane_fall_ticks)
 
 
 ## The fall of lamp `lamp` now, as `WorldLight` reads it, or {} when this
@@ -556,6 +594,12 @@ static func problems(data: Variant, where: String, lamp_count: int) -> PackedStr
 		for key: String in ["delay_seconds", "fall_second", "sag_px", "lamp_lead_px", "tilt_degrees"]:
 			if not not_negative.call(c.get(key)):
 				errors.append("%s: 'collapse.crane.%s' must be a number from 0" % [where, key])
+		if c.has("pedal") and not c.get("pedal") is bool:
+			errors.append("%s: 'collapse.crane.pedal' must be true or false" % where)
+		if c.has("falls") and not c.get("falls") is bool:
+			errors.append("%s: 'collapse.crane.falls' must be true or false" % where)
+		if c.has("start_seconds") and not not_negative.call(c.get("start_seconds")):
+			errors.append("%s: 'collapse.crane.start_seconds' must be a number from 0" % where)
 		var w: Variant = c.get("blast_way", 1.0)
 		if not (w is float or w is int) or float(w) < 0.0 or float(w) > 1.0:
 			errors.append("%s: 'collapse.crane.blast_way' must be from 0 to 1" % where)
@@ -589,4 +633,9 @@ static func problems(data: Variant, where: String, lamp_count: int) -> PackedStr
 				errors.append("%s: 'collapse.blast.%s' must be a number above 0" % [where, key])
 		if not b.get("color") is String or not Color.html_is_valid(str(b.get("color"))):
 			errors.append("%s: 'collapse.blast.color' must be a colour" % where)
+	var gate: Variant = d.get("gate")
+	if gate != null:
+		var g: Dictionary = gate if gate is Dictionary else {}
+		if not not_negative.call(g.get("second")) or not positive.call(g.get("swing_seconds")):
+			errors.append("%s: 'collapse.gate' needs 'second' from 0 and 'swing_seconds' above 0" % where)
 	return errors
