@@ -49,6 +49,11 @@ static func volume_db(data: Dictionary, sound_name: String) -> float:
 	return float(sound_entry(data, sound_name).get("db", 0.0))
 
 
+## A menu move sounds only if the last one is at least `gap_seconds` old.
+static func move_sounds(last_msec: int, now_msec: int, gap_seconds: float) -> bool:
+	return now_msec - last_msec >= int(gap_seconds * 1000.0)
+
+
 static func climax(data: Dictionary, sound_name: String) -> float:
 	return float(sound_entry(data, sound_name).get("climax", 0.0))
 
@@ -319,6 +324,8 @@ static func validate(data: Variant, check_files := true) -> PackedStringArray:
 		world.append(str(d["ambience"].get("sound", "")))
 	for key in ["move", "click", "level_done"]:
 		_expect_name(errors, sounds, d, ["ui", key], false)
+	if d.get("ui") is Dictionary and (not _is_number(d["ui"].get("move_gap_seconds")) or float(d["ui"]["move_gap_seconds"]) < 0.0):
+		errors.append("audio.json: ui.move_gap_seconds must be a number >= 0")
 	_expect_name(errors, sounds, d, ["sparks", "sound"], false)
 	if d.get("sparks") is Dictionary:
 		world.append(str(d["sparks"].get("sound", "")))

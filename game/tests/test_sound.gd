@@ -55,6 +55,7 @@ func test_audio_data_check_catches_broken_data() -> void:
 		"a negative climax": func(d: Dictionary) -> void: d["sounds"]["lever"]["climax"] = -1,
 		"no steps": func(d: Dictionary) -> void: d["heroine"]["steps"] = [],
 		"a rewind loop that does not loop": func(d: Dictionary) -> void: d["time"]["loop"] = "door_stop",
+		"no gap between menu moves": func(d: Dictionary) -> void: d["ui"].erase("move_gap_seconds"),
 	}
 	for what: String in cases:
 		var broken := good.duplicate(true)
@@ -268,6 +269,14 @@ func test_streams_are_loaded_at_the_start_and_the_pause_opens_quietly() -> void:
 	var loader := _tree.root.get_node("LevelLoader")
 	loader.emit_signal("pause_opening")
 	check(int(sound.get("_quiet_until")) > Time.get_ticks_msec(), "the pause's first focus must not sound as a move")
+
+
+func test_a_mouse_sweeping_a_list_ticks_once_per_gap() -> void:
+	var gap := float((SoundRules.config()["ui"] as Dictionary)["move_gap_seconds"])
+	check(gap > 0.0, "menu moves need a gap, or a sweep of the mouse is a burst of ticks (C1)")
+	check(SoundRules.move_sounds(-1000000, 0, gap), "the first move sounds")
+	check(not SoundRules.move_sounds(1000, 1000 + int(gap * 500.0), gap), "a move inside the gap is silent")
+	check(SoundRules.move_sounds(1000, 1000 + int(gap * 1000.0), gap), "a move after the gap sounds")
 
 
 ## An act of the heroine under Shift is a new present: it sounds forward,

@@ -26,6 +26,7 @@ var _ambience_mix := 0.0
 var _room: Node
 var _in_level := false
 var _quiet_until := 0
+var _last_move := -1000000
 
 
 func _ready() -> void:
@@ -193,9 +194,15 @@ func _on_button_pressed() -> void:
 
 
 func _on_button_focused() -> void:
-	if Time.get_ticks_msec() < _quiet_until:
+	var now := Time.get_ticks_msec()
+	if now < _quiet_until:
 		return
-	play_global(str((config.get("ui", {}) as Dictionary).get("move", "")))
+	var ui := config.get("ui", {}) as Dictionary
+	# The mouse sweeping a list focuses every button it crosses: one tick per gap (C1).
+	if not SoundRules.move_sounds(_last_move, now, float(ui.get("move_gap_seconds", 0.0))):
+		return
+	_last_move = now
+	play_global(str(ui.get("move", "")))
 
 
 func _on_level_started(_id: String) -> void:

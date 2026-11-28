@@ -260,62 +260,63 @@ def sound(name: str, loop: float = 0.0, reverse: bool = True, about: str = ""):
     return deco
 
 
-# Shift is wind blowing back through the hall (C1, Boris 28.11): an even
-# sound everyone knows and stops noticing, so pressing Shift a hundred times
-# never tires. No tone, no rhythm, no clicks; the highs are cut. WIND picks one
-# of the variants (`--wind` overrides it).
+# Shift is a gust of wind (C1, Boris 28.11): a natural sound with a body that
+# everyone knows and stops noticing, so pressing Shift a hundred times never
+# tires. No tone, no rhythm, no clicks. The body is noise in a wide band around
+# `center` that moves with the gust; `air` adds the hiss of moving air above it;
+# a fast irregular flutter makes it sound like real turbulence, not a hum.
+# WIND picks the variant (`--wind` overrides it).
 WINDS = {
-    "soft": {"center": 420.0, "width": 0.9, "rumble": 0.5, "whistle": 0.0, "top": 1800.0, "rise": 0.3, "fall": 0.18, "start_sweep": 1.0},
-    "dense": {"center": 520.0, "width": 0.8, "rumble": 0.8, "whistle": 0.12, "top": 2400.0, "rise": 0.35, "fall": 0.22, "start_sweep": 1.0},
-    "breath": {"center": 600.0, "width": 0.7, "rumble": 0.25, "whistle": 0.0, "top": 2200.0, "rise": 0.25, "fall": 0.12, "start_sweep": 1.15},
+    "gust": {"center": 900.0, "width": 1.1, "air": 0.35, "rumble": 0.35, "flutter": 0.22, "top": 6500.0},
+    "warm": {"center": 650.0, "width": 1.0, "air": 0.2, "rumble": 0.5, "flutter": 0.18, "top": 5000.0},
 }
-WIND = "soft"
+WIND = "gust"
 
 
-def _wind(rng, n, centers, w, gain):
-    """Pink noise through a wide moving band, a low rumble and maybe a faint whistle."""
+def _wind(rng, n, centers, w):
+    """A gust's sound for the band centres `centers` (Hz per sample); unit peak-ish."""
     x = swept_noise(rng, n, centers, w["width"], -1.0)
-    x += w["rumble"] * lowpass(colored(rng, n, -2.0), 160)
-    if w["whistle"] > 0:
-        x += w["whistle"] * swept_noise(rng, n, centers * 1.9, 0.08, 0.0)
-    return gain * lowpass(x, w["top"], 2)
+    x += w["air"] * swept_noise(rng, n, centers * 3.5, 0.7, 0.0)
+    x += w["rumble"] * lowpass(colored(rng, n, -2.0), 180)
+    flutter = lowpass(rng.standard_normal(n), 9.0, 2)
+    flutter /= np.max(np.abs(flutter)) + 1e-12
+    x *= 1.0 + w["flutter"] * flutter
+    return lowpass(x, w["top"], 1)
 
 
 # Time: what Shift sounds like (played by the time sound and the rewind loop).
 
-@sound("time_rewind_start", reverse=False, about="Shift pressed: a gust of wind rises, as if the hall's gates opened (C1)")
+@sound("time_rewind_start", reverse=False, about="Shift pressed: a gust of wind rises and settles into the held wind (C1)")
 def time_rewind_start(rng):
     w = WINDS[WIND]
-    n = n_of(0.7)
+    n = n_of(1.0)
     t = times(n)
-    rise = np.clip(t / w["rise"], 0.0, 1.0) ** 1.6
-    env = rise * (1.0 - 0.45 * np.clip((t - w["rise"]) / 0.35, 0.0, 1.0))
-    centers = w["center"] * (0.55 + 0.45 * rise) * w["start_sweep"]
-    x = _wind(rng, n, centers, w, 1.0) * env
-    return fade(x, 0.02, 0.15)
+    rise = np.clip(t / 0.35, 0.0, 1.0) ** 1.5
+    env = rise * (1.0 - 0.5 * np.clip((t - 0.35) / 0.4, 0.0, 1.0))
+    centers = w["center"] * (0.6 + 0.65 * rise - 0.25 * np.clip((t - 0.35) / 0.4, 0.0, 1.0))
+    x = _wind(rng, n, centers, w) * env
+    return fade(x, 0.03, 0.25)
 
 
-@sound("time_rewind_loop", loop=6.0, reverse=False, about="Shift held: an even soft wind in an empty hall, no ticks, no tone (C1)")
+@sound("time_rewind_loop", loop=6.0, reverse=False, about="Shift held: wind blowing in gusts through the hall (C1)")
 def time_rewind_loop(rng):
     w = WINDS[WIND]
     length, xf = 6.0, 1.0
     n = n_of(length + xf)
-    # The band and the strength wander slowly, like wind through a big hall.
-    drift = lfo(n, [0.17, 0.33, 0.5], 1.0, length, rng) - 1.0
-    centers = w["center"] * 2 ** (0.35 * drift)
-    gust = 1.0 + 0.25 * (lfo(n, [0.17, 0.5], 1.0, length, rng) - 1.0)
-    x = _wind(rng, n, centers, w, 1.0) * gust
+    gusts = lfo(n, [0.17, 0.33, 0.5], 1.0, length, rng) - 1.0
+    centers = w["center"] * 2 ** (0.4 * gusts)
+    x = _wind(rng, n, centers, w) * (1.0 + 0.3 * gusts)
     return seamless(x, xf)
 
 
-@sound("time_rewind_end", reverse=False, about="Shift released: the gust falls away and the hall is still (C1)")
+@sound("time_rewind_end", reverse=False, about="Shift released: the last push of the gust passes and dies down (C1)")
 def time_rewind_end(rng):
     w = WINDS[WIND]
-    n = n_of(0.7)
+    n = n_of(0.8)
     t = times(n)
-    env = np.clip(t / 0.04, 0.0, 1.0) * np.exp(-t / w["fall"])
-    centers = w["center"] * np.geomspace(1.0, 0.5, n)
-    x = _wind(rng, n, centers, w, 1.0) * env
+    env = np.clip(t / 0.06, 0.0, 1.0) * np.exp(-np.maximum(t - 0.06, 0.0) / 0.22)
+    centers = w["center"] * np.geomspace(1.2, 0.5, n)
+    x = _wind(rng, n, centers, w) * env
     return fade(x, 0.02, 0.2)
 
 
@@ -761,12 +762,13 @@ def ambience_factory(rng):
     return seamless(x, xf)
 
 
-@sound("ui_move", reverse=False, about="menu: focus moves, a soft wooden tick (C1)")
+@sound("ui_move", reverse=False, about="menu: focus moves, a soft felt thup with no click (C1)")
 def ui_move(rng):
-    n = n_of(0.09)
-    x = 0.6 * modal(rng, n, 760, [1, 2.6], [0.014, 0.007], [1.0, 0.25]) + 0.3 * thump(n, 260, 200, 0.012)
-    x = lowpass(x, 1600, 2)
-    return fade(x, 0.003, 0.03)
+    n = n_of(0.12)
+    x = thump(n, 330, 240, 0.03) * np.clip(times(n) / 0.006, 0.0, 1.0)
+    x += 0.15 * bandpass(rng.standard_normal(n), 200, 900) * env_ar(n, 0.006, 0.02)
+    x = lowpass(x, 900, 2)
+    return fade(x, 0.004, 0.04)
 
 
 @sound("ui_click", reverse=False, about="menu: a button pressed, a soft muffled relay (C1)")
