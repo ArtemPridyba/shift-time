@@ -9,6 +9,7 @@
 	"sounds": {
 		"time_rewind_start": { "db": -7.9 },
 		"time_rewind_loop": { "db": -10.5, "loop": true },
+		"time_rewind_gust": { "db": -9.2, "loop": true },
 		"time_rewind_end": { "db": -8.6 },
 		"step_1": { "db": -10.0 },
 		"step_2": { "db": -10.0 },
@@ -48,7 +49,7 @@
 		"ui_click": { "db": -8.0 },
 		"level_done": { "db": -5.0 }
 	},
-	"time": { "loop": "time_rewind_loop", "pinned_db": -10.0, "fade_seconds": 0.1 },
+	"time": { "loop": "time_rewind_loop", "gust": "time_rewind_gust", "gust_speed": 0.7, "gust_motion": 0.35, "gust_kick": 0.3, "gust_rise_seconds": 0.35, "gust_fall_seconds": 0.9, "pinned_db": -10.0, "fade_seconds": 0.1 },
 	"heroine": {
 		"steps": ["step_1", "step_2", "step_3", "step_4"],
 		"step_px": 55,

@@ -56,6 +56,8 @@ func test_audio_data_check_catches_broken_data() -> void:
 		"no steps": func(d: Dictionary) -> void: d["heroine"]["steps"] = [],
 		"a rewind loop that does not loop": func(d: Dictionary) -> void: d["time"]["loop"] = "door_stop",
 		"no gap between menu moves": func(d: Dictionary) -> void: d["ui"].erase("move_gap_seconds"),
+		"a gust layer that does not loop": func(d: Dictionary) -> void: d["time"]["gust"] = "door_stop",
+		"a negative push of the gust": func(d: Dictionary) -> void: d["time"]["gust_kick"] = -1,
 	}
 	for what: String in cases:
 		var broken := good.duplicate(true)
@@ -175,8 +177,16 @@ func test_a_door_sounds_forward_then_reversed_under_shift() -> void:
 	check(not _heard(sound, "_rev"), "nothing plays reversed before Shift: %s" % [sound.heard])
 	# Under Shift the recorded motion runs back: reversed loop, reversed clanks.
 	Input.action_press("rewind")
-	await _ticks(420)
+	var most_motion := 0
+	var most_gust := 0.0
+	var autoload := _tree.root.get_node("Sound")
+	for i in 420:
+		await _ticks(1)
+		most_motion = maxi(most_motion, sound.motion)
+		most_gust = maxf(most_gust, float(autoload.get("_gust_level")))
 	Input.action_release("rewind")
+	check(most_motion > 0, "a door rolling back under Shift is motion the gust of Shift hears (C1)")
+	check(most_gust > 0.3, "a long hold with the world rolling back must raise the gust: %.2f (C1)" % most_gust)
 	check(_heard(sound, "loop:door_move_rev"), "a door moving back must play the reversed loop: %s" % [sound.heard])
 	check(_heard(sound, "door_stop_rev"), "an undone stop must play the reversed clank: %s" % [sound.heard])
 	room.queue_free()
@@ -269,6 +279,25 @@ func test_streams_are_loaded_at_the_start_and_the_pause_opens_quietly() -> void:
 	var loader := _tree.root.get_node("LevelLoader")
 	loader.emit_signal("pause_opening")
 	check(int(sound.get("_quiet_until")) > Time.get_ticks_msec(), "the pause's first focus must not sound as a move")
+
+
+func test_the_gust_of_shift_grows_with_the_speed_and_the_world() -> void:
+	var time_data := SoundRules.config()["time"] as Dictionary
+	check(is_zero_approx(SoundRules.gust_target(time_data, 1.0, 3.0, 0)), "a fresh press with a still world has no gust")
+	var fast := SoundRules.gust_target(time_data, 3.0, 3.0, 0)
+	check(fast > 0.3 and fast > SoundRules.gust_target(time_data, 2.0, 3.0, 0), "the gust grows as the rewind speeds up: %.2f" % fast)
+	check(SoundRules.gust_target(time_data, 1.0, 3.0, 1) > 0.0, "a thing rolling back raises the gust")
+	check(SoundRules.gust_target(time_data, 3.0, 3.0, 9) <= 1.0, "the gust never goes above full")
+	var level := 0.0
+	for i in 30:
+		level = SoundRules.gust_step(time_data, level, 1.0, 0, 1.0 / 60.0)
+	check(level > 0.4 and level < 1.0, "the gust rises smoothly, not at once: %.2f" % level)
+	var kicked := SoundRules.gust_step(time_data, 0.0, 0.0, 1, 1.0 / 60.0)
+	check(kicked > 0.2, "a reversed event of the world pushes the gust: %.2f" % kicked)
+	var calm := level
+	for i in 30:
+		calm = SoundRules.gust_step(time_data, calm, 0.0, 0, 1.0 / 60.0)
+	check(calm < level and calm > 0.0, "the gust calms down smoothly")
 
 
 func test_a_mouse_sweeping_a_list_ticks_once_per_gap() -> void:

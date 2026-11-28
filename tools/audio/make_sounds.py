@@ -266,11 +266,21 @@ def sound(name: str, loop: float = 0.0, reverse: bool = True, about: str = ""):
 # 3 kHz. A natural sound everyone knows and stops noticing, so pressing Shift a
 # hundred times never tires. `q` is how narrow the whistle is; `body` the wide
 # band under it; `rumble` the low push of the air.
+# `palette` colours the whistle in the game's own way: "duct" blows it through
+# an iron air duct, "flywheel" lays a heavy flywheel spinning under it, "echo"
+# adds its own echo run backwards, so it swells into every gust.
 # WIND picks the variant (`--wind` overrides it).
+_WHISTLE = {"center": 600.0, "q": 22.0, "body": 0.3, "second": 0.04, "rumble": 0.45, "top": 3000.0, "palette": ""}
 WINDS = {
-    "whistle": {"center": 600.0, "q": 22.0, "body": 0.3, "second": 0.04, "rumble": 0.45, "top": 3000.0},
-    "wide": {"center": 600.0, "q": 7.0, "body": 0.45, "second": 0.05, "rumble": 0.55, "top": 3000.0},
+    "whistle": _WHISTLE,
+    "wide": dict(_WHISTLE, q=7.0, body=0.45, second=0.05, rumble=0.55),
+    "duct": dict(_WHISTLE, palette="duct"),
+    "flywheel": dict(_WHISTLE, palette="flywheel"),
+    "echo": dict(_WHISTLE, palette="echo"),
 }
+# The strong layer the game fades in as the rewind speeds up and the world moves:
+# the same wind, higher, wider and pushier.
+GUST = {"center": 1.22, "q": 0.55, "body": 1.6, "rumble": 1.3}
 WIND = "whistle"
 
 
@@ -288,15 +298,36 @@ def _resonance(x, centers, q):
     return out
 
 
-def _wind(rng, n, centers, w):
-    """The whistle of wind for the band centres `centers` (Hz per sample)."""
+def _wind(rng, n, centers, w, spin=None, loop=False):
+    """The whistle of wind for the band centres `centers` (Hz per sample);
+    `spin` is the flywheel's turns a second per sample, `loop` a seamless loop."""
     x = _resonance(colored(rng, n, -1.0), centers, w["q"])
     x /= np.std(x) + 1e-12
     x += w["second"] * _resonance(colored(rng, n, -1.0), centers * 2.0, w["q"]) / 0.3
     body = swept_noise(rng, n, centers, 0.9, -1.0)
     x += w["body"] * body
     x += w["rumble"] * lowpass(colored(rng, n, -2.0), 250)
-    return lowpass(x, w["top"], 2)
+    x = lowpass(x, w["top"], 2)
+    x /= np.std(x) + 1e-12
+    if w["palette"] == "duct":
+        pipe = resonate(x, [125.0 * k for k in range(1, 12)], 35.0, [1.0 / np.sqrt(k) for k in range(1, 12)])
+        x = 0.55 * x + 0.8 * pipe / (np.std(pipe) + 1e-12)
+    elif w["palette"] == "flywheel":
+        turns = np.full(n, 18.0) if spin is None else spin
+        phase = 2 * np.pi * np.cumsum(turns) / SR
+        hum = sum(a * np.sin(k * phase) for k, a in ((3, 1.0), (6, 0.5), (9, 0.25), (12, 0.12)))
+        hum *= 1.0 + 0.3 * np.sin(phase)
+        whir = bandpass(rng.standard_normal(n), 180, 420) * (1.0 + 0.6 * np.sin(phase))
+        x += 0.55 * hum + 0.25 * whir / (np.std(whir) + 1e-12)
+    elif w["palette"] == "echo":
+        ir = reverb_ir(rng, 1.6, 2200.0, 0.02)
+        if loop:
+            k = len(x)
+            back = np.fft.irfft(np.fft.rfft(x[::-1], k) * np.fft.rfft(np.pad(ir, (0, max(0, k - len(ir))))[:k], k), k)[::-1]
+        else:
+            back = signal.fftconvolve(x[::-1], ir)[: len(x)][::-1]
+        x = x + 0.9 * back / (np.std(back) + 1e-12)
+    return x
 
 
 # Time: what Shift sounds like (played by the time sound and the rewind loop).
@@ -311,7 +342,7 @@ def time_rewind_start(rng):
     settle = np.clip((t - 0.45) / 0.45, 0.0, 1.0)
     env = rise * (1.0 - 0.45 * settle)
     centers = w["center"] * (0.7 + 0.38 * rise - 0.08 * settle)
-    x = _wind(rng, n, centers, w) * env
+    x = _wind(rng, n, centers, w, spin=18.0 * (0.55 + 0.45 * rise)) * env
     return fade(x, 0.03, 0.25)
 
 
@@ -322,7 +353,19 @@ def time_rewind_loop(rng):
     n = n_of(length + xf)
     gusts = lfo(n, [0.17, 0.33, 0.5], 1.0, length, rng) - 1.0
     centers = w["center"] * 2 ** (0.18 * gusts)
-    x = _wind(rng, n, centers, w) * (1.0 + 0.35 * gusts)
+    x = _wind(rng, n, centers, w, loop=True) * (1.0 + 0.35 * gusts)
+    return seamless(x, xf)
+
+
+@sound("time_rewind_gust", loop=6.0, reverse=False, about="Shift held, the strong layer: gusts the game fades in as the rewind speeds up and the world moves (C1)")
+def time_rewind_gust(rng):
+    w = WINDS[WIND]
+    w = dict(w, center=w["center"] * GUST["center"], q=w["q"] * GUST["q"], body=w["body"] * GUST["body"], rumble=w["rumble"] * GUST["rumble"])
+    length, xf = 6.0, 1.0
+    n = n_of(length + xf)
+    gusts = lfo(n, [0.33, 0.67, 1.0], 1.0, length, rng) - 1.0
+    centers = w["center"] * 2 ** (0.25 * gusts)
+    x = _wind(rng, n, centers, w, spin=np.full(n, 24.0), loop=True) * (1.0 + 0.5 * gusts)
     return seamless(x, xf)
 
 
@@ -333,7 +376,7 @@ def time_rewind_end(rng):
     t = times(n)
     env = np.clip(t / 0.05, 0.0, 1.0) * np.exp(-np.maximum(t - 0.05, 0.0) / 0.25)
     centers = w["center"] * np.geomspace(1.0, 0.65, n)
-    x = _wind(rng, n, centers, w) * env
+    x = _wind(rng, n, centers, w, spin=np.geomspace(18.0, 9.0, n)) * env
     return fade(x, 0.02, 0.25)
 
 

@@ -18,6 +18,8 @@ var _global: Array[AudioStreamPlayer] = []
 var _next_global := 0
 var _rewind: AudioStreamPlayer
 var _rewind_level := 0.0
+var _gust: AudioStreamPlayer
+var _gust_level := 0.0
 var _was_rewinding := false
 var _ambience: AudioStreamPlayer
 var _ambience_rev: AudioStreamPlayer
@@ -35,6 +37,7 @@ func _ready() -> void:
 	for i in GLOBAL_PLAYERS:
 		_global.append(_player("Global%d" % i))
 	_rewind = _player("Rewind")
+	_gust = _player("Gust")
 	_ambience = _player("Ambience")
 	_ambience_rev = _player("AmbienceReversed")
 	get_tree().node_added.connect(_on_node_added)
@@ -102,22 +105,46 @@ func _update_rewind(delta: float, rewinding: bool, manager: Node, room_time: Nod
 	var sound_name := str(time_data.get("loop", ""))
 	var fade := maxf(float(time_data.get("fade_seconds", 0.1)), 0.001)
 	_rewind_level = move_toward(_rewind_level, 1.0 if rewinding else 0.0, delta / fade)
+	var gust_name := str(time_data.get("gust", ""))
 	if rewinding and not _was_rewinding:
 		_rewind.stream = stream(sound_name)
 		if _rewind.stream != null:
 			_rewind.play()
+		_gust.stream = stream(gust_name)
+		_gust_level = 0.0
+		if _gust.stream != null:
+			_gust.play()
 	_was_rewinding = rewinding
 	if _rewind_level <= 0.0:
-		if _rewind.playing:
-			_rewind.stop()
+		for player: AudioStreamPlayer in [_rewind, _gust]:
+			if player.playing:
+				player.stop()
 		return
 	if not _rewind.playing:
 		return   # stopped from outside (the test runners before they quit)
+	var pinned: bool = room_time != null and room_time.get("last_step") == TimeWorld.Step.PINNED
 	var db := SoundRules.volume_db(config, sound_name) + linear_to_db(_rewind_level)
-	if room_time != null and room_time.get("last_step") == TimeWorld.Step.PINNED:
+	if pinned:
 		db += float(time_data.get("pinned_db", 0.0))   # at frame 0 the world stands
+	var speed := float(manager.rewind_speed) if manager != null else 1.0
 	_rewind.volume_db = db
-	_rewind.pitch_scale = SoundRules.rewind_pitch(config, float(manager.rewind_speed) if manager != null else 1.0)
+	_rewind.pitch_scale = SoundRules.rewind_pitch(config, speed)
+	_update_gust(delta, time_data, gust_name, speed, rewinding and not pinned, room_time)
+
+
+## The strong layer of Shift's wind (C1): it grows as the rewind speeds up and
+## as the world rolls back, and calms when the world stands at frame 0.
+func _update_gust(delta: float, time_data: Dictionary, gust_name: String, speed: float, blowing: bool, room_time: Node) -> void:
+	var room_sound: Node = room_time.get_parent().get_node_or_null("RoomSound") if room_time != null and room_time.get_parent() != null else null
+	var motion: int = int(room_sound.get("motion")) if room_sound != null else 0
+	var kicks: int = int(room_sound.call("take_kicks")) if room_sound != null else 0
+	var speed_max := float(Content.time().get("rewind_speed_max", 1.0))
+	var target := SoundRules.gust_target(time_data, speed, speed_max, motion) if blowing else 0.0
+	_gust_level = SoundRules.gust_step(time_data, _gust_level, target, kicks if blowing else 0, delta)
+	if not _gust.playing:
+		return
+	_gust.volume_db = SoundRules.volume_db(config, gust_name) + linear_to_db(maxf(_gust_level * _rewind_level, 0.0001))
+	_gust.pitch_scale = _rewind.pitch_scale
 
 
 ## The hum of the hall, quieter in the menus; under Shift it crossfades into

@@ -61,6 +61,10 @@ var _wires: Array[Node2D] = []
 var _faults: Array[Node2D] = []
 var _clock := {}            # instance id -> world seconds at the last tick (sparks)
 var _carts := {}            # instance id -> AudioStreamPlayer2D
+## Under Shift: how many things of the world roll back now (their move loops),
+## and the reversed events heard since `take_kicks` — the gust of Shift follows them (C1).
+var motion := 0
+var _kicks := 0
 
 
 ## Called by the `Sound` autoload before the node enters the tree.
@@ -142,6 +146,10 @@ func _physics_process(delta: float) -> void:
 	for entry in _entries:
 		_listen(entry, timeline.peek(cursor, entry.id, entry.field), reversed, at_head, speed, cursor, counts)
 	_loop_counts = counts
+	motion = 0
+	if reversed:
+		for count: Variant in counts.values():
+			motion += int(count)
 	_prune_ahead(cursor, speed)
 	_last_cursor = cursor
 	_hear_heroine(delta)
@@ -152,6 +160,13 @@ func _physics_process(delta: float) -> void:
 ## After a reset of the room (R, drowning, burning, a fall): every object
 ## jumped back at once, which is no event. Everything heard is forgotten and
 ## the room's players fall silent; the next tick listens afresh (D206).
+## The reversed events heard since the last call (the gust of Shift reads them).
+func take_kicks() -> int:
+	var kicks := _kicks
+	_kicks = 0
+	return kicks
+
+
 func _forget() -> void:
 	for player: AudioStreamPlayer2D in _pool + _loops.values():
 		player.stop()
@@ -160,6 +175,8 @@ func _forget() -> void:
 	_last.clear()
 	_since.clear()
 	_loop_counts.clear()
+	motion = 0
+	_kicks = 0
 	_ahead.clear()
 	_early.clear()
 	_lead_next.clear()
@@ -351,6 +368,8 @@ func _play(node: Variant, sound_name: String, reversed: bool, offset: float, pit
 	player.global_position = at if at != Vector2.INF else _where(node)
 	player.play(offset)
 	_note(sound_name + ("_rev" if reversed else ""))
+	if reversed:
+		_kicks += 1
 	return player
 
 

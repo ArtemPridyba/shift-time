@@ -49,6 +49,22 @@ static func volume_db(data: Dictionary, sound_name: String) -> float:
 	return float(sound_entry(data, sound_name).get("db", 0.0))
 
 
+## How strong the gust layer of Shift wants to be (0..1, C1): it grows as the
+## rewind speeds up (`speed` from 1 to `speed_max`) and while `motion` things of
+## the world roll back.
+static func gust_target(time_data: Dictionary, speed: float, speed_max: float, motion: int) -> float:
+	var ramp := clampf((speed - 1.0) / maxf(speed_max - 1.0, 0.001), 0.0, 1.0)
+	return clampf(float(time_data.get("gust_speed", 0.0)) * ramp + float(time_data.get("gust_motion", 0.0)) * motion, 0.0, 1.0)
+
+
+## One step of the gust's level towards `target`: it rises and falls smoothly;
+## every reversed event of the world (`kicks`) gives it a push.
+static func gust_step(time_data: Dictionary, level: float, target: float, kicks: int, delta: float) -> float:
+	level = minf(1.0, level + float(time_data.get("gust_kick", 0.0)) * kicks)
+	var tau := maxf(float(time_data.get("gust_rise_seconds" if target > level else "gust_fall_seconds", 0.1)), 0.001)
+	return clampf(level + (target - level) * minf(delta / tau, 1.0), 0.0, 1.0)
+
+
 ## A menu move sounds only if the last one is at least `gap_seconds` old.
 static func move_sounds(last_msec: int, now_msec: int, gap_seconds: float) -> bool:
 	return now_msec - last_msec >= int(gap_seconds * 1000.0)
@@ -297,7 +313,11 @@ static func validate(data: Variant, check_files := true) -> PackedStringArray:
 			for i in (rules as Array).size():
 				errors.append_array(_rule_problems(rules[i], "audio.json: objects.%s[%d]" % [class_key, i], sounds, world))
 	_expect_name(errors, sounds, d, ["time", "loop"], true)
+	_expect_name(errors, sounds, d, ["time", "gust"], true)
 	if d.get("time") is Dictionary:
+		for key in ["gust_speed", "gust_motion", "gust_kick", "gust_rise_seconds", "gust_fall_seconds"]:
+			if not _is_number(d["time"].get(key)) or float(d["time"][key]) < 0.0:
+				errors.append("audio.json: time.%s must be a number >= 0" % key)
 		if not _is_number(d["time"].get("pinned_db")) or not _is_number(d["time"].get("fade_seconds")):
 			errors.append("audio.json: time.pinned_db and time.fade_seconds must be numbers")
 	var heroine: Variant = d.get("heroine")
